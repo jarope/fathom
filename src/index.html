@@ -1,0 +1,706 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fathom</title>
+    <style>
+      /* Theme — ported from Fascia (Console 2A). Dark default; [data-theme="light"]
+       * swaps the palette. Space Grotesk (UI) + IBM Plex Mono (paths/numbers). */
+      @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
+
+      :root {
+        color-scheme: dark;
+        --panel-1: #1c1e18; --panel-2: #141610;
+        --surf-1: #24261f; --surf-2: #1a1c16;
+        --ink: #e9eae1; --ink-2: #a7a99b; --ink-3: #75776a;
+        --hair: rgba(255, 255, 255, 0.07); --edge: rgba(255, 255, 255, 0.05);
+        --accent: #dd8843; --accent-2: #e4a35a; --live: #e4a35a; --warn: #d85f37;
+        --seg-track: #22241d; --seg-ink: #8b8d80;
+        --seg-active-1: #cb7d3a; --seg-active-2: #a05a20;
+        --field-bg: linear-gradient(#0e100b, #070805); --field-ink: #eef0e0;
+        --field-label: #5f6550; --field-edge: rgba(255, 255, 255, 0.05);
+        --card-shadow: 0 10px 24px -12px rgba(0, 0, 0, 0.55);
+        --sink-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.45);
+        --field-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.6);
+        --row-hover: rgba(221, 136, 67, 0.08);
+        --row-sel: rgba(221, 136, 67, 0.20);
+        --list-bg: linear-gradient(#0e100b, #070805);
+        --drop: rgba(221, 136, 67, 0.16);
+      }
+      :root[data-theme="light"] {
+        color-scheme: light;
+        --panel-1: #f8fafd; --panel-2: #ebeef4;
+        --surf-1: #fdfdff; --surf-2: #f0f3f8;
+        --ink: #2b3240; --ink-2: #5a6272; --ink-3: #8a93a3;
+        --hair: rgba(160, 172, 196, 0.4); --edge: rgba(255, 255, 255, 0.55);
+        --accent: #c06f2b; --accent-2: #cc8a3e; --live: #cc8a3e; --warn: #c2542c;
+        --seg-track: #e4e8ef; --seg-ink: #7a8290;
+        --seg-active-1: #c47733; --seg-active-2: #9a531c;
+        --field-bg: linear-gradient(#161b28, #0d101a); --field-ink: #f0f2ff;
+        --field-label: #5d6a86; --field-edge: rgba(255, 255, 255, 0.08);
+        --card-shadow: 0 12px 26px -14px rgba(20, 26, 40, 0.35);
+        --sink-shadow: inset 0 1px 3px rgba(120, 130, 150, 0.28);
+        --field-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5);
+        --row-hover: rgba(192, 111, 43, 0.09);
+        --row-sel: rgba(192, 111, 43, 0.20);
+        --list-bg: linear-gradient(#eef1f6, #e5e9f0);
+        --drop: rgba(192, 111, 43, 0.16);
+      }
+
+      @keyframes livepulse { 0%,100% { opacity: 0.55; } 50% { opacity: 1; } }
+      @keyframes spin { to { transform: rotate(360deg); } }
+
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body { height: 100%; }
+      body {
+        background: var(--panel-2); color: var(--ink);
+        font-family: "Space Grotesk", "Helvetica Neue", sans-serif;
+        -webkit-user-select: none; user-select: none; padding: 12px; display: flex;
+      }
+      .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+      .panel {
+        flex: 1; min-height: 0; display: flex; flex-direction: column;
+        border-radius: 20px; background: linear-gradient(158deg, var(--panel-1), var(--panel-2));
+        box-shadow: 0 40px 90px -30px rgba(20, 26, 40, 0.5);
+        border: 1px solid var(--edge); overflow: hidden;
+      }
+
+      /* Header */
+      .header {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 12px 18px; border-bottom: 1px solid var(--hair);
+      }
+      .brand { display: flex; align-items: baseline; gap: 11px; }
+      .brand-row { display: flex; align-items: center; gap: 9px; }
+      .live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--live); box-shadow: 0 0 9px var(--live); animation: livepulse 3.4s ease-in-out infinite; }
+      .logo { font-weight: 700; font-size: 22px; letter-spacing: 0.16em; }
+      .subtitle { font-size: 12.5px; color: var(--ink-3); }
+      .header-right { display: flex; align-items: center; gap: 9px; }
+      .rbtn {
+        width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--hair);
+        background: linear-gradient(150deg, var(--surf-1), var(--surf-2));
+        color: var(--ink-2); cursor: pointer; font-size: 15px;
+        display: flex; align-items: center; justify-content: center;
+      }
+      .rbtn:hover { color: var(--ink); border-color: var(--accent); }
+      .rbtn.on { color: #fff; background: linear-gradient(180deg, var(--seg-active-1), var(--seg-active-2)); border-color: transparent; }
+
+      /* Panes */
+      .panes { flex: 1; min-height: 0; display: flex; }
+      .pane { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; position: relative; }
+      .panes.twin .pane.b { border-left: 1px solid var(--hair); }
+      .panes.single .pane.b { display: none; }
+      /* Active-pane cue only matters in twin view. */
+      .panes.twin .pane.active .pathwrap { border-color: var(--accent); }
+      .panes.twin .pane.active .ptoolbar { background: linear-gradient(180deg, rgba(221,136,67,0.05), transparent); }
+
+      .ptoolbar { display: flex; align-items: center; gap: 7px; padding: 9px 12px; border-bottom: 1px solid var(--hair); }
+      .navbtns { display: flex; gap: 3px; }
+      .nb {
+        width: 30px; height: 30px; flex: none; border-radius: 8px; border: 1px solid var(--hair); cursor: pointer;
+        font-size: 14px; color: var(--ink-2); background: linear-gradient(150deg, var(--surf-1), var(--surf-2));
+        display: flex; align-items: center; justify-content: center;
+      }
+      .nb:hover:not(:disabled) { color: var(--ink); border-color: var(--accent); }
+      .nb:disabled { opacity: 0.35; cursor: default; }
+      .nb.on { color: #fff; background: linear-gradient(180deg, var(--seg-active-1), var(--seg-active-2)); border-color: transparent; }
+
+      .pathwrap { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; background: var(--field-bg); border-radius: 9px; padding: 0 11px; box-shadow: var(--field-shadow); border: 1px solid var(--field-edge); height: 30px; }
+      .pathwrap .tag { font-size: 9.5px; letter-spacing: 0.16em; color: var(--field-label); font-weight: 600; flex: none; }
+      .path { flex: 1; min-width: 0; border: none; background: transparent; outline: none; font-family: "IBM Plex Mono", monospace; font-size: 12.5px; color: var(--field-ink); caret-color: var(--accent); -webkit-user-select: text; user-select: text; }
+
+      .searchwrap { display: flex; align-items: center; gap: 6px; width: 150px; flex: none; background: var(--field-bg); border-radius: 9px; padding: 0 9px; box-shadow: var(--field-shadow); border: 1px solid var(--field-edge); height: 30px; }
+      .searchwrap.active { border-color: var(--accent); }
+      .searchwrap .ic { color: var(--ink-3); font-size: 12px; flex: none; }
+      .search { flex: 1; min-width: 0; border: none; background: transparent; outline: none; font-family: "IBM Plex Mono", monospace; font-size: 12.5px; color: var(--field-ink); caret-color: var(--accent); -webkit-user-select: text; user-select: text; }
+      .search::placeholder { color: var(--ink-3); opacity: 0.7; }
+
+      .listing { flex: 1; min-height: 0; overflow-y: auto; margin: 10px 12px 0; border-radius: 12px; border: 1px solid var(--hair); background: var(--list-bg); box-shadow: var(--sink-shadow); }
+      .listing.drop-target { border-color: var(--accent); box-shadow: var(--sink-shadow), inset 0 0 0 1px var(--accent); }
+      .head, .row { display: grid; gap: 12px; align-items: center; padding: 7px 13px; grid-template-columns: minmax(150px, 1.7fr) 84px 132px; }
+      .searching .head, .searching .row { grid-template-columns: minmax(140px, 1.3fr) minmax(150px, 1.6fr) 80px 116px; }
+      .head { position: sticky; top: 0; z-index: 2; background: linear-gradient(158deg, var(--surf-1), var(--surf-2)); border-bottom: 1px solid var(--hair); font-weight: 600; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); }
+      .row { border-bottom: 1px solid var(--hair); cursor: default; }
+      .row:hover { background: var(--row-hover); }
+      .row.sel { background: var(--row-sel); }
+      .row.drop-into { background: var(--drop); box-shadow: inset 0 0 0 1px var(--accent); border-radius: 6px; }
+      .c-name { display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 13px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .c-name .ic { flex: none; opacity: 0.85; font-size: 14px; }
+      .c-name.dir { color: var(--accent-2); font-weight: 600; }
+      .c-name .link { color: var(--ink-3); font-size: 11px; }
+      .c-folder { font-family: "IBM Plex Mono", monospace; font-size: 11.5px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; direction: rtl; text-align: left; }
+      .c-size, .c-date { font-family: "IBM Plex Mono", monospace; font-size: 11.5px; color: var(--ink-3); text-align: right; white-space: nowrap; }
+
+      .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; height: 100%; min-height: 160px; color: var(--ink-3); text-align: center; padding: 24px; }
+      .empty-state .big { font-size: 30px; opacity: 0.5; }
+      .empty-state .msg { font-size: 13.5px; }
+
+      .pstatus { display: flex; align-items: center; gap: 8px; padding: 7px 14px; font-size: 11.5px; color: var(--ink-3); min-height: 15px; }
+      .pstatus .count { color: var(--ink-2); font-weight: 600; }
+      .pstatus .sel { color: var(--accent-2); font-weight: 600; }
+      .pstatus .msg { color: var(--ink-2); }
+      .pstatus .warn { color: var(--warn); }
+      .pstatus .grow { flex: 1; }
+      .spinner { width: 11px; height: 11px; border-radius: 50%; border: 2px solid var(--hair); border-top-color: var(--accent); animation: spin 0.7s linear infinite; flex: none; }
+
+      .ctx { position: fixed; z-index: 300; min-width: 210px; background: linear-gradient(158deg, var(--surf-1), var(--surf-2)); border: 1px solid var(--hair); border-radius: 10px; box-shadow: 0 20px 50px -14px rgba(0, 0, 0, 0.6); padding: 5px; display: none; }
+      .ctx.show { display: block; }
+      .ctx-item { display: flex; align-items: center; gap: 9px; padding: 8px 11px; border-radius: 6px; font-size: 13px; color: var(--ink); cursor: pointer; }
+      .ctx-item .k { margin-left: auto; font-size: 11px; color: var(--ink-3); font-family: "IBM Plex Mono", monospace; }
+      .ctx-item:hover { background: var(--seg-track); }
+      .ctx-item.danger:hover { background: rgba(216, 95, 55, 0.18); color: var(--warn); }
+      .ctx-sep { height: 1px; margin: 4px 6px; background: var(--hair); }
+
+      /* Quick-Look preview */
+      #preview { position: fixed; inset: 0; z-index: 200; display: none; align-items: center; justify-content: center; background: rgba(6, 6, 8, 0.74); }
+      #preview.show { display: flex; }
+      .pv-box { display: flex; flex-direction: column; align-items: center; gap: 12px; max-width: 92vw; max-height: 90vh; }
+      .pv-img { max-width: 92vw; max-height: 78vh; object-fit: contain; border-radius: 10px; box-shadow: 0 30px 90px -20px rgba(0, 0, 0, 0.85); background: var(--surf-2); }
+      .pv-cap { display: flex; align-items: center; gap: 12px; font-family: "IBM Plex Mono", monospace; font-size: 13px; color: #eef0e0; background: rgba(0, 0, 0, 0.42); border: 1px solid rgba(255, 255, 255, 0.12); padding: 8px 14px; border-radius: 10px; }
+      .pv-cap .nm { font-weight: 600; }
+      .pv-cap .dim { color: #b6b7ab; }
+      .pv-cap .hint { color: rgba(255, 255, 255, 0.45); font-size: 11px; }
+
+      /* Docked (half-view) preview — right in single mode, below the left pane in twin */
+      .dock { display: none; flex-direction: column; min-width: 0; min-height: 0; background: linear-gradient(158deg, var(--surf-1), var(--surf-2)); }
+      .dock.side { flex: 1 1 0; border-left: 1px solid var(--hair); }
+      .dock.bottom { flex: 1 1 0; margin: 10px 12px 0; border: 1px solid var(--hair); border-radius: 12px; overflow: hidden; }
+      .dock-imgwrap { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 14px; }
+      .dock-img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; box-shadow: var(--card-shadow); background: var(--list-bg); cursor: zoom-in; }
+      .dock-empty { color: var(--ink-3); font-size: 13px; text-align: center; }
+      .dock-cap { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-top: 1px solid var(--hair); font-family: "IBM Plex Mono", monospace; font-size: 12px; }
+      .dock-name { color: var(--ink); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .dock-dim { color: var(--ink-3); margin-left: auto; flex: none; }
+
+      .listing::-webkit-scrollbar { width: 11px; }
+      .listing::-webkit-scrollbar-thumb { background: var(--seg-track); border-radius: 6px; border: 3px solid transparent; background-clip: padding-box; }
+      .listing::-webkit-scrollbar-thumb:hover { background: var(--ink-3); }
+    </style>
+  </head>
+  <body>
+    <div class="panel">
+      <div class="header">
+        <div class="brand">
+          <div class="brand-row"><span class="live-dot"></span><span class="logo">FATHOM</span></div>
+          <span class="subtitle">file browser</span>
+        </div>
+        <div class="header-right">
+          <button id="dockToggle" class="rbtn" type="button" title="Preview panel (⌘P)">🖼</button>
+          <button id="viewToggle" class="rbtn" type="button" title="Single / twin pane (⌘\\)">◫</button>
+          <button id="theme" class="rbtn" type="button" aria-label="Toggle theme" title="Toggle light / dark">◐</button>
+        </div>
+      </div>
+
+      <div id="panes" class="panes single"></div>
+
+      <div id="dock" class="dock">
+        <div class="dock-imgwrap">
+          <img class="dock-img" id="dockImg" alt="" />
+          <div class="dock-empty" id="dockEmpty">Select an image to preview</div>
+        </div>
+        <div class="dock-cap">
+          <span class="dock-name" id="dockName"></span>
+          <span class="dock-dim" id="dockDim"></span>
+        </div>
+      </div>
+    </div>
+
+    <div id="ctx" class="ctx"></div>
+
+    <div id="preview">
+      <div class="pv-box">
+        <img class="pv-img" id="pvImg" alt="" />
+        <div class="pv-cap">
+          <span class="nm" id="pvName"></span>
+          <span class="dim" id="pvDim"></span>
+          <span class="hint">Space / Esc to close · ↑ ↓ to browse</span>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const T = window.__TAURI__;
+      const invoke = T ? T.core.invoke : null;
+      const dialog = T ? T.dialog : null;
+
+      const el = (tag, cls, txt) => { const n = document.createElement(tag); if (cls) n.className = cls; if (txt != null) n.textContent = txt; return n; };
+      const fmtSize = (b, isDir) => {
+        if (isDir) return "—";
+        if (b < 1024) return b + " B";
+        const u = ["KB", "MB", "GB", "TB"]; let n = b / 1024, i = 0;
+        while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+        return (n >= 10 ? n.toFixed(0) : n.toFixed(1)) + " " + u[i];
+      };
+      const fmtDate = (secs) => {
+        if (!secs) return "—";
+        const d = new Date(secs * 1000), p = (x) => String(x).padStart(2, "0");
+        return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+      };
+
+      // ---- Previews: raster via backend, SVG native, video via macOS Quick Look ----
+      const IMG_RE = /\.(png|jpe?g|gif|webp|bmp|svg)$/i;
+      const VIDEO_RE = /\.(mov|mp4|m4v|avi|mkv|webm|mpg|mpeg|3gp|wmv|flv)$/i;
+      const isImage = (name) => IMG_RE.test(name);
+      const isSvg = (name) => /\.svg$/i.test(name);
+      const isVideo = (name) => VIDEO_RE.test(name);
+      const isPreviewable = (name) => isImage(name) || isVideo(name);
+      const thumbCache = new Map(); // "max|path" -> Promise<{data,w,h}|null>
+      const svgCache = new Map();   // path -> Promise<{data,w,h}|null>
+      const qlCache = new Map();    // "max|path" -> Promise<{data,w,h}|null>
+      function getThumb(path, max) {
+        const key = max + "|" + path;
+        if (!thumbCache.has(key)) thumbCache.set(key, invoke("thumbnail", { path, maxEdge: max }).catch(() => null));
+        return thumbCache.get(key);
+      }
+      function getSvg(path) {
+        if (!svgCache.has(path)) svgCache.set(path, invoke("svg_data_uri", { path }).then((d) => ({ data: d, w: null, h: null })).catch(() => null));
+        return svgCache.get(path);
+      }
+      function getQL(path, max) {
+        const key = max + "|" + path;
+        if (!qlCache.has(key)) qlCache.set(key, invoke("ql_thumbnail", { path, maxEdge: max }).catch(() => null));
+        return qlCache.get(key);
+      }
+      // SVG bypasses the rasterizer (vector); video goes through Quick Look; else a thumbnail.
+      const getPreview = (path, name, max) => (isSvg(name) ? getSvg(path) : isVideo(name) ? getQL(path, max) : getThumb(path, max));
+      const dimText = (t, size) => (t.w ? `${t.w} × ${t.h} · ` : "") + fmtSize(size, false);
+
+      // ---- Theme (persisted) ----
+      const savedTheme = localStorage.getItem("fathom-theme");
+      if (savedTheme) document.documentElement.setAttribute("data-theme", savedTheme);
+      document.getElementById("theme").addEventListener("click", () => {
+        const cur = document.documentElement.getAttribute("data-theme");
+        const next = cur === "light" ? "dark" : "light";
+        document.documentElement.setAttribute("data-theme", next);
+        localStorage.setItem("fathom-theme", next);
+      });
+
+      // ---- Globals shared across panes ----
+      const panesEl = document.getElementById("panes");
+      const ctx = document.getElementById("ctx");
+      let viewMode = "single";            // "single" | "twin"
+      let active = null;                  // active Pane
+      let dragData = null;                // { paths, source }
+      const PANE_TEMPLATE = `
+        <div class="ptoolbar">
+          <div class="navbtns">
+            <button class="nb b-back" type="button" title="Back">◀</button>
+            <button class="nb b-fwd" type="button" title="Forward">▶</button>
+            <button class="nb b-up" type="button" title="Up">▲</button>
+            <button class="nb b-home" type="button" title="Home">⌂</button>
+          </div>
+          <div class="pathwrap"><span class="tag">PATH</span><input class="path" type="text" spellcheck="false" autocomplete="off" /></div>
+          <div class="searchwrap"><span class="ic">🔍</span><input class="search" type="text" spellcheck="false" autocomplete="off" placeholder="search… *.pdf" /></div>
+          <button class="nb b-hidden" type="button" title="Show hidden files">◌</button>
+        </div>
+        <div class="listing"></div>
+        <div class="pstatus"></div>`;
+
+      const hideCtx = () => ctx.classList.remove("show");
+      document.addEventListener("click", hideCtx);
+      document.addEventListener("scroll", hideCtx, true);
+      window.addEventListener("blur", hideCtx);
+
+      function setActive(p) {
+        active = p;
+        panes.forEach((x) => x.root.classList.toggle("active", x === p));
+      }
+      const other = (p) => panes.find((x) => x !== p);
+
+      // ---- Cross-pane move/copy ----
+      async function performTransfer(paths, destDir, copy) {
+        if (!paths || !paths.length || !destDir) return;
+        let rep;
+        try {
+          rep = await invoke(copy ? "copy_paths" : "move_paths", { sources: paths, destDir });
+        } catch (e) { active && active.flash("⚠ " + e, "warn"); return; }
+        // Refresh every visible pane so both source and destination update.
+        await Promise.all(visiblePanes().map((p) => p.reload()));
+        const verb = copy ? "Copied" : "Moved";
+        let msg = `${verb} ${rep.done}`;
+        if (rep.renamed) msg += ` (${rep.renamed} renamed to avoid overwrite)`;
+        if (rep.skipped) msg += `, ${rep.skipped} already there`;
+        (active || panes[0]).flash(rep.errors.length ? `${msg} · ⚠ ${rep.errors[0]}` : msg, rep.errors.length ? "warn" : "msg");
+        if (previewOpen && !copy) closePreview(); // the previewed item just left this folder
+      }
+
+      async function pickAndTransfer(pane, copy) {
+        if (!dialog) return;
+        const sel = pane.selectedPaths(); if (!sel.length) return;
+        const dest = await dialog.open({ directory: true, multiple: false, defaultPath: pane.cwd, title: copy ? "Copy to…" : "Move to…" });
+        if (typeof dest === "string") performTransfer(sel, dest, copy);
+      }
+
+      const visiblePanes = () => (viewMode === "twin" ? panes.slice() : [panes[0]]);
+
+      // ---- Shared context menu (used by both the list and the big preview) ----
+      // Acts on pane P's current selection. Callers set the selection first.
+      function openContextMenu(P, x, y) {
+        const sel = P.selectedEntries();
+        if (!sel.length) return;
+        ctx.innerHTML = "";
+        const item = (label, fn, opts = {}) => {
+          const it = el("div", "ctx-item" + (opts.danger ? " danger" : ""));
+          it.append(el("span", null, label));
+          if (opts.key) it.append(el("span", "k", opts.key));
+          it.addEventListener("click", (e) => { e.stopPropagation(); hideCtx(); fn(); });
+          ctx.append(it);
+        };
+        if (sel.length === 1) item(sel[0].is_dir ? "Open folder" : "Open", () => P.activate(P.entries.indexOf(sel[0])), { key: "⏎" });
+        item("Reveal in Finder", () => invoke("reveal_in_finder", { path: sel[0].path }));
+        item("Copy path" + (sel.length > 1 ? "s" : ""), () => { navigator.clipboard.writeText(sel.map((e) => e.path).join("\n")); P.flash("Copied path" + (sel.length > 1 ? "s" : "")); });
+        ctx.append(el("div", "ctx-sep"));
+        if (viewMode === "twin") {
+          item("Copy to other pane", () => performTransfer(P.selectedPaths(), other(P).cwd, true), { key: "F5" });
+          item("Move to other pane", () => performTransfer(P.selectedPaths(), other(P).cwd, false), { key: "F6" });
+        }
+        item("Copy to…", () => pickAndTransfer(P, true));
+        item("Move to…", () => pickAndTransfer(P, false));
+        ctx.append(el("div", "ctx-sep"));
+        item(`Move ${sel.length > 1 ? sel.length + " items " : ""}to Bin`, P.trashSelected, { danger: true, key: "⌫" });
+        ctx.classList.add("show");
+        const w = 220, h = ctx.offsetHeight || 240;
+        ctx.style.left = Math.min(x, window.innerWidth - w - 8) + "px";
+        ctx.style.top = Math.min(y, window.innerHeight - h - 8) + "px";
+      }
+
+      // ---- Pane component ----
+      function createPane(key) {
+        const root = el("div", "pane " + key);
+        root.innerHTML = PANE_TEMPLATE;
+        const q = (s) => root.querySelector(s);
+        const els = {
+          path: q(".path"), search: q(".search"), searchwrap: q(".searchwrap"),
+          listing: q(".listing"), status: q(".pstatus"),
+          back: q(".b-back"), fwd: q(".b-fwd"), up: q(".b-up"), home: q(".b-home"), hidden: q(".b-hidden"),
+        };
+
+        const P = {
+          key, root, els,
+          cwd: null, parent: null, entries: [], selected: new Set(),
+          anchor: -1, cursor: -1, mode: "browse", showHidden: false,
+          history: [], hi: -1, msgTimer: null, onChange: null,
+        };
+
+        // -- status --
+        P.renderStatus = (extra) => {
+          els.status.innerHTML = "";
+          const n = P.entries.length;
+          els.status.append(el("span", "count", n.toLocaleString()), el("span", null, ` item${n === 1 ? "" : "s"}`));
+          if (P.selected.size) els.status.append(el("span", null, " · "), el("span", "sel", `${P.selected.size} selected`));
+          els.status.append(el("span", "grow"));
+          if (extra) els.status.append(extra);
+        };
+        P.flash = (text, cls = "msg") => {
+          P.renderStatus(el("span", cls, text));
+          if (P.msgTimer) clearTimeout(P.msgTimer);
+          P.msgTimer = setTimeout(P.renderStatus, 4500);
+        };
+
+        // -- navigation --
+        P.navigate = async (path, { push = true } = {}) => {
+          if (!invoke) { els.status.textContent = "Native backend unavailable."; return; }
+          let listing;
+          try { listing = await invoke("list_dir", { path, showHidden: P.showHidden }); }
+          catch (e) { P.flash("⚠ " + e, "warn"); return; }
+          P.cwd = listing.dir; P.parent = listing.parent; P.entries = listing.entries;
+          P.mode = "browse"; P.selected.clear(); P.anchor = -1; P.cursor = -1;
+          els.path.value = listing.dir; els.search.value = ""; els.searchwrap.classList.remove("active");
+          if (push) { P.history = P.history.slice(0, P.hi + 1); P.history.push(listing.dir); P.hi = P.history.length - 1; }
+          P.renderList(); P.renderStatus(); P.updateNav(); if (P.onChange) P.onChange();
+        };
+        P.reload = () => (P.cwd ? P.navigate(P.cwd, { push: false }) : Promise.resolve());
+        P.updateNav = () => { els.back.disabled = P.hi <= 0; els.fwd.disabled = P.hi >= P.history.length - 1; els.up.disabled = !P.parent; };
+        P.goUp = () => P.parent && P.navigate(P.parent);
+        P.goBack = () => { if (P.hi > 0) { P.hi--; P.navigate(P.history[P.hi], { push: false }); } };
+        P.goFwd = () => { if (P.hi < P.history.length - 1) { P.hi++; P.navigate(P.history[P.hi], { push: false }); } };
+
+        els.back.addEventListener("click", P.goBack);
+        els.fwd.addEventListener("click", P.goFwd);
+        els.up.addEventListener("click", P.goUp);
+        els.home.addEventListener("click", async () => P.navigate(await invoke("home_dir")));
+        els.path.addEventListener("keydown", (e) => { if (e.key === "Enter") P.navigate(els.path.value.trim()); });
+        els.hidden.addEventListener("click", () => { P.showHidden = !P.showHidden; els.hidden.classList.toggle("on", P.showHidden); if (P.mode === "browse") P.reload(); });
+
+        // -- search (within this pane's folder) --
+        P.runSearch = async () => {
+          const query = els.search.value.trim();
+          if (!query) { P.reload(); return; }
+          if (!P.cwd) return;
+          els.searchwrap.classList.add("active");
+          P.renderStatus(el("span", "spinner"));
+          let res;
+          try { res = await invoke("search", { req: { root: P.cwd, query, case_insensitive: true, include_dirs: true, include_hidden: P.showHidden } }); }
+          catch (e) { P.flash("⚠ " + e, "warn"); return; }
+          P.entries = res.hits; P.mode = "search"; P.selected.clear(); P.anchor = -1; P.cursor = -1;
+          P.renderList();
+          P.renderStatus(el("span", "msg", `${res.hits.length.toLocaleString()} found · ${res.elapsed_ms} ms${res.truncated ? " · capped" : ""}`));
+          if (P.onChange) P.onChange();
+        };
+        els.search.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") P.runSearch();
+          if (e.key === "Escape") { els.search.value = ""; P.reload(); }
+        });
+
+        // -- selection --
+        P.selectedEntries = () => P.entries.filter((e) => P.selected.has(e.path));
+        P.selectedPaths = () => P.selectedEntries().map((e) => e.path);
+        P.reflect = () => {
+          [...els.listing.querySelectorAll(".row")].forEach((r) => r.classList.toggle("sel", P.selected.has(P.entries[+r.dataset.i].path)));
+          P.renderStatus(); if (P.onChange) P.onChange();
+        };
+        P.selectSingle = (i) => { P.selected = new Set([P.entries[i].path]); P.anchor = i; P.cursor = i; P.reflect(); };
+        P.toggleOne = (i) => { const p = P.entries[i].path; P.selected.has(p) ? P.selected.delete(p) : P.selected.add(p); P.anchor = i; P.cursor = i; P.reflect(); };
+        P.selectRange = (a, b) => { const [lo, hi] = a < b ? [a, b] : [b, a]; P.selected = new Set(); for (let i = lo; i <= hi; i++) P.selected.add(P.entries[i].path); P.cursor = b; P.reflect(); };
+        P.selectAll = () => { P.selected = new Set(P.entries.map((x) => x.path)); P.reflect(); };
+        P.clearSel = () => { P.selected.clear(); P.reflect(); };
+        P.moveCursor = (dir, extend) => {
+          if (!P.entries.length) return;
+          let i = P.cursor;
+          i = dir > 0 ? Math.min(P.entries.length - 1, i + 1) : Math.max(0, i < 0 ? 0 : i - 1);
+          if (extend && P.anchor >= 0) P.selectRange(P.anchor, i); else P.selectSingle(i);
+          const row = els.listing.querySelector(`.row[data-i="${i}"]`); if (row) row.scrollIntoView({ block: "nearest" });
+        };
+        P.activate = (i) => { const e = P.entries[i]; if (e.is_dir) P.navigate(e.path); else invoke("open_path", { path: e.path }); };
+        P.enterOrOpen = () => {
+          const sel = P.selectedEntries();
+          if (sel.length === 1) P.activate(P.entries.indexOf(sel[0]));
+          else sel.filter((x) => !x.is_dir).forEach((x) => invoke("open_path", { path: x.path }));
+        };
+
+        // -- trash --
+        P.trashSelected = async () => {
+          const sel = P.selectedPaths(); if (!sel.length) return;
+          try { const n = await invoke("move_to_trash", { paths: sel }); await P.reload(); P.flash(`Moved ${n} to Bin ↩`); if (previewOpen) closePreview(); }
+          catch (e) { P.flash("⚠ " + e, "warn"); }
+        };
+
+        // -- render --
+        P.renderList = () => {
+          els.listing.classList.toggle("searching", P.mode === "search");
+          els.listing.innerHTML = "";
+          if (!P.entries.length) {
+            const e = el("div", "empty-state");
+            e.append(el("span", "big", P.mode === "search" ? "∅" : "📂"));
+            e.append(el("span", "msg", P.mode === "search" ? "Nothing matched here." : "This folder is empty."));
+            els.listing.append(e);
+            return;
+          }
+          const head = el("div", "head");
+          if (P.mode === "search") head.append(el("span", null, "Name"), el("span", null, "Folder"), el("span", "c-size", "Size"), el("span", "c-date", "Modified"));
+          else head.append(el("span", null, "Name"), el("span", "c-size", "Size"), el("span", "c-date", "Modified"));
+          els.listing.append(head);
+
+          const frag = document.createDocumentFragment();
+          P.entries.forEach((h, i) => {
+            const row = el("div", "row"); row.dataset.i = i; row.setAttribute("draggable", "true");
+            if (P.selected.has(h.path)) row.classList.add("sel");
+            const name = el("div", "c-name" + (h.is_dir ? " dir" : ""));
+            name.append(el("span", "ic", h.is_dir ? "📁" : isVideo(h.name) ? "🎬" : isImage(h.name) ? "🖼" : "📄"));
+            name.append(el("span", null, h.name));
+            if (h.is_symlink) name.append(el("span", "link", "↳"));
+            name.title = h.name;
+            row.append(name);
+            if (P.mode === "search") { const f = el("div", "c-folder", h.parent); f.title = h.parent; row.append(f); }
+            row.append(el("div", "c-size", fmtSize(h.size, h.is_dir)));
+            row.append(el("div", "c-date", fmtDate(h.modified)));
+            frag.append(row);
+          });
+          els.listing.append(frag);
+        };
+
+        // -- pointer + activation --
+        root.addEventListener("mousedown", () => setActive(P), true);
+        els.listing.addEventListener("click", (ev) => {
+          const row = ev.target.closest(".row"); if (!row) return;
+          const i = +row.dataset.i;
+          if (ev.metaKey || ev.ctrlKey) P.toggleOne(i);
+          else if (ev.shiftKey && P.anchor >= 0) P.selectRange(P.anchor, i);
+          else P.selectSingle(i);
+        });
+        els.listing.addEventListener("dblclick", (ev) => { const row = ev.target.closest(".row"); if (row) P.activate(+row.dataset.i); });
+
+        // -- drag & drop --
+        els.listing.addEventListener("dragstart", (ev) => {
+          const row = ev.target.closest(".row"); if (!row) return;
+          const i = +row.dataset.i;
+          if (!P.selected.has(P.entries[i].path)) P.selectSingle(i);
+          setActive(P);
+          dragData = { paths: P.selectedPaths(), source: P };
+          ev.dataTransfer.effectAllowed = "copyMove";
+          ev.dataTransfer.setData("text/plain", dragData.paths.join("\n"));
+        });
+        const clearDropCue = () => { els.listing.classList.remove("drop-target"); els.listing.querySelectorAll(".row.drop-into").forEach((r) => r.classList.remove("drop-into")); };
+        els.listing.addEventListener("dragover", (ev) => {
+          if (!dragData) return;
+          ev.preventDefault();
+          const copy = ev.altKey || ev.ctrlKey;
+          ev.dataTransfer.dropEffect = copy ? "copy" : "move";
+          const row = ev.target.closest(".row");
+          const overFolder = row && P.entries[+row.dataset.i].is_dir && !dragData.paths.includes(P.entries[+row.dataset.i].path);
+          clearDropCue();
+          if (overFolder) row.classList.add("drop-into"); else els.listing.classList.add("drop-target");
+        });
+        els.listing.addEventListener("dragleave", (ev) => { if (!els.listing.contains(ev.relatedTarget)) clearDropCue(); });
+        els.listing.addEventListener("drop", (ev) => {
+          if (!dragData) return;
+          ev.preventDefault();
+          const copy = ev.altKey || ev.ctrlKey;
+          const row = ev.target.closest(".row");
+          let dest = P.cwd;
+          if (row) { const e = P.entries[+row.dataset.i]; if (e.is_dir && !dragData.paths.includes(e.path)) dest = e.path; }
+          const paths = dragData.paths;
+          clearDropCue(); dragData = null;
+          if (dest) performTransfer(paths, dest, copy);
+        });
+        els.listing.addEventListener("dragend", clearDropCue);
+
+        // -- context menu --
+        els.listing.addEventListener("contextmenu", (ev) => {
+          ev.preventDefault();
+          setActive(P);
+          const row = ev.target.closest(".row");
+          if (row) { const i = +row.dataset.i; if (!P.selected.has(P.entries[i].path)) P.selectSingle(i); }
+          openContextMenu(P, ev.clientX, ev.clientY);
+        });
+
+        return P;
+      }
+
+      // ---- Build panes ----
+      const panes = [createPane("a"), createPane("b")];
+      panes.forEach((p) => panesEl.append(p.root));
+
+      // ---- View toggle ----
+      function setView(mode) {
+        viewMode = mode;
+        panesEl.classList.toggle("twin", mode === "twin");
+        panesEl.classList.toggle("single", mode === "single");
+        document.getElementById("viewToggle").classList.toggle("on", mode === "twin");
+        document.getElementById("viewToggle").textContent = mode === "twin" ? "▤" : "◫";
+        if (mode === "twin" && !panes[1].cwd) panes[1].navigate(panes[0].cwd || "/", { push: true });
+        if (mode === "single") setActive(panes[0]);
+        placeDock(); // re-dock the preview (right in single, below-left in twin)
+      }
+      document.getElementById("viewToggle").addEventListener("click", () => setView(viewMode === "single" ? "twin" : "single"));
+
+      // ---- Quick-Look preview (Space) ----
+      const preview = document.getElementById("preview");
+      const pvImg = document.getElementById("pvImg");
+      const pvName = document.getElementById("pvName");
+      const pvDim = document.getElementById("pvDim");
+      let previewOpen = false;
+
+      function previewTarget(P) {
+        let e = P.cursor >= 0 ? P.entries[P.cursor] : null;
+        if (!(e && !e.is_dir && isPreviewable(e.name))) e = P.selectedEntries().find((x) => !x.is_dir && isPreviewable(x.name)) || null;
+        return e;
+      }
+      // Step selection to the next/prev image (skipping folders & non-images).
+      function previewStep(P, dir) {
+        for (let i = P.cursor + dir; i >= 0 && i < P.entries.length; i += dir) {
+          const e = P.entries[i];
+          if (!e.is_dir && isPreviewable(e.name)) {
+            P.selectSingle(i);
+            const row = P.els.listing.querySelector(`.row[data-i="${i}"]`); if (row) row.scrollIntoView({ block: "nearest" });
+            return true;
+          }
+        }
+        return false;
+      }
+      async function showPreviewFor(P) {
+        const e = previewTarget(P);
+        if (!e) return false;
+        P.selectSingle(P.entries.indexOf(e)); // keep the pane selection == what's shown, so ops act on it
+        pvName.textContent = e.name; pvDim.textContent = "…";
+        preview.classList.add("show"); previewOpen = true;
+        const t = await getPreview(e.path, e.name, 1600);
+        if (t && t.data) { pvImg.src = t.data; pvDim.textContent = dimText(t, e.size); }
+        else { pvImg.removeAttribute("src"); pvDim.textContent = "can't preview"; }
+        return true;
+      }
+      function closePreview() { preview.classList.remove("show"); previewOpen = false; pvImg.removeAttribute("src"); }
+      // Left-click the backdrop closes; clicks on the image/caption don't.
+      preview.addEventListener("click", (ev) => { if (ev.target === preview) closePreview(); });
+      // Right-click anywhere in the big view opens the normal menu for the shown image.
+      preview.addEventListener("contextmenu", (ev) => {
+        ev.preventDefault();
+        const P = active; if (!P) return;
+        const e = previewTarget(P); if (e) P.selectSingle(P.entries.indexOf(e));
+        openContextMenu(P, ev.clientX, ev.clientY);
+      });
+
+      // ---- Docked half-view preview (pane A) ----
+      const dock = document.getElementById("dock");
+      const dockImg = document.getElementById("dockImg");
+      const dockEmpty = document.getElementById("dockEmpty");
+      const dockName = document.getElementById("dockName");
+      const dockDim = document.getElementById("dockDim");
+      let dockPreview = false;
+
+      function placeDock() {
+        document.getElementById("dockToggle").classList.toggle("on", dockPreview);
+        if (!dockPreview) { dock.style.display = "none"; if (dock.parentNode) dock.remove(); return; }
+        dock.style.display = "flex";
+        if (viewMode === "single") { dock.className = "dock side"; panesEl.append(dock); }
+        else { dock.className = "dock bottom"; panes[0].root.insertBefore(dock, panes[0].els.status); }
+        refreshDock();
+      }
+      async function refreshDock() {
+        if (!dockPreview) return;
+        const e = previewTarget(panes[0]);
+        if (!e) { dockImg.style.display = "none"; dockEmpty.style.display = "block"; dockName.textContent = ""; dockDim.textContent = ""; return; }
+        dockEmpty.style.display = "none"; dockName.textContent = e.name; dockDim.textContent = "…";
+        const t = await getPreview(e.path, e.name, 1200);
+        if (t && t.data) { dockImg.src = t.data; dockImg.style.display = "block"; dockDim.textContent = dimText(t, e.size); }
+        else { dockImg.style.display = "none"; dockDim.textContent = "can't preview"; }
+      }
+      document.getElementById("dockToggle").addEventListener("click", () => { dockPreview = !dockPreview; placeDock(); });
+      dockImg.addEventListener("click", () => showPreviewFor(panes[0]));
+      panes[0].onChange = refreshDock; // the docked preview always tracks the left pane
+
+      // ---- Global keyboard (routes to the active pane) ----
+      window.addEventListener("keydown", (e) => {
+        if (/^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)) return;
+        const P = active; if (!P) return;
+
+        if (previewOpen) {
+          if (e.key === " " || e.key === "Escape") { e.preventDefault(); closePreview(); return; }
+          if (e.key === "ArrowDown") { e.preventDefault(); if (previewStep(P, 1)) showPreviewFor(P); return; }
+          if (e.key === "ArrowUp") { e.preventDefault(); if (previewStep(P, -1)) showPreviewFor(P); return; }
+          if (e.key === "F5") { e.preventDefault(); if (viewMode === "twin" && P.selected.size) performTransfer(P.selectedPaths(), other(P).cwd, true); return; }
+          if (e.key === "F6") { e.preventDefault(); if (viewMode === "twin" && P.selected.size) performTransfer(P.selectedPaths(), other(P).cwd, false); return; }
+          if (e.key === "Backspace" || e.key === "Delete") { e.preventDefault(); if (P.selected.size) P.trashSelected(); return; }
+          e.preventDefault(); return;
+        }
+        if (e.key === " ") { e.preventDefault(); showPreviewFor(P); return; }
+
+        const mod = e.metaKey || e.ctrlKey;
+
+        if (mod && e.key === "\\") { e.preventDefault(); setView(viewMode === "single" ? "twin" : "single"); return; }
+        if (mod && e.key.toLowerCase() === "p") { e.preventDefault(); dockPreview = !dockPreview; placeDock(); return; }
+        if (mod && e.key.toLowerCase() === "a") { e.preventDefault(); P.selectAll(); return; }
+        if (mod && e.key === "ArrowUp") { e.preventDefault(); P.goUp(); return; }
+        if (mod && e.key === "[") { e.preventDefault(); P.goBack(); return; }
+        if (mod && e.key === "]") { e.preventDefault(); P.goFwd(); return; }
+        if (e.key === "Escape") { P.clearSel(); hideCtx(); return; }
+        if (e.key === "F5") { e.preventDefault(); if (viewMode === "twin" && P.selected.size) performTransfer(P.selectedPaths(), other(P).cwd, true); return; }
+        if (e.key === "F6") { e.preventDefault(); if (viewMode === "twin" && P.selected.size) performTransfer(P.selectedPaths(), other(P).cwd, false); return; }
+        if (e.key === "Backspace" || e.key === "Delete") { e.preventDefault(); if (P.selected.size) P.trashSelected(); return; }
+        if (e.key === "Enter") { e.preventDefault(); P.enterOrOpen(); return; }
+        if (e.key === "ArrowDown") { e.preventDefault(); P.moveCursor(1, e.shiftKey); return; }
+        if (e.key === "ArrowUp") { e.preventDefault(); P.moveCursor(-1, e.shiftKey); return; }
+      });
+
+      // ---- Boot ----
+      (async () => {
+        setActive(panes[0]);
+        if (!invoke) { panes[0].els.status.textContent = "Open Fathom through the app, not a browser."; return; }
+        try { panes[0].navigate(await invoke("home_dir")); }
+        catch (e) { panes[0].flash("⚠ " + e, "warn"); }
+      })();
+    </script>
+  </body>
+</html>
