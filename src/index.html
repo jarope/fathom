@@ -111,7 +111,11 @@
       .pathwrap .tag { font-size: 9.5px; letter-spacing: 0.16em; color: var(--field-label); font-weight: 600; flex: none; }
       .path { flex: 1; min-width: 0; border: none; background: transparent; outline: none; font-family: "IBM Plex Mono", monospace; font-size: 12.5px; color: var(--field-ink); caret-color: var(--accent); -webkit-user-select: text; user-select: text; }
 
-      .searchwrap { display: flex; align-items: center; gap: 6px; width: 150px; flex: none; background: var(--field-bg); border-radius: 9px; padding: 0 9px; box-shadow: var(--field-shadow); border: 1px solid var(--field-edge); height: 30px; }
+      .searchwrap { display: flex; align-items: center; gap: 6px; flex: 1 1 0; min-width: 0; background: var(--field-bg); border-radius: 9px; padding: 0 9px; box-shadow: var(--field-shadow); border: 1px solid var(--field-edge); height: 30px; }
+      /* Path/search share the toolbar's flexible space: 50/50 in single, 60/40 in twin. */
+      .pathwrap { flex: 1 1 0; }
+      .panes.twin .pathwrap { flex: 3 1 0; }
+      .panes.twin .searchwrap { flex: 2 1 0; }
       .searchwrap.active { border-color: var(--accent); }
       .searchwrap .ic { color: var(--ink-3); font-size: 12px; flex: none; }
       .search { flex: 1; min-width: 0; border: none; background: transparent; outline: none; font-family: "IBM Plex Mono", monospace; font-size: 12.5px; color: var(--field-ink); caret-color: var(--accent); -webkit-user-select: text; user-select: text; }
@@ -122,6 +126,11 @@
       .head, .row { display: grid; gap: 12px; align-items: center; padding: 7px 13px; grid-template-columns: minmax(150px, 1.7fr) 84px 132px; }
       .searching .head, .searching .row { grid-template-columns: minmax(140px, 1.3fr) minmax(150px, 1.6fr) 80px 116px; }
       .head { position: sticky; top: 0; z-index: 2; background: linear-gradient(158deg, var(--surf-1), var(--surf-2)); border-bottom: 1px solid var(--hair); font-weight: 600; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); }
+      .head .hcell { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; user-select: none; -webkit-user-select: none; }
+      .head .hcell:hover { color: var(--ink-2); }
+      .head .hcell.active { color: var(--accent-2); }
+      .head .hcell.c-size, .head .hcell.c-date { justify-content: flex-end; }
+      .head .hcell .arrow { font-size: 8px; }
       .row { border-bottom: 1px solid var(--hair); cursor: default; }
       .row:hover { background: var(--row-hover); }
       .row.sel { background: var(--row-sel); }
@@ -382,6 +391,7 @@
           cwd: null, parent: null, entries: [], selected: new Set(),
           anchor: -1, cursor: -1, mode: "browse", showHidden: false,
           history: [], hi: -1, msgTimer: null, onChange: null,
+          sortKey: "name", sortDir: 1, // 1 asc, -1 desc; folders always first
         };
 
         // -- status --
@@ -405,7 +415,7 @@
           let listing;
           try { listing = await invoke("list_dir", { path, showHidden: P.showHidden }); }
           catch (e) { P.flash("⚠ " + e, "warn"); return; }
-          P.cwd = listing.dir; P.parent = listing.parent; P.entries = listing.entries;
+          P.cwd = listing.dir; P.parent = listing.parent; P.entries = listing.entries; P.applySort();
           P.mode = "browse"; P.selected.clear(); P.anchor = -1; P.cursor = -1;
           els.path.value = listing.dir; els.search.value = ""; els.searchwrap.classList.remove("active");
           if (push) { P.history = P.history.slice(0, P.hi + 1); P.history.push(listing.dir); P.hi = P.history.length - 1; }
@@ -434,7 +444,7 @@
           let res;
           try { res = await invoke("search", { req: { root: P.cwd, query, case_insensitive: true, include_dirs: true, include_hidden: P.showHidden } }); }
           catch (e) { P.flash("⚠ " + e, "warn"); return; }
-          P.entries = res.hits; P.mode = "search"; P.selected.clear(); P.anchor = -1; P.cursor = -1;
+          P.entries = res.hits; P.applySort(); P.mode = "search"; P.selected.clear(); P.anchor = -1; P.cursor = -1;
           P.renderList();
           P.renderStatus(el("span", "msg", `${res.hits.length.toLocaleString()} found · ${res.elapsed_ms} ms${res.truncated ? " · capped" : ""}`));
           if (P.onChange) P.onChange();
@@ -477,6 +487,27 @@
           catch (e) { P.flash("⚠ " + e, "warn"); }
         };
 
+        // -- sort (folders always first, then by the chosen column) --
+        P.applySort = () => {
+          const k = P.sortKey, d = P.sortDir;
+          P.entries.sort((a, b) => {
+            if (a.is_dir !== b.is_dir) return a.is_dir ? -1 : 1;
+            let r;
+            if (k === "size") r = a.size - b.size;
+            else if (k === "modified") r = (a.modified || 0) - (b.modified || 0);
+            else if (k === "folder") r = a.parent.toLowerCase().localeCompare(b.parent.toLowerCase());
+            else r = a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+            if (r === 0) r = a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+            return r * d;
+          });
+        };
+        P.sortBy = (key) => {
+          if (P.sortKey === key) P.sortDir = -P.sortDir;
+          else { P.sortKey = key; P.sortDir = key === "name" || key === "folder" ? 1 : -1; } // size/date default newest/largest first
+          P.cursor = -1;
+          P.applySort(); P.renderList(); if (P.onChange) P.onChange();
+        };
+
         // -- render --
         P.renderList = () => {
           els.listing.classList.toggle("searching", P.mode === "search");
@@ -489,8 +520,15 @@
             return;
           }
           const head = el("div", "head");
-          if (P.mode === "search") head.append(el("span", null, "Name"), el("span", null, "Folder"), el("span", "c-size", "Size"), el("span", "c-date", "Modified"));
-          else head.append(el("span", null, "Name"), el("span", "c-size", "Size"), el("span", "c-date", "Modified"));
+          const mkHead = (label, key, cls) => {
+            const c = el("span", "hcell" + (cls ? " " + cls : "") + (P.sortKey === key ? " active" : ""));
+            c.append(el("span", null, label));
+            if (P.sortKey === key) c.append(el("span", "arrow", P.sortDir === 1 ? "▲" : "▼"));
+            c.addEventListener("click", () => P.sortBy(key));
+            return c;
+          };
+          if (P.mode === "search") head.append(mkHead("Name", "name"), mkHead("Folder", "folder"), mkHead("Size", "size", "c-size"), mkHead("Modified", "modified", "c-date"));
+          else head.append(mkHead("Name", "name"), mkHead("Size", "size", "c-size"), mkHead("Modified", "modified", "c-date"));
           els.listing.append(head);
 
           const frag = document.createDocumentFragment();

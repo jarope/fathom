@@ -9,7 +9,13 @@ Same stack as **Pattern Studio** (Tauri 2 — Rust backend, single vanilla
 `index.html`, no npm), themed with the light/dark design system from the
 **Fascia** VST.
 
-## What it does today (v0.6.0)
+## What it does today (v0.7.0)
+
+- **Sort** — click any column header (**Name / Folder / Size / Modified**) to
+  sort; click again to reverse. Name sorts A→Z first, size/date largest/newest
+  first; folders always stay on top. The active column shows a ▲/▼ arrow, and
+  the choice sticks as you navigate.
+
 
 - **Previews** — images (`png/jpg/gif/webp/bmp/svg`, marked 🖼) and **video**
   (`mov/mp4/m4v/avi/mkv/webm/…`, marked 🎬) preview inline. SVGs render natively
