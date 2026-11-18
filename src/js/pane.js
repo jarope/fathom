@@ -7,6 +7,7 @@ import { pushUndo, refreshAll, selectEverywhere, trashPaths } from "./ops.js";
 import { openContextMenu, showMenu } from "./menu.js";
 import { setActive, openTab } from "./tabs.js";
 import { registerDropZone, startDrag } from "./dnd.js";
+import { tagDots } from "./tags.js";
 
 const TEMPLATE = `
   <div class="ptoolbar">
@@ -216,6 +217,15 @@ export function createPane(key) {
     P.renderStatus(el("span", "msg", `${res.hits.length.toLocaleString()} found · ${res.elapsed_ms} ms${res.truncated ? " · capped" : ""}`));
     changed();
   };
+  /** Show an arbitrary list of entries (tag / Spotlight results) like search results. */
+  P.showResults = (entries, msg) => {
+    P.base = entries; P.entries = entries.slice(); P.applySort(); P.mode = "search";
+    P.selected.clear(); P.anchor = -1; P.cursor = -1;
+    els.searchwrap.classList.remove("filtering");
+    P.renderList();
+    P.renderStatus(el("span", "msg", msg + " · Esc to go back"));
+    changed();
+  };
   els.search.addEventListener("keydown", (e) => {
     if (e.key === "Enter") P.runSearch();
     if (e.key === "Escape") { els.search.value = ""; P.reload(); els.search.blur(); }
@@ -384,6 +394,7 @@ export function createPane(key) {
         h.name.split(/(?<=[_\-.])/).forEach((part, j) => { if (j) nm.append(document.createElement("wbr")); nm.append(part); });
         t.append(icon("folderFill"), nm);
         if (h.is_symlink) t.append(el("span", "link", "↳"));
+        const td = tagDots(h.tags); if (td) t.append(td);
         s.append(t);
       }
       els.listing.append(s);
@@ -400,6 +411,7 @@ export function createPane(key) {
       name.append(el("span", "ic", h.is_dir ? "📁" : isVideo(h.name) ? "🎬" : isImage(h.name) ? "🖼" : "📄"));
       name.append(el("span", "nm", h.name));
       if (h.is_symlink) name.append(el("span", "link", "↳"));
+      const td = tagDots(h.tags); if (td) name.append(td);
       name.title = h.name;
       row.append(name);
       if (P.mode === "search") { const f = el("div", "c-folder", h.parent); f.title = h.parent; row.append(f); }

@@ -6,44 +6,81 @@ import { undoStack, redoStack, undo, redo, setClip, paste, duplicateSel, transfe
 import { openTab } from "./tabs.js";
 import { addBookmarks } from "./sidebar.js";
 import { toggleHidden } from "./view.js";
+import { menuTagRow, editTagsDialog, clearTags } from "./tags.js";
+import { openWithEntries, share, quickLook } from "./system.js";
 
-let ctx;
+let ctx, sub, subTimer = null;
 
 export function initMenu() {
   ctx = document.getElementById("ctx");
+  sub = el("div", "ctx ctx-sub"); document.body.append(sub);
   document.addEventListener("click", hideCtx);
-  document.addEventListener("scroll", (e) => { if (!ctx.contains(e.target)) hideCtx(); }, true);
+  document.addEventListener("scroll", (e) => { if (!ctx.contains(e.target) && !sub.contains(e.target)) hideCtx(); }, true);
   window.addEventListener("blur", hideCtx);
 }
 
-export const hideCtx = () => ctx && ctx.classList.remove("show");
+export const hideCtx = () => { if (ctx) ctx.classList.remove("show"); if (sub) sub.classList.remove("show"); clearTimeout(subTimer); };
+const hideSub = () => { clearTimeout(subTimer); if (sub) sub.classList.remove("show"); ctx && ctx.querySelectorAll(".ctx-item.open").forEach((n) => n.classList.remove("open")); };
 
-/**
- * entries: array of "sep" | { label, fn, key?, icon?, danger?, on?, disabled? }
- * Falsy entries are skipped; doubled / trailing separators collapse.
- */
-export function showMenu(entries, x, y) {
-  ctx.innerHTML = "";
+/** Fill a menu element. entries: see showMenu. Returns false if nothing to show. */
+function fill(box, entries, nested) {
+  box.innerHTML = "";
   for (const it of entries) {
     if (!it) continue;
     if (it === "sep") {
-      if (ctx.lastChild && !ctx.lastChild.classList.contains("ctx-sep")) ctx.append(el("div", "ctx-sep"));
+      if (box.lastChild && !box.lastChild.classList.contains("ctx-sep")) box.append(el("div", "ctx-sep"));
       continue;
     }
-    const n = el("div", "ctx-item" + (it.danger ? " danger" : "") + (it.on ? " on" : "") + (it.disabled ? " disabled" : ""));
-    if (it.icon) n.append(icon(it.icon));
+    if (it.custom) { const c = it.custom(); if (c) box.append(c); continue; }
+    if (it.heading) { box.append(el("div", "ctx-head", it.heading)); continue; }
+    const n = el("div", "ctx-item" + (it.danger ? " danger" : "") + (it.on ? " on" : "") + (it.disabled ? " disabled" : "") + (it.sub ? " has-sub" : ""));
+    if (it.img !== undefined) { const im = el("img", "ctx-img"); if (it.img) im.src = it.img; n.append(im); }
+    else if (it.icon) n.append(icon(it.icon));
     n.append(el("span", "lbl", it.label));
     if (it.key) n.append(el("span", "k", it.key));
-    if (!it.disabled) n.addEventListener("click", (e) => { e.stopPropagation(); hideCtx(); it.fn(); });
-    ctx.append(n);
+    if (it.sub) n.append(el("span", "k chev", "›"));
+    if (!nested) n.addEventListener("mouseenter", () => {
+      if (n.classList.contains("open")) return;
+      hideSub();
+      if (it.sub && !it.disabled) subTimer = setTimeout(() => openSub(n, it.sub), 120);
+    });
+    if (it.disabled) { /* inert */ }
+    else if (it.sub) n.addEventListener("click", (e) => { e.stopPropagation(); clearTimeout(subTimer); openSub(n, it.sub); });
+    else n.addEventListener("click", (e) => { e.stopPropagation(); hideCtx(); it.fn(); });
+    box.append(n);
   }
-  if (ctx.lastChild && ctx.lastChild.classList.contains("ctx-sep")) ctx.lastChild.remove();
-  if (!ctx.childElementCount) return;
+  if (box.lastChild && box.lastChild.classList.contains("ctx-sep")) box.lastChild.remove();
+  return box.childElementCount > 0;
+}
+
+function place(box, x, y, flipX) {
+  const w = box.offsetWidth || 230, h = box.offsetHeight || 240;
+  if (flipX != null && x + w > window.innerWidth - 8) x = flipX - w;
+  box.style.left = Math.max(8, Math.min(x, window.innerWidth - w - 8)) + "px";
+  box.style.top = Math.max(8, Math.min(y, window.innerHeight - h - 8)) + "px";
+}
+
+async function openSub(item, build) {
+  item.classList.add("open");
+  const entries = typeof build === "function" ? await build() : build;
+  if (!item.classList.contains("open") || !ctx.classList.contains("show")) return;
+  if (!fill(sub, entries, true)) { sub.classList.remove("show"); return; }
+  sub.classList.add("show"); sub.scrollTop = 0;
+  const r = item.getBoundingClientRect();
+  place(sub, r.right + 2, r.top - 5, r.left - 2);
+}
+
+/**
+ * entries: array of "sep" | { heading } | { custom: () => Node } |
+ *   { label, fn, key?, icon?, img?, danger?, on?, disabled?, sub?: entries | () => Promise<entries> }
+ * Falsy entries are skipped; doubled / trailing separators collapse.
+ */
+export function showMenu(entries, x, y) {
+  hideSub();
+  if (!fill(ctx, entries, false)) return;
   ctx.classList.add("show");
   ctx.scrollTop = 0;
-  const w = ctx.offsetWidth || 230, h = ctx.offsetHeight || 240;
-  ctx.style.left = Math.max(8, Math.min(x, window.innerWidth - w - 8)) + "px";
-  ctx.style.top = Math.max(8, Math.min(y, window.innerHeight - h - 8)) + "px";
+  place(ctx, x, y);
 }
 
 /** Right-click menu for pane P. Acts on its current selection; empty selection → folder menu. */
@@ -78,6 +115,8 @@ export function openContextMenu(P, x, y) {
   showMenu([
     one && { label: one.is_dir ? "Open folder" : "Open", fn: () => P.activate(P.entries.indexOf(one)), key: "⏎" },
     one && one.is_dir && { label: "Open in New Tab", fn: () => openTab(one.path), key: "⌘-dbl-click" },
+    { label: "Open With", sub: () => openWithEntries(P, sel.map((e) => e.path)) },
+    { label: "Quick Look", fn: () => quickLook(P), key: "Space" },
     one && { label: "Rename…", fn: () => P.startRename(one.path), key: "F2" },
     !one && { label: `Rename ${sel.length} items…`, fn: () => batchRename(P), key: "F2" },
     { label: "Duplicate", fn: () => duplicateSel(P), key: "⌘D" },
@@ -92,6 +131,11 @@ export function openContextMenu(P, x, y) {
     { label: one ? `Compress “${one.name}”` : `Compress ${sel.length} items`, fn: () => compressSel(P) },
     sel.some(isArchive) && { label: sel.filter(isArchive).length > 1 ? "Extract archives here" : "Extract here", fn: () => extractSel(P) },
     "sep",
+    { custom: () => menuTagRow(P, hideCtx) },
+    { label: "Tags…", fn: () => editTagsDialog(P) },
+    sel.some((e) => e.tags && e.tags.length) && { label: "Remove all tags", fn: () => clearTags(P), key: "⌃⌘0" },
+    "sep",
+    { label: "Share…", fn: () => share(P, sel.map((e) => e.path), x, y) },
     { label: "Reveal in Finder", fn: () => invoke("reveal_in_finder", { path: sel[0].path }) },
     one && one.is_dir && { label: "Open Terminal Here", fn: () => openTerminal(P, one.path) },
     dirs.length && { label: "Add to Places", fn: () => addBookmarks(dirs) },

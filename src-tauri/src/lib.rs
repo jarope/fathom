@@ -15,6 +15,8 @@ use walkdir::{DirEntry, WalkDir};
 mod archive;
 mod bin_ops;
 mod dnd;
+mod system;
+mod tags;
 mod batch;
 mod jobs;
 mod pasteboard;
@@ -40,6 +42,9 @@ struct Entry {
     size: u64,
     /// Last-modified time, seconds since the Unix epoch (None if unavailable).
     modified: Option<u64>,
+    /// Finder tags (omitted when untagged, which is almost always).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    tags: Vec<tags::Tag>,
 }
 
 pub(crate) fn modified_secs(meta: &std::fs::Metadata) -> Option<u64> {
@@ -70,6 +75,7 @@ fn entry_from(
         is_symlink,
         size: follow_meta.filter(|m| m.is_file()).map(|m| m.len()).unwrap_or(0),
         modified: follow_meta.and_then(modified_secs),
+        tags: tags::read_tags(path, is_symlink),
     }
 }
 
@@ -131,6 +137,20 @@ fn list_dir(path: String, show_hidden: bool) -> Result<Listing, String> {
         parent: dir.parent().map(|p| p.to_string_lossy().into_owned()),
         entries,
     })
+}
+
+/// Entries for a list of paths (tag / Spotlight results), skipping vanished ones.
+#[tauri::command]
+fn entries_for(paths: Vec<String>, show_hidden: bool) -> Vec<Entry> {
+    paths
+        .iter()
+        .map(std::path::Path::new)
+        .filter(|p| show_hidden || !p.file_name().map(|n| n.to_string_lossy().starts_with('.')).unwrap_or(false))
+        .filter_map(|p| {
+            let link = p.symlink_metadata().ok()?.file_type().is_symlink();
+            Some(entry_from(p, p.metadata().ok().as_ref(), link))
+        })
+        .collect()
 }
 
 /// The user's home directory — Fathom's starting location.
@@ -857,6 +877,16 @@ pub fn run() {
             dnd::start_drag,
             dnd::drop_action,
             dnd::classify_paths,
+            tags::set_tags,
+            tags::tag_list,
+            tags::tag_search,
+            entries_for,
+            system::open_with_apps,
+            system::open_with,
+            system::file_icon,
+            system::share,
+            system::quick_look,
+            system::quick_look_close,
             jobs::plan_transfer,
             jobs::start_transfer,
             jobs::start_duplicate,

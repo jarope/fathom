@@ -6,6 +6,8 @@ import { openTab, closeTab, cycleTab, gotoTab, setView } from "./tabs.js";
 import { showPreviewFor, closePreview, previewStep, toggleDock } from "./preview.js";
 import { hideCtx } from "./menu.js";
 import { toggleHidden, toggleSidebar, toggleShelf, setZoom, zoomStep } from "./view.js";
+import { quickLook, closeQuickLook } from "./system.js";
+import { toggleNth, clearTags } from "./tags.js";
 
 export function initKeys() {
   // Zoom works everywhere (even while typing), like any Mac app.
@@ -29,11 +31,15 @@ export function initKeys() {
       if (e.key === "Backspace" || e.key === "Delete") { e.preventDefault(); if (P.selected.size) P.trashSelected(); return; }
       e.preventDefault(); return;
     }
-    if (e.key === " ") { e.preventDefault(); showPreviewFor(P); return; }
+    if (e.key === " ") { e.preventDefault(); quickLook(P); return; }
+    if (e.key === "Escape" && app.qlOpen) { e.preventDefault(); closeQuickLook(); return; }
 
     const mod = e.metaKey || e.ctrlKey;
     const code = e.code; // layout-independent (⌥ changes e.key on macOS)
     const k = (fn) => { e.preventDefault(); fn(); };
+
+    // Tags: ⌃⌘1–7 toggle the favourite tags, ⌃⌘0 clears.
+    if (e.metaKey && e.ctrlKey && /^Digit[0-9]$/.test(code)) return k(() => (code === "Digit0" ? clearTags(P) : toggleNth(P, +code.slice(5))));
 
     // Tabs
     if (mod && !e.shiftKey && code === "KeyT") return k(() => openTab(P.cwd));
@@ -75,7 +81,7 @@ export function initKeys() {
     if (mod && !e.shiftKey && code === "BracketLeft") return k(P.goBack);
     if (mod && !e.shiftKey && code === "BracketRight") return k(P.goFwd);
 
-    if (e.key === "Escape") { P.clearSel(); hideCtx(); return; }
+    if (e.key === "Escape") { hideCtx(); if (P.selected.size || P.mode !== "search") P.clearSel(); else P.reload(); return; }
     if (e.key === "F5") return k(() => transferToOther(P, true));
     if (e.key === "F6") return k(() => transferToOther(P, false));
     if (e.key === "Backspace" || e.key === "Delete") return k(() => P.selected.size && P.trashSelected());

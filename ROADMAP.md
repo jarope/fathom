@@ -36,7 +36,7 @@ Status key: ✅ done · 🟡 partial · ⬜ not started
 | **Service menus / actions** | Extensible right-click actions | ⬜ (later: user scripts → menu) |
 | **Archives** | Compress / extract via Ark | ✅ compress (zip) / extract (zip, tar, 7z, rar…) |
 | **Trash view** | Browse + restore | ⬜ (needs "Put Back") |
-| **Tags / ratings** | Baloo | ⬜ macOS Finder tags (xattr) — a strong fit |
+| **Tags / ratings** | Baloo | ✅ Finder tags: dots, menu, ⌃⌘1–7, sidebar, drop-to-tag |
 | **Content search** | Baloo | ⬜ Spotlight (`mdfind`) |
 | **Remote locations** | sftp, smb, etc. via KIO | ⬜ mounted volumes only for now |
 | **Git status overlays** | Plugin | ⬜ |
@@ -44,7 +44,7 @@ Status key: ✅ done · 🟡 partial · ⬜ not started
 | **Session restore** | Tabs/paths reopened | ✅ tabs, folders, layout, sort, window size |
 | **Customisable shortcuts** | Any action (26.04) | ⬜ |
 | **Folder shelf** (Fathom original) | — | ✅ sub-folders as one scrolling row of tiles above the files |
-| **Native file icons / thumbnails** | | 🟡 emoji + Quick Look thumbs |
+| **Native file icons / thumbnails** | | 🟡 emoji + Quick Look thumbs (real icons in Open With) |
 | **Drag to/from other apps** | | ✅ native drag sessions both ways |
 
 ## Phases
@@ -81,7 +81,7 @@ too). Symlinks go to the Bin via NSFileManager — Finder can't bin them by path
 ### Phase 4 — Mac-native power (next)
 Shipped in four steps:
 
-**v0.14 — Tags & system integration**
+**v0.14 — Tags & system integration** ✅
 - **Finder tags**: coloured dots on rows (read from Finder's own tag data, so
   tags set in either app show in both); tag/untag from the right-click colour
   row and ⌃⌘1–7 (⌃⌘0 clears); written through NSURL so Spotlight stays right.

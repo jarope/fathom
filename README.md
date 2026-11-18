@@ -9,7 +9,7 @@ Same stack as **Pattern Studio** (Tauri 2 — Rust backend, vanilla HTML/CSS and
 native ES modules in `src/js/`, no npm, no bundler), themed with the light/dark design system from the
 **Fascia** VST.
 
-## What it does today (v0.13.0)
+## What it does today (v0.14.0)
 
 - **Progress & cancel** — copies, moves, duplicates and archive jobs run in the
   background; anything that takes more than a moment gets a card (bottom-right)
@@ -70,6 +70,18 @@ native ES modules in `src/js/`, no npm, no bundler), themed with the light/dark 
   redoes (last 50). Undoing a copy/new item sends it to the Bin, and Redo
   brings it back out. Items binned by Fathom also get Finder's own "Put Back".
 
+- **Finder tags** — tag dots on rows and folder tiles, the same tags Finder
+  uses (set in either app, seen in both). Right-click → colour row or
+  **Tags…**; **⌃⌘1–7** toggle your favourite tags, **⌃⌘0** clears. The sidebar
+  lists your tags: click one to see everything with it (Spotlight), drop files
+  on it to tag them.
+
+- **Open With ▸ / Share… / Quick Look** — right-click → Open With lists the
+  apps that can open the selection (default first, with their icons, plus
+  Other…); Share… opens the macOS share menu (AirDrop, Messages, Mail…).
+  **Space** opens real **Quick Look** — PDFs, video, Office, code… — and ↑ ↓
+  keep moving the selection while it's open.
+
 - **Drag & drop with other apps** — drag files out of Fathom into Finder,
   the Desktop, Mail, Slack…, and drag files in from anywhere. Copy or move
   follows Finder's rules: **same disk = move, another disk = copy, hold ⌥ to
@@ -96,9 +108,8 @@ native ES modules in `src/js/`, no npm, no bundler), themed with the light/dark 
   - **Docked panel** (🖼 in the header, or ⌘P) — a half-view preview that tracks
     the left pane's selection: **right, 50% width** in single mode; **below the
     left pane, 50% height** in twin mode. Toggle on/off; click it to go full.
-  - **Space** — Quick-Look-style **full preview** with dimensions + size; **↑ ↓**
-    step through images; right-click / F5 / F6 / ⌫ act on the shown image;
-    **Space/Esc** closes. After a move or trash it closes; after a copy it stays.
+  - **Space** — real macOS **Quick Look** (see above); ↑ ↓ move through the
+    list while it's open, Space/Esc closes.
 
 
 - **Browse** — opens where you left off; double-click a folder to enter, with
@@ -126,7 +137,6 @@ native ES modules in `src/js/`, no npm, no bundler), themed with the light/dark 
 
 | Key | Action |
 | --- | --- |
-| Space | Full preview of selected image (↑↓ to browse, Space/Esc to close) |
 | ⌘P | Toggle the docked preview panel |
 | ⏎ | Open selection (enter folder / open file) |
 | ⌫ or Delete | Move selection to Bin |
@@ -152,6 +162,8 @@ native ES modules in `src/js/`, no npm, no bundler), themed with the light/dark 
 | ⌃⌘S / F9 | Toggle Places sidebar |
 | ⇧⌘F | Toggle the folder shelf |
 | ⌘+ / ⌘− / ⌘0 | Zoom in / out / actual size |
+| Space | Quick Look |
+| ⌃⌘1…7 / ⌃⌘0 | Toggle favourite tag / clear tags |
 | ← / → | Step through the folder shelf |
 | ⇧⌘H | Home |
 | ⌘R | Refresh |

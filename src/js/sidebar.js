@@ -8,6 +8,7 @@ import { showMenu } from "./menu.js";
 import { openTab, other } from "./tabs.js";
 import { openTerminal } from "./ops.js";
 import { registerDropZone } from "./dnd.js";
+import { favourites, showTagged, tagPaths } from "./tags.js";
 
 let places = null;
 let bookmarks = store.get("fathom-places", []); // [{ name, path }]
@@ -67,6 +68,15 @@ export function renderSidebar() {
     sec("Locations");
     places.volumes.forEach((v) => item(v.name, v.path, "drive", { volume: v }));
   }
+  if (favourites.length) {
+    sec("Tags");
+    favourites.forEach((t) => {
+      const n = el("div", "place tagplace");
+      n.dataset.tag = t.name; n.title = `Everything tagged “${t.name}” · drop files here to tag them`;
+      n.append(el("i", `tg tc${t.color || 0}`), el("span", "pname", t.name));
+      sb.append(n);
+    });
+  }
   markActive();
 }
 
@@ -95,14 +105,15 @@ export function initSidebar() {
 
   sb.addEventListener("click", (ev) => {
     const n = placeOf(ev); if (!n) return;
+    if (n.dataset.tag) { if (app.active) showTagged(app.active, n.dataset.tag); return; }
     if (ev.target.closest(".eject")) { eject(n.dataset.path, n.querySelector(".pname").textContent); return; }
     if (ev.metaKey) openTab(n.dataset.path);
     else if (app.active) app.active.navigate(n.dataset.path);
   });
-  sb.addEventListener("auxclick", (ev) => { const n = placeOf(ev); if (n && ev.button === 1) openTab(n.dataset.path); });
+  sb.addEventListener("auxclick", (ev) => { const n = placeOf(ev); if (n && n.dataset.path && ev.button === 1) openTab(n.dataset.path); });
   sb.addEventListener("contextmenu", (ev) => {
     ev.preventDefault();
-    const n = placeOf(ev); if (!n) return;
+    const n = placeOf(ev); if (!n || n.dataset.tag) return;
     const path = n.dataset.path, kind = n.dataset.kind, name = n.querySelector(".pname").textContent;
     const P = app.active;
     const i = bookmarks.findIndex((b) => b.path === path);
@@ -126,6 +137,7 @@ export function initSidebar() {
     root: sb,
     over: (n, data) => {
       const pl = n.closest(".place");
+      if (pl && pl.dataset.tag) return { el: pl, act: (d) => app.active && tagPaths(app.active, d.paths, pl.dataset.tag) };
       if (pl) return { el: pl, dest: pl.dataset.path };
       if (data.dirs === null || data.dirs.length) return { el: sb, cls: "drop-target", act: (d) => d.dirs && d.dirs.length && addBookmarks(d.dirs) };
       return null;
