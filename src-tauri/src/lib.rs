@@ -15,6 +15,8 @@ use walkdir::{DirEntry, WalkDir};
 mod archive;
 mod bin_ops;
 mod dnd;
+mod query;
+mod spotlight;
 mod system;
 mod tags;
 mod batch;
@@ -28,8 +30,8 @@ use jobs::OpReport;
 // ---------------------------------------------------------------------------
 
 /// One filesystem entry, with the directory and file name split for display.
-#[derive(Serialize)]
-struct Entry {
+#[derive(Serialize, Clone)]
+pub(crate) struct Entry {
     /// Full absolute path.
     path: String,
     /// File (or directory) name.
@@ -55,7 +57,7 @@ pub(crate) fn modified_secs(meta: &std::fs::Metadata) -> Option<u64> {
 }
 
 /// Build an `Entry` from a path plus its (already-fetched) metadata.
-fn entry_from(
+pub(crate) fn entry_from(
     path: &std::path::Path,
     follow_meta: Option<&std::fs::Metadata>,
     is_symlink: bool,
@@ -205,7 +207,10 @@ fn run_search(req: &SearchReq) -> Result<SearchResult, String> {
         return Err(format!("Not a folder: {}", req.root));
     }
 
-    let raw = req.query.trim();
+    // Words match names; filters (kind:, size:, modified:, tag:) narrow further.
+    let parsed = query::parse(&req.query);
+    let words = parsed.words.join(" ");
+    let raw = words.trim();
     let has_meta = raw.chars().any(|c| matches!(c, '*' | '?' | '[' | ']'));
     let pattern = if raw.is_empty() {
         "*".to_string()
@@ -265,7 +270,11 @@ fn run_search(req: &SearchReq) -> Result<SearchResult, String> {
 
         let follow = entry.metadata().ok();
         let is_symlink = entry.path_is_symlink();
-        hits.push(entry_from(path, follow.as_ref(), is_symlink));
+        let e = entry_from(path, follow.as_ref(), is_symlink);
+        if parsed.has_filters() && !query::passes(&parsed, path, e.is_dir, e.size, e.modified, &e.tags) {
+            continue;
+        }
+        hits.push(e);
 
         if hits.len() >= cap {
             truncated = true;
@@ -862,6 +871,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .manage(std::sync::Arc::new(jobs::Jobs::default()))
+        .manage(std::sync::Arc::new(spotlight::Spotlight::default()))
         .manage(WatchState {
             watcher: std::sync::Mutex::new(None),
             dirs: Default::default(),
@@ -881,6 +891,8 @@ pub fn run() {
             tags::tag_list,
             tags::tag_search,
             entries_for,
+            spotlight::spotlight_search,
+            spotlight::spotlight_cancel,
             system::open_with_apps,
             system::open_with,
             system::file_icon,

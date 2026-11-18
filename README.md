@@ -9,7 +9,7 @@ Same stack as **Pattern Studio** (Tauri 2 — Rust backend, vanilla HTML/CSS and
 native ES modules in `src/js/`, no npm, no bundler), themed with the light/dark design system from the
 **Fascia** VST.
 
-## What it does today (v0.14.0)
+## What it does today (v0.15.0)
 
 - **Progress & cancel** — copies, moves, duplicates and archive jobs run in the
   background; anything that takes more than a moment gets a card (bottom-right)
@@ -69,6 +69,14 @@ native ES modules in `src/js/`, no npm, no bundler), themed with the light/dark 
   items and **Move to Bin** (it puts the items back where they were); **⇧⌘Z**
   redoes (last 50). Undoing a copy/new item sends it to the Bin, and Redo
   brings it back out. Items binned by Fathom also get Finder's own "Put Back".
+
+- **Search** — type to filter the folder; **⏎** searches. The **🔍** button
+  picks what ⏎ does: **Names** or **Contents** (Spotlight — text inside
+  PDFs, documents, code…), in **this folder and below** or **this Mac**.
+  Spotlight results stream in as they're found. Add filters to any search:
+  `kind:pdf` `kind:image` `kind:psd` · `modified:<7d` `modified:>2025-01-31`
+  `modified:today` · `size:>100MB` · `tag:Red` · `"quoted phrases"`.
+  **Save this search…** pins it to the sidebar under *Searches*.
 
 - **Finder tags** — tag dots on rows and folder tiles, the same tags Finder
   uses (set in either app, seen in both). Right-click → colour row or

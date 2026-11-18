@@ -37,7 +37,7 @@ Status key: ✅ done · 🟡 partial · ⬜ not started
 | **Archives** | Compress / extract via Ark | ✅ compress (zip) / extract (zip, tar, 7z, rar…) |
 | **Trash view** | Browse + restore | ⬜ (needs "Put Back") |
 | **Tags / ratings** | Baloo | ✅ Finder tags: dots, menu, ⌃⌘1–7, sidebar, drop-to-tag |
-| **Content search** | Baloo | ⬜ Spotlight (`mdfind`) |
+| **Content search** | Baloo | ✅ Spotlight: contents / names, here or whole Mac, streamed; saved searches |
 | **Remote locations** | sftp, smb, etc. via KIO | ⬜ mounted volumes only for now |
 | **Git status overlays** | Plugin | ⬜ |
 | **Per-folder view settings** | Remembered | ⬜ |
@@ -91,7 +91,7 @@ Shipped in four steps:
 - **Real Quick Look on Space** (QLPreviewPanel): PDFs, video, Office, code…
   replaces Fathom's image-only full preview; ↑ ↓ keep moving the selection.
 
-**v0.15 — Spotlight search**
+**v0.15 — Spotlight search** ✅
 - Filter box gets a **Name / Contents** switch; Contents = Spotlight
   (`mdfind -onlyin`), results stream in; this folder or the whole Mac.
 - Query helpers: `kind:pdf`, `modified:<7d`, `size:>100MB`, `tag:Red`.

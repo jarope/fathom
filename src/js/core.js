@@ -65,6 +65,7 @@ export const store = {
 
 // 20×20 line icons, stroked with currentColor.
 const ICONS = {
+  search: '<circle cx="8.75" cy="8.75" r="5"/><path d="M12.5 12.5l4.25 4.25"/>',
   home: '<path d="M3.5 9.5L10 4l6.5 5.5"/><path d="M5.5 8v7.75h9V8"/>',
   desktop: '<rect x="2.75" y="3.75" width="14.5" height="10" rx="1.5"/><path d="M7 16.75h6M10 13.75v3"/>',
   documents: '<path d="M5.5 2.75h6l3 3v11.5h-9z"/><path d="M11.5 2.75v3h3M7.75 10h4.5M7.75 13h4.5"/>',

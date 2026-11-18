@@ -13,6 +13,7 @@ import { initJobs } from "./jobs.js";
 import { initDnd } from "./dnd.js";
 import { initSystem, qlFollow } from "./system.js";
 import { loadTags } from "./tags.js";
+import { initSearch } from "./search.js";
 
 app.showHidden = !!store.get("fathom-hidden", 0);
 app.sidebar = store.get("fathom-sidebar", true) !== false;
@@ -22,6 +23,7 @@ app.folderShelf = store.get("fathom-shelf", true) !== false;
 app.hooks.changed = (P) => { if (app.tab && P === app.tab.panes[0]) refreshDock(); qlFollow(P); };
 app.hooks.navigated = () => { renderTabs(); markActive(); syncWatch(); saveSession(); };
 app.hooks.save = saveSession;
+app.hooks.searchesChanged = () => renderSidebar();
 
 initHeader();
 initMenu();
@@ -41,6 +43,7 @@ initKeys();
   await initJobs();
   await initDnd();
   await initSystem();
+  await initSearch();
   loadTags().then(() => app.sidebar && renderSidebar());
   if (!(await restoreSession())) await openTab(app.home);
   syncWatch();

@@ -9,6 +9,7 @@ import { openTab, other } from "./tabs.js";
 import { openTerminal } from "./ops.js";
 import { registerDropZone } from "./dnd.js";
 import { favourites, showTagged, tagPaths } from "./tags.js";
+import { saved, runSaved, removeSaved } from "./search.js";
 
 let places = null;
 let bookmarks = store.get("fathom-places", []); // [{ name, path }]
@@ -68,6 +69,16 @@ export function renderSidebar() {
     sec("Locations");
     places.volumes.forEach((v) => item(v.name, v.path, "drive", { volume: v }));
   }
+  if (saved.length) {
+    sec("Searches");
+    saved.forEach((s, i) => {
+      const n = el("div", "place searchplace");
+      n.dataset.search = i;
+      n.title = `${s.query}${s.contents ? " · contents" : ""}${s.mac ? " · this Mac" : s.root ? " · in " + s.root : ""}`;
+      n.append(icon("search"), el("span", "pname", s.name));
+      sb.append(n);
+    });
+  }
   if (favourites.length) {
     sec("Tags");
     favourites.forEach((t) => {
@@ -106,6 +117,7 @@ export function initSidebar() {
   sb.addEventListener("click", (ev) => {
     const n = placeOf(ev); if (!n) return;
     if (n.dataset.tag) { if (app.active) showTagged(app.active, n.dataset.tag); return; }
+    if (n.dataset.search) { if (app.active) runSaved(app.active, saved[+n.dataset.search]); return; }
     if (ev.target.closest(".eject")) { eject(n.dataset.path, n.querySelector(".pname").textContent); return; }
     if (ev.metaKey) openTab(n.dataset.path);
     else if (app.active) app.active.navigate(n.dataset.path);
@@ -114,6 +126,16 @@ export function initSidebar() {
   sb.addEventListener("contextmenu", (ev) => {
     ev.preventDefault();
     const n = placeOf(ev); if (!n || n.dataset.tag) return;
+    if (n.dataset.search) {
+      const i = +n.dataset.search;
+      showMenu([
+        { label: "Run", fn: () => app.active && runSaved(app.active, saved[i]) },
+        { label: "Run in New Tab", fn: async () => { await openTab(saved[i].root || app.active.cwd); runSaved(app.active, saved[i]); } },
+        "sep",
+        { label: "Remove from sidebar", fn: () => removeSaved(i), danger: true },
+      ], ev.clientX, ev.clientY);
+      return;
+    }
     const path = n.dataset.path, kind = n.dataset.kind, name = n.querySelector(".pname").textContent;
     const P = app.active;
     const i = bookmarks.findIndex((b) => b.path === path);
@@ -137,6 +159,7 @@ export function initSidebar() {
     root: sb,
     over: (n, data) => {
       const pl = n.closest(".place");
+      if (pl && pl.dataset.search) return null;
       if (pl && pl.dataset.tag) return { el: pl, act: (d) => app.active && tagPaths(app.active, d.paths, pl.dataset.tag) };
       if (pl) return { el: pl, dest: pl.dataset.path };
       if (data.dirs === null || data.dirs.length) return { el: sb, cls: "drop-target", act: (d) => d.dirs && d.dirs.length && addBookmarks(d.dirs) };

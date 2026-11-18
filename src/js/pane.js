@@ -8,6 +8,7 @@ import { openContextMenu, showMenu } from "./menu.js";
 import { setActive, openTab } from "./tabs.js";
 import { registerDropZone, startDrag } from "./dnd.js";
 import { tagDots } from "./tags.js";
+import { usesSpotlight, startSpotlight, cancelSpotlight, searchMenu, placeholder, modeLabel } from "./search.js";
 
 const TEMPLATE = `
   <div class="ptoolbar">
@@ -22,7 +23,7 @@ const TEMPLATE = `
       <div class="crumbs"></div>
       <input class="path" type="text" spellcheck="false" autocomplete="off" />
     </div>
-    <div class="searchwrap"><span class="ic">🔍</span><input class="search" type="text" spellcheck="false" autocomplete="off" placeholder="filter… ⏎ searches subfolders" /></div>
+    <div class="searchwrap"><button class="smode" type="button" title="Search options — names or contents, here or the whole Mac">🔍<span class="smode-l"></span></button><input class="search" type="text" spellcheck="false" autocomplete="off" /></div>
   </div>
   <div class="listing"></div>
   <div class="pstatus"></div>`;
@@ -35,7 +36,7 @@ export function createPane(key) {
   const q = (s) => root.querySelector(s);
   const els = {
     pathwrap: q(".pathwrap"), crumbs: q(".crumbs"), path: q(".path"),
-    search: q(".search"), searchwrap: q(".searchwrap"),
+    search: q(".search"), searchwrap: q(".searchwrap"), smode: q(".smode"),
     listing: q(".listing"), status: q(".pstatus"),
     back: q(".b-back"), fwd: q(".b-fwd"), up: q(".b-up"), home: q(".b-home"), newb: q(".b-new"),
   };
@@ -75,6 +76,9 @@ export function createPane(key) {
   // scroll (used by reloads/auto-refresh of the same folder). Returns success.
   P.navigate = async (path, { push = true, keepFilter = false, keepSel = false } = {}) => {
     if (!invoke) { els.status.textContent = "Native backend unavailable."; return false; }
+    cancelSpotlight(P);
+    if (pendingDraw) { cancelAnimationFrame(pendingDraw); pendingDraw = 0; }
+    P.spotResults = false;
     let listing;
     try { listing = await invoke("list_dir", { path, showHidden: P.showHidden }); }
     catch (e) { P.flash("⚠ " + e, "warn"); return false; }
@@ -184,7 +188,8 @@ export function createPane(key) {
 
   // ----------------------------------------------- live filter / recursive search
   P.applyFilter = () => {
-    const f = els.search.value.trim();
+    // Query helpers (kind:pdf…) only apply when ⏎ runs a search.
+    const f = P.spotResults ? "" : els.search.value.replace(/\b(kind|type|modified|date|size|tag):("[^"]*"|\S+)/gi, "").trim();
     let keep = P.base;
     if (f) {
       if (/[*?]/.test(f)) { const re = globRe(f); keep = P.base.filter((e) => re.test(e.name)); }
@@ -205,6 +210,8 @@ export function createPane(key) {
     const query = els.search.value.trim();
     if (!query) { P.reload(); return; }
     if (!P.cwd) return;
+    if (usesSpotlight()) { startSpotlight(P, query); return; }
+    P.spotResults = false;
     els.searchwrap.classList.add("active");
     P.renderStatus(el("span", "spinner"));
     let res;
@@ -218,14 +225,52 @@ export function createPane(key) {
     changed();
   };
   /** Show an arbitrary list of entries (tag / Spotlight results) like search results. */
-  P.showResults = (entries, msg) => {
+  P.showResults = (entries, msg, busy = false) => {
     P.base = entries; P.entries = entries.slice(); P.applySort(); P.mode = "search";
+    P.spotResults = busy;
     P.selected.clear(); P.anchor = -1; P.cursor = -1;
     els.searchwrap.classList.remove("filtering");
+    els.searchwrap.classList.toggle("active", busy);
     P.renderList();
+    const st = el("span", "msg", msg + (busy ? "" : " · Esc to go back"));
+    if (busy) { const w = el("span"); w.append(el("span", "spinner"), st); P.renderStatus(w); } else P.renderStatus(st);
+    changed();
+  };
+  // Streamed results (Spotlight): add a batch; redraw at most once per frame.
+  let pendingDraw = 0;
+  const drawResults = () => {
+    pendingDraw = 0;
+    if (P.mode !== "search" || !P.spotResults) return; // cancelled / left the results meanwhile
+    const top = els.listing.scrollTop;
+    P.entries = P.base.slice(); P.applySort();
+    const cur = P.cursor >= 0 ? P.entries[P.cursor] : null;
+    P.renderList(); els.listing.scrollTop = top;
+    if (cur) P.cursor = P.entries.indexOf(cur);
+    P.renderStatus(Object.assign(el("span"), { innerHTML: '<span class="spinner"></span> <span class="msg">Searching…</span>' }));
+  };
+  P.appendResults = (entries) => {
+    if (P.mode !== "search" || !entries.length) return;
+    P.base = P.base.concat(entries);
+    if (!pendingDraw) pendingDraw = requestAnimationFrame(drawResults);
+  };
+  P.finishResults = (msg) => {
+    if (pendingDraw) { cancelAnimationFrame(pendingDraw); drawResults(); }
+    els.searchwrap.classList.remove("active");
     P.renderStatus(el("span", "msg", msg + " · Esc to go back"));
     changed();
   };
+  P.syncSearchMode = () => {
+    els.search.placeholder = placeholder();
+    const l = modeLabel();
+    els.smode.querySelector(".smode-l").textContent = l;
+    els.smode.classList.toggle("on", !!l);
+  };
+  P.syncSearchMode();
+  els.smode.addEventListener("click", (ev) => {
+    ev.stopPropagation(); setActive(P);
+    const r = els.smode.getBoundingClientRect();
+    searchMenu(P, r.left, r.bottom + 6);
+  });
   els.search.addEventListener("keydown", (e) => {
     if (e.key === "Enter") P.runSearch();
     if (e.key === "Escape") { els.search.value = ""; P.reload(); els.search.blur(); }
