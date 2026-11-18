@@ -9,7 +9,31 @@ Same stack as **Pattern Studio** (Tauri 2 — Rust backend, vanilla HTML/CSS and
 native ES modules in `src/js/`, no npm, no bundler), themed with the light/dark design system from the
 **Fascia** VST.
 
-## What it does today (v0.10.0)
+## What it does today (v0.12.0)
+
+- **Progress & cancel** — copies, moves, duplicates and archive jobs run in the
+  background; anything that takes more than a moment gets a card (bottom-right)
+  with a progress bar, speed, time left, the current file, and **✕ to cancel**.
+  Cancelling cleans up the half-copied item; what already finished stays (and
+  ⌘Z undoes it). Same-disk copies stay instant (APFS clones).
+- **"Already exists" dialog** — when a copy/move/paste/drop would clash, choose
+  per item **Keep both** (“… copy”), **Replace** (the old one goes to the
+  **Bin**, never deleted), **Skip**, or for folders **Merge**; or *Apply to all*.
+  Shows both sizes/dates and flags the newer one.
+- **Finder clipboard** — ⌘C in Fathom → ⌘V in Finder, Mail, Slack… and files
+  copied in Finder paste into Fathom. **⌥⌘V** moves them here instead.
+- **Compress / Extract** (right-click) — *Compress* makes `name.zip` (or
+  `Archive.zip`) like Finder; *Extract here* handles zip, tar, gz, bz2, xz, 7z,
+  rar… One top-level item comes out as itself; several land in a folder.
+- **Batch rename** — select several and press **F2** (or right-click → *Rename
+  N items…*): replace text (optionally regex), add text before/after, number
+  them (“Holiday 01.jpg”), or change case — with a live preview that flags
+  duplicates before anything happens. Swaps (a↔b) are safe; ⌘Z undoes.
+
+- **Zoom** (⌘+ / ⌘− / ⌘0, or the **Aa** button) — scales text, icons and
+  rows together from 75% to 160%, so it stays comfortable whether you're on
+  the laptop screen or a big external monitor. Remembered between launches;
+  the title bar keeps its height so the traffic lights stay lined up.
 
 - **Folder shelf** (on by default; ⇧⌘F or the shelf button to toggle) — a
   folder's sub-folders collapse into **one horizontally scrolling row of
@@ -103,8 +127,9 @@ native ES modules in `src/js/`, no npm, no bundler), themed with the light/dark 
 | ⌘A / Esc | Select all / clear |
 | ⇧⌘N / F10 | New folder (then type its name) |
 | ⌥⌘N | New text file |
-| F2 | Rename in place |
-| ⌘X / ⌘C / ⌘V | Cut / copy / paste |
+| F2 | Rename in place (several selected → batch rename) |
+| ⌘X / ⌘C / ⌘V | Cut / copy / paste (shared with Finder) |
+| ⌥⌘V | Move clipboard files here |
 | ⌘D | Duplicate |
 | ⌘Z | Undo last file operation |
 | ⌘F / ⌘L | Focus filter / type a path |
@@ -118,6 +143,7 @@ native ES modules in `src/js/`, no npm, no bundler), themed with the light/dark 
 | ⌃Tab · ⌘⇧[ ] · ⌘1…9 | Switch tabs |
 | ⌃⌘S / F9 | Toggle Places sidebar |
 | ⇧⌘F | Toggle the folder shelf |
+| ⌘+ / ⌘− / ⌘0 | Zoom in / out / actual size |
 | ← / → | Step through the folder shelf |
 | ⇧⌘H | Home |
 | ⌘R | Refresh |

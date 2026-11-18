@@ -2,6 +2,7 @@
 // sidebar, layout buttons, and the title-bar drag region.
 
 import { app, store } from "./core.js";
+import { showMenu } from "./menu.js";
 import { setView } from "./tabs.js";
 import { renderSidebar } from "./sidebar.js";
 
@@ -25,8 +26,50 @@ export function toggleSidebar() {
   renderSidebar();
 }
 
+// ---- Zoom: scales the whole window (text, icons, rows) like ⌘+ in Safari ----
+// Remembered between launches, so a laptop and a big monitor can each get a comfy size.
+const ZOOMS = [0.75, 0.85, 0.9, 1, 1.1, 1.2, 1.3, 1.45, 1.6];
+let zoom = 1;
+const pct = (z) => Math.round(z * 100) + "%";
+
+function applyZoom(z) {
+  zoom = z;
+  // The title bar keeps its real height so the traffic lights stay centred in it.
+  document.documentElement.style.setProperty("--z", z);
+  const wv = window.__TAURI__?.webview?.getCurrentWebview?.();
+  if (wv?.setZoom) wv.setZoom(z).catch(() => { document.documentElement.style.zoom = z; });
+  else document.documentElement.style.zoom = z; // browser harness
+  const b = document.getElementById("zoomBtn");
+  if (b) { b.title = `Zoom ${pct(z)} — ⌘+ / ⌘− / ⌘0`; b.classList.toggle("on", z !== 1); }
+}
+
+export function setZoom(z, announce = true) {
+  z = Math.min(ZOOMS[ZOOMS.length - 1], Math.max(ZOOMS[0], z));
+  store.set("fathom-zoom", z);
+  applyZoom(z);
+  if (announce && app.active) app.active.flash(`Zoom ${pct(z)}`);
+}
+export const zoomStep = (dir) => {
+  const i = ZOOMS.findIndex((x) => x >= zoom - 0.001);
+  setZoom(ZOOMS[Math.max(0, Math.min(ZOOMS.length - 1, (i < 0 ? 3 : i) + dir))]);
+};
+
+function zoomMenu(btn) {
+  const r = btn.getBoundingClientRect();
+  showMenu([
+    { label: "Larger", fn: () => zoomStep(1), key: "⌘+" },
+    { label: "Smaller", fn: () => zoomStep(-1), key: "⌘−" },
+    { label: "Actual Size", fn: () => setZoom(1), key: "⌘0" },
+    "sep",
+    ...ZOOMS.map((z) => ({ label: pct(z), fn: () => setZoom(z), on: Math.abs(z - zoom) < 0.001 })),
+  ], r.left, r.bottom + 6);
+}
+
 export function initHeader() {
   const $ = (id) => document.getElementById(id);
+
+  applyZoom(store.get("fathom-zoom", 1));
+  $("zoomBtn").addEventListener("click", (e) => { e.stopPropagation(); zoomMenu($("zoomBtn")); });
 
   // Theme (stored as a raw string — predates the JSON store).
   let saved = null;

@@ -11,8 +11,8 @@ Status key: ✅ done · 🟡 partial · ⬜ not started
 | --- | --- | --- |
 | **Split view** (F3) | Two panes, independent | ✅ twin pane (⌘\\) |
 | **Create new** | Folder (F10), file from templates | ✅ folder (⇧⌘N / F10 / ＋), text file (⌥⌘N) · ⬜ templates |
-| **Rename** | Inline (F2), batch rename | ✅ inline F2 · ⬜ batch rename |
-| **Clipboard** | Cut / copy / paste, paste into folder | ✅ ⌘X ⌘C ⌘V, paste into folder · ⬜ interop with Finder's pasteboard |
+| **Rename** | Inline (F2), batch rename | ✅ inline F2 · ✅ batch rename with preview |
+| **Clipboard** | Cut / copy / paste, paste into folder | ✅ ⌘X ⌘C ⌘V, paste into folder, Finder pasteboard both ways, ⌥⌘V move |
 | **Duplicate** | Ctrl+D | ✅ ⌘D |
 | **Undo / redo** | Ctrl+Z for file operations | ✅ undo rename / move / copy / create · ⬜ redo, undo of Bin |
 | **Filter bar** (Ctrl+I) | Live filter of current folder | ✅ search box filters live; ⏎ searches recursively |
@@ -29,12 +29,12 @@ Status key: ✅ done · 🟡 partial · ⬜ not started
 | **Folders panel** | Tree sidebar | ⬜ |
 | **Information panel** | Preview + metadata of selection | 🟡 docked image/video preview · ⬜ metadata, PDF, text |
 | **Auto-refresh** | Watches folders (KDirWatch) | ✅ FSEvents via `notify` |
-| **Progress / cancel** for long ops | KIO job tracker | ⬜ (ops are silent until done) |
-| **Conflict dialog** | Overwrite / skip / rename / apply-to-all | 🟡 always auto-renames |
+| **Progress / cancel** for long ops | KIO job tracker | ✅ job cards: bar, speed, ETA, cancel |
+| **Conflict dialog** | Overwrite / skip / rename / apply-to-all | ✅ keep both / replace (→ Bin) / skip / merge, apply to all |
 | **Properties dialog** | Size (recursive), permissions, dates, open-with | ⬜ |
 | **Open With…** | App chooser | ⬜ |
 | **Service menus / actions** | Extensible right-click actions | ⬜ (later: user scripts → menu) |
-| **Archives** | Compress / extract via Ark | ⬜ zip/unzip via `ditto` |
+| **Archives** | Compress / extract via Ark | ✅ compress (zip) / extract (zip, tar, 7z, rar…) |
 | **Trash view** | Browse + restore | ⬜ (needs "Put Back") |
 | **Tags / ratings** | Baloo | ⬜ macOS Finder tags (xattr) — a strong fit |
 | **Content search** | Baloo | ⬜ Spotlight (`mdfind`) |
@@ -45,7 +45,7 @@ Status key: ✅ done · 🟡 partial · ⬜ not started
 | **Customisable shortcuts** | Any action (26.04) | ⬜ |
 | **Folder shelf** (Fathom original) | — | ✅ sub-folders as one scrolling row of tiles above the files |
 | **Native file icons / thumbnails** | | 🟡 emoji + Quick Look thumbs |
-| **Drag to/from other apps** | | ⬜ (internal drag only today) |
+| **Drag to/from other apps** | | ⬜ next (Phase 3b) — internal drag only today |
 
 ## Phases
 
@@ -60,15 +60,22 @@ drop-downs; FSEvents auto-refresh; session + window-size restore. Long folders
 use `content-visibility` for cheap rendering — a true **virtualised list**
 moves to Phase 4 alongside the grid view, which needs the same machinery.
 
-### Phase 3 — Operations done properly (v0.10)
-- Operations in a Rust job queue with **progress, cancel**, and a jobs popover.
-- **Conflict dialog**: replace / skip / keep both, apply to all.
-- **Redo**; undo for Move to Bin (Finder "Put Back" via AppleScript/NSFileManager).
-- **macOS pasteboard interop**: ⌘C in Fathom → ⌘V in Finder/Mail and back
-  (needs a small objc2 bridge — NSPasteboard file URLs).
-- **Drag in/out** of other apps (enable Tauri's native drag-drop).
-- **Compress / Extract** (`ditto -c -k`, `ditto -x -k`).
-- **Batch rename** (find/replace, numbering, case) with live preview.
+### Phase 3 — Operations done properly ✅ (v0.11.0)
+Job engine with progress, speed/ETA and cancel; conflict dialog (keep both /
+replace-to-Bin / skip / merge, apply to all); Finder pasteboard interop both
+ways (+ ⌥⌘V move); compress / extract; batch rename with live preview. Undo
+covers all of it (merged moves undo piece by piece).
+
+### Zoom ✅ (v0.12.0)
+⌘+ / ⌘− / ⌘0 and an **Aa** menu: whole-window zoom 75–160%, remembered;
+the title bar stays 64pt so the traffic lights stay aligned.
+
+### Phase 3b — Drag & drop with other apps
+- **Drag in** from Finder/Desktop and **drag out** to Finder, Mail, Slack…
+  Needs Tauri's native drag-drop (and a native drag session for drag-out),
+  which can interfere with Fathom's own pane-to-pane HTML drag — so it needs
+  hands-on testing in the real app, not just the headless harness.
+- **Redo** (⇧⌘Z), and undo for Move to Bin (Finder's "Put Back").
 
 ### Phase 4 — Views & information (v0.11)
 - **Virtualised list** (only on-screen rows in the DOM) for 50k-entry folders.

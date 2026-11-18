@@ -2,7 +2,7 @@
 // sub-folder drop-downs, the sidebar and tabs.
 
 import { app, invoke, el, icon, plural } from "./core.js";
-import { undoStack, undo, setClip, paste, duplicateSel, transferToOther, pickAndTransfer, openTerminal } from "./ops.js";
+import { undoStack, undo, setClip, paste, duplicateSel, transferToOther, pickAndTransfer, openTerminal, compressSel, extractSel, batchRename, isArchive } from "./ops.js";
 import { openTab } from "./tabs.js";
 import { addBookmarks } from "./sidebar.js";
 import { toggleHidden } from "./view.js";
@@ -58,7 +58,8 @@ export function openContextMenu(P, x, y) {
       { label: "New Folder", fn: () => P.newItem(true), key: "⇧⌘N" },
       { label: "New Text File", fn: () => P.newItem(false), key: "⌥⌘N" },
       "sep",
-      clip && { label: `Paste ${plural(clip.paths.length, "item")}`, fn: () => paste(P), key: "⌘V" },
+      { label: clip ? `Paste ${plural(clip.paths.length, "item")}` : "Paste", fn: () => paste(P), key: "⌘V" },
+      { label: "Move Here (from clipboard)", fn: () => paste(P, null, { move: true }), key: "⌥⌘V" },
       "sep",
       { label: "Open in New Tab", fn: () => openTab(P.cwd), key: "⌘T" },
       { label: "Open Terminal Here", fn: () => openTerminal(P, P.cwd), key: "⌥⌘T" },
@@ -77,6 +78,7 @@ export function openContextMenu(P, x, y) {
     one && { label: one.is_dir ? "Open folder" : "Open", fn: () => P.activate(P.entries.indexOf(one)), key: "⏎" },
     one && one.is_dir && { label: "Open in New Tab", fn: () => openTab(one.path), key: "⌘-dbl-click" },
     one && { label: "Rename…", fn: () => P.startRename(one.path), key: "F2" },
+    !one && { label: `Rename ${sel.length} items…`, fn: () => batchRename(P), key: "F2" },
     { label: "Duplicate", fn: () => duplicateSel(P), key: "⌘D" },
     "sep",
     P.mode === "browse" && { label: "New Folder", fn: () => P.newItem(true), key: "⇧⌘N" },
@@ -84,7 +86,10 @@ export function openContextMenu(P, x, y) {
     "sep",
     { label: "Cut", fn: () => setClip(P, true), key: "⌘X" },
     { label: "Copy", fn: () => setClip(P, false), key: "⌘C" },
-    clip && one && one.is_dir && { label: "Paste into folder", fn: () => paste(P, one.path) },
+    one && one.is_dir && { label: "Paste into folder", fn: () => paste(P, one.path) },
+    "sep",
+    { label: one ? `Compress “${one.name}”` : `Compress ${sel.length} items`, fn: () => compressSel(P) },
+    sel.some(isArchive) && { label: sel.filter(isArchive).length > 1 ? "Extract archives here" : "Extract here", fn: () => extractSel(P) },
     "sep",
     { label: "Reveal in Finder", fn: () => invoke("reveal_in_finder", { path: sel[0].path }) },
     one && one.is_dir && { label: "Open Terminal Here", fn: () => openTerminal(P, one.path) },

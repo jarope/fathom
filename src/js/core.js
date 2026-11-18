@@ -19,6 +19,7 @@ export const app = {
   sidebar: true,
   dockPreview: false,
   previewOpen: false,
+  modalOpen: false,
   // Wired up by main.js so modules can notify without importing each other in circles.
   hooks: {
     changed: () => {},   // a pane's selection/contents changed

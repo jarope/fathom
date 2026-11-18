@@ -1,15 +1,23 @@
 // Global keyboard: routes to the active pane. Text fields keep their own keys.
 
 import { app } from "./core.js";
-import { undo, setClip, paste, duplicateSel, transferToOther, openTerminal } from "./ops.js";
+import { undo, setClip, paste, duplicateSel, transferToOther, openTerminal, batchRename } from "./ops.js";
 import { openTab, closeTab, cycleTab, gotoTab, setView } from "./tabs.js";
 import { showPreviewFor, closePreview, previewStep, toggleDock } from "./preview.js";
 import { hideCtx } from "./menu.js";
-import { toggleHidden, toggleSidebar, toggleShelf } from "./view.js";
+import { toggleHidden, toggleSidebar, toggleShelf, setZoom, zoomStep } from "./view.js";
 
 export function initKeys() {
+  // Zoom works everywhere (even while typing), like any Mac app.
   window.addEventListener("keydown", (e) => {
-    if (/^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)) return;
+    if (!e.metaKey || e.altKey || e.ctrlKey) return;
+    const c = e.code;
+    if (c === "Equal" || c === "NumpadAdd") { e.preventDefault(); e.stopImmediatePropagation(); zoomStep(1); }
+    else if (c === "Minus" || c === "NumpadSubtract") { e.preventDefault(); e.stopImmediatePropagation(); zoomStep(-1); }
+    else if (c === "Digit0" || c === "Numpad0") { e.preventDefault(); e.stopImmediatePropagation(); setZoom(1); }
+  });
+  window.addEventListener("keydown", (e) => {
+    if (app.modalOpen || /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) return;
     const P = app.active; if (!P) return;
 
     if (app.previewOpen) {
@@ -46,11 +54,12 @@ export function initKeys() {
     if (mod && e.shiftKey && code === "KeyN") return k(() => P.newItem(true));
     if (mod && e.altKey && code === "KeyN") return k(() => P.newItem(false));
     if (e.key === "F10") return k(() => P.newItem(true)); // Dolphin's binding
-    if (e.key === "F2") return k(() => { const s = P.selectedEntries(); if (s.length === 1) P.startRename(s[0].path); });
+    if (e.key === "F2") return k(() => { const s = P.selectedEntries(); if (s.length === 1) P.startRename(s[0].path); else if (s.length > 1) batchRename(P); });
     if (mod && e.altKey && code === "KeyT") return k(() => P.cwd && openTerminal(P, P.cwd));
     if (mod && !e.shiftKey && code === "KeyZ") return k(undo);
     if (mod && code === "KeyC") return k(() => setClip(P, false));
     if (mod && code === "KeyX") return k(() => setClip(P, true));
+    if (mod && e.altKey && code === "KeyV") return k(() => paste(P, null, { move: true })); // Finder's "Move Item Here"
     if (mod && code === "KeyV") return k(() => paste(P));
     if (mod && code === "KeyD") return k(() => duplicateSel(P));
     if (mod && code === "KeyF") return k(() => { P.els.search.focus(); P.els.search.select(); });

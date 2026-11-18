@@ -12,6 +12,13 @@ use globset::GlobBuilder;
 use serde::{Deserialize, Serialize};
 use walkdir::{DirEntry, WalkDir};
 
+mod archive;
+mod batch;
+mod jobs;
+mod pasteboard;
+
+use jobs::OpReport;
+
 // ---------------------------------------------------------------------------
 // Shared shapes
 // ---------------------------------------------------------------------------
@@ -33,7 +40,7 @@ struct Entry {
     modified: Option<u64>,
 }
 
-fn modified_secs(meta: &std::fs::Metadata) -> Option<u64> {
+pub(crate) fn modified_secs(meta: &std::fs::Metadata) -> Option<u64> {
     meta.modified()
         .ok()
         .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
@@ -271,7 +278,13 @@ async fn search(req: SearchReq) -> Result<SearchResult, String> {
 /// Move one or more paths to the OS Bin. Recoverable — this is NOT a delete.
 /// Reports how many were binned, and surfaces any that failed.
 #[tauri::command]
-fn move_to_trash(paths: Vec<String>) -> Result<usize, String> {
+async fn move_to_trash(paths: Vec<String>) -> Result<usize, String> {
+    tauri::async_runtime::spawn_blocking(move || trash_all(paths))
+        .await
+        .map_err(|e| format!("trash task panicked: {e}"))?
+}
+
+fn trash_all(paths: Vec<String>) -> Result<usize, String> {
     let mut binned = 0usize;
     let mut errors = Vec::new();
     for p in &paths {
@@ -293,7 +306,7 @@ fn move_to_trash(paths: Vec<String>) -> Result<usize, String> {
 /// Returns `(path, renamed)` — `renamed` is true when we had to append a
 /// " copy" suffix (Finder-style) to avoid overwriting an existing item.
 /// We NEVER overwrite: collisions are resolved by renaming, so no data is lost.
-fn unique_dest(dir: &Path, name: &str) -> (PathBuf, bool) {
+pub(crate) fn unique_dest(dir: &Path, name: &str) -> (PathBuf, bool) {
     let first = dir.join(name);
     if !first.exists() {
         return (first, false);
@@ -324,7 +337,7 @@ fn unique_dest(dir: &Path, name: &str) -> (PathBuf, bool) {
 
 /// Recursively copy a file, directory, or symlink from `src` to `dst`.
 /// Symlinks are recreated as links (their targets are not followed/duplicated).
-fn copy_recursive(src: &Path, dst: &Path) -> std::io::Result<()> {
+pub(crate) fn copy_recursive(src: &Path, dst: &Path) -> std::io::Result<()> {
     let md = std::fs::symlink_metadata(src)?;
     let ft = md.file_type();
     if ft.is_symlink() {
@@ -347,7 +360,7 @@ fn copy_recursive(src: &Path, dst: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
-fn remove_path(p: &Path) -> std::io::Result<()> {
+pub(crate) fn remove_path(p: &Path) -> std::io::Result<()> {
     if std::fs::symlink_metadata(p)?.is_dir() {
         std::fs::remove_dir_all(p)
     } else {
@@ -357,118 +370,10 @@ fn remove_path(p: &Path) -> std::io::Result<()> {
 
 /// True if `dest` is the source itself or lives inside it — moving/copying a
 /// folder into its own subtree would loop or destroy it, so we refuse.
-fn dest_inside_source(src: &Path, dest: &Path) -> bool {
+pub(crate) fn dest_inside_source(src: &Path, dest: &Path) -> bool {
     let s = std::fs::canonicalize(src).unwrap_or_else(|_| src.to_path_buf());
     let d = std::fs::canonicalize(dest).unwrap_or_else(|_| dest.to_path_buf());
     d == s || d.starts_with(&s)
-}
-
-/// Outcome summary for a batch move/copy.
-#[derive(Serialize, Default)]
-struct OpReport {
-    done: usize,
-    renamed: usize,
-    skipped: usize,
-    errors: Vec<String>,
-    /// `[source, final_destination]` for every item that succeeded — the UI
-    /// keeps these so the operation can be undone.
-    pairs: Vec<[String; 2]>,
-}
-
-/// Shared move/copy engine. `do_move` picks move (rename, with copy+remove
-/// fallback across volumes) vs copy. Never overwrites; never follows a folder
-/// into itself.
-fn transfer(sources: Vec<String>, dest_dir: String, do_move: bool) -> Result<OpReport, String> {
-    let dest = std::fs::canonicalize(&dest_dir)
-        .map_err(|e| format!("Bad destination {dest_dir}: {e}"))?;
-    if !dest.is_dir() {
-        return Err(format!("Destination is not a folder: {}", dest.display()));
-    }
-
-    let mut rep = OpReport::default();
-    for s in &sources {
-        let src = Path::new(s);
-        if !src.exists() {
-            rep.errors.push(format!("{s}: no longer exists"));
-            continue;
-        }
-        let name = match src.file_name().and_then(|n| n.to_str()) {
-            Some(n) => n.to_string(),
-            None => {
-                rep.errors.push(format!("{s}: unreadable name"));
-                continue;
-            }
-        };
-        if src.is_dir() && dest_inside_source(src, &dest) {
-            rep.errors.push(format!("{name}: can't put a folder inside itself"));
-            continue;
-        }
-        // Moving an item into the folder it already lives in is a no-op.
-        if do_move {
-            if let Some(parent) = src.parent() {
-                let pc = std::fs::canonicalize(parent).unwrap_or_else(|_| parent.to_path_buf());
-                if pc == dest {
-                    rep.skipped += 1;
-                    continue;
-                }
-            }
-        }
-
-        let (target, renamed) = unique_dest(&dest, &name);
-        let res = if do_move {
-            match std::fs::rename(src, &target) {
-                Ok(()) => Ok(()),
-                // Cross-device rename (EXDEV) or similar — fall back to copy+remove.
-                Err(_) => copy_recursive(src, &target).and_then(|_| remove_path(src)),
-            }
-        } else {
-            copy_recursive(src, &target)
-        };
-
-        match res {
-            Ok(()) => {
-                rep.done += 1;
-                if renamed {
-                    rep.renamed += 1;
-                }
-                rep.pairs
-                    .push([s.clone(), target.to_string_lossy().into_owned()]);
-            }
-            Err(e) => rep.errors.push(format!("{name}: {e}")),
-        }
-    }
-    Ok(rep)
-}
-
-/// Duplicate each item next to itself ("name copy.ext"), like Finder's ⌘D.
-/// Items may live in different folders (e.g. a search-result selection).
-fn duplicate(sources: Vec<String>) -> OpReport {
-    let mut rep = OpReport::default();
-    for s in &sources {
-        let src = Path::new(s);
-        let (Some(parent), Some(name)) = (src.parent(), src.file_name().and_then(|n| n.to_str()))
-        else {
-            rep.errors.push(format!("{s}: can't duplicate"));
-            continue;
-        };
-        let (target, _) = unique_dest(parent, name);
-        match copy_recursive(src, &target) {
-            Ok(()) => {
-                rep.done += 1;
-                rep.pairs
-                    .push([s.clone(), target.to_string_lossy().into_owned()]);
-            }
-            Err(e) => rep.errors.push(format!("{name}: {e}")),
-        }
-    }
-    rep
-}
-
-#[tauri::command]
-async fn duplicate_paths(sources: Vec<String>) -> Result<OpReport, String> {
-    tauri::async_runtime::spawn_blocking(move || duplicate(sources))
-        .await
-        .map_err(|e| format!("duplicate task panicked: {e}"))
 }
 
 /// Move each `[from, to]` pair to exactly `to` — used to undo a move. Refuses
@@ -481,9 +386,12 @@ fn move_exact(pairs: Vec<[String; 2]>) -> OpReport {
             rep.errors.push(format!("{from}: no longer exists"));
             continue;
         }
-        if dst.exists() {
+        if std::fs::symlink_metadata(dst).is_ok() {
             rep.errors.push(format!("{to}: something is already there"));
             continue;
+        }
+        if let Some(parent) = dst.parent() {
+            let _ = std::fs::create_dir_all(parent); // a merged move may have removed it
         }
         let res = match std::fs::rename(src, dst) {
             Ok(()) => Ok(()),
@@ -510,7 +418,7 @@ async fn move_exact_paths(pairs: Vec<[String; 2]>) -> Result<OpReport, String> {
 // --- Create / rename ---------------------------------------------------------
 
 /// Reject names that can't be a single path component.
-fn check_name(name: &str) -> Result<&str, String> {
+pub(crate) fn check_name(name: &str) -> Result<&str, String> {
     let n = name.trim();
     if n.is_empty() {
         return Err("A name can't be empty.".into());
@@ -525,7 +433,7 @@ fn check_name(name: &str) -> Result<&str, String> {
 }
 
 /// `dir/base`, or `dir/base 2`, `dir/base 3`… — the first free one.
-fn unique_new(dir: &Path, base: &str) -> PathBuf {
+pub(crate) fn unique_new(dir: &Path, base: &str) -> PathBuf {
     let first = dir.join(base);
     if !first.exists() {
         return first;
@@ -630,22 +538,6 @@ fn open_terminal(path: String) -> Result<(), String> {
         let _ = path;
         Err("Open Terminal is only available on macOS.".into())
     }
-}
-
-/// Move items into `dest_dir`. Runs on a blocking thread (big trees).
-#[tauri::command]
-async fn move_paths(sources: Vec<String>, dest_dir: String) -> Result<OpReport, String> {
-    tauri::async_runtime::spawn_blocking(move || transfer(sources, dest_dir, true))
-        .await
-        .map_err(|e| format!("move task panicked: {e}"))?
-}
-
-/// Copy items into `dest_dir`. Runs on a blocking thread (big trees).
-#[tauri::command]
-async fn copy_paths(sources: Vec<String>, dest_dir: String) -> Result<OpReport, String> {
-    tauri::async_runtime::spawn_blocking(move || transfer(sources, dest_dir, false))
-        .await
-        .map_err(|e| format!("copy task panicked: {e}"))?
 }
 
 // --- Image thumbnails / previews -------------------------------------------
@@ -972,6 +864,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
+        .manage(std::sync::Arc::new(jobs::Jobs::default()))
         .manage(WatchState {
             watcher: std::sync::Mutex::new(None),
             dirs: Default::default(),
@@ -984,9 +877,15 @@ pub fn run() {
             home_dir,
             search,
             move_to_trash,
-            move_paths,
-            copy_paths,
-            duplicate_paths,
+            jobs::plan_transfer,
+            jobs::start_transfer,
+            jobs::start_duplicate,
+            jobs::cancel_job,
+            archive::start_compress,
+            archive::start_extract,
+            pasteboard::pasteboard_write,
+            pasteboard::pasteboard_read,
+            batch::batch_rename_cmd,
             move_exact_paths,
             create_item,
             rename_path,
@@ -1049,7 +948,7 @@ mod tests {
         std::fs::create_dir_all(&src).unwrap();
         std::fs::create_dir_all(&dst).unwrap();
         std::fs::write(src.join("f"), "1").unwrap();
-        let rep = transfer(vec![s(&src.join("f"))], s(&dst), true).unwrap();
+        let rep = xfer(vec![src.join("f")], &dst, true, jobs::Policy::KeepBoth);
         assert_eq!(rep.pairs.len(), 1);
         // Undo: move back to the exact original spot.
         let back = move_exact(rep.pairs.iter().map(|[a, b]| [b.clone(), a.clone()]).collect());
@@ -1062,11 +961,97 @@ mod tests {
         assert_eq!(std::fs::read_to_string(dst.join("f")).unwrap(), "2");
     }
 
+    fn xfer(srcs: Vec<PathBuf>, dest: &Path, do_move: bool, policy: jobs::Policy) -> OpReport {
+        let items = srcs.into_iter().map(|src| jobs::Item { src, dest_dir: dest.to_path_buf(), policy }).collect();
+        jobs::run(items, do_move, &mut jobs::Ctl::detached())
+    }
+
     #[test]
     fn duplicate_lands_next_to_source() {
         let d = tmp("dup");
         std::fs::write(d.join("x.png"), "x").unwrap();
-        let rep = duplicate(vec![s(&d.join("x.png"))]);
+        let rep = xfer(vec![d.join("x.png")], &d, false, jobs::Policy::KeepBoth);
         assert!(rep.pairs[0][1].ends_with("/x copy.png"));
+    }
+
+    #[test]
+    fn skip_leaves_both_untouched() {
+        let d = tmp("skip");
+        let (a, b) = (d.join("a"), d.join("b"));
+        std::fs::create_dir_all(&a).unwrap();
+        std::fs::create_dir_all(&b).unwrap();
+        std::fs::write(a.join("f"), "new").unwrap();
+        std::fs::write(b.join("f"), "old").unwrap();
+        let rep = xfer(vec![a.join("f")], &b, true, jobs::Policy::Skip);
+        assert_eq!((rep.done, rep.skipped), (0, 1));
+        assert_eq!(std::fs::read_to_string(b.join("f")).unwrap(), "old");
+        assert!(a.join("f").exists());
+    }
+
+    #[test]
+    fn merge_folders_keeps_both_on_file_clash_and_undoes() {
+        let d = tmp("merge");
+        let (src, dst) = (d.join("src/Photos"), d.join("dst/Photos"));
+        std::fs::create_dir_all(src.join("sub")).unwrap();
+        std::fs::create_dir_all(dst.join("sub")).unwrap();
+        std::fs::write(src.join("a.jpg"), "A").unwrap();
+        std::fs::write(src.join("same.jpg"), "new").unwrap();
+        std::fs::write(src.join("sub/x"), "x").unwrap();
+        std::fs::write(dst.join("same.jpg"), "old").unwrap();
+        let rep = xfer(vec![src.clone()], &d.join("dst"), true, jobs::Policy::Merge);
+        assert_eq!(rep.merged, 1, "{rep:?}");
+        assert!(dst.join("a.jpg").exists() && dst.join("sub/x").exists());
+        assert_eq!(std::fs::read_to_string(dst.join("same.jpg")).unwrap(), "old");
+        assert_eq!(std::fs::read_to_string(dst.join("same copy.jpg")).unwrap(), "new");
+        assert!(!src.exists(), "emptied source folder is removed");
+        // Undo puts every piece back, recreating the removed folder.
+        let back = move_exact(rep.pairs.iter().map(|[a, b]| [b.clone(), a.clone()]).collect());
+        assert!(back.errors.is_empty(), "{:?}", back.errors);
+        assert_eq!(std::fs::read_to_string(src.join("same.jpg")).unwrap(), "new");
+        assert!(src.join("sub/x").exists());
+    }
+
+    #[test]
+    fn cancelled_job_does_nothing() {
+        let d = tmp("cancel");
+        std::fs::write(d.join("f"), "x").unwrap();
+        std::fs::create_dir_all(d.join("out")).unwrap();
+        let mut ctl = jobs::Ctl::detached();
+        ctl.cancel_now();
+        let rep = jobs::run(vec![jobs::Item { src: d.join("f"), dest_dir: d.join("out"), policy: jobs::Policy::KeepBoth }], false, &mut ctl);
+        assert_eq!(rep.done, 0);
+        assert!(!d.join("out/f").exists());
+    }
+
+    #[test]
+    fn batch_rename_swaps_and_refuses_clashes() {
+        let d = tmp("batch");
+        std::fs::write(d.join("a"), "A").unwrap();
+        std::fs::write(d.join("b"), "B").unwrap();
+        std::fs::write(d.join("c"), "C").unwrap();
+        let r = batch::batch_rename(vec![[s(&d.join("a")), "b".into()], [s(&d.join("b")), "a".into()]]).unwrap();
+        assert_eq!(r.len(), 2);
+        assert_eq!(std::fs::read_to_string(d.join("a")).unwrap(), "B");
+        assert_eq!(std::fs::read_to_string(d.join("b")).unwrap(), "A");
+        // "c" exists and isn't being renamed away → refused, nothing touched.
+        assert!(batch::batch_rename(vec![[s(&d.join("a")), "c".into()]]).is_err());
+        assert!(batch::batch_rename(vec![[s(&d.join("a")), "x".into()], [s(&d.join("b")), "X".into()]]).is_err());
+        assert_eq!(std::fs::read_to_string(d.join("c")).unwrap(), "C");
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn zip_roundtrip() {
+        let d = tmp("zip");
+        std::fs::create_dir_all(d.join("proj/src")).unwrap();
+        std::fs::write(d.join("proj/src/main.rs"), "fn main(){}").unwrap();
+        let rep = archive::compress(vec![d.join("proj")], &mut jobs::Ctl::detached());
+        assert!(rep.errors.is_empty(), "{:?}", rep.errors);
+        assert!(d.join("proj.zip").exists());
+        let rep = archive::extract(d.join("proj.zip"), &mut jobs::Ctl::detached());
+        assert!(rep.errors.is_empty(), "{:?}", rep.errors);
+        // Single top-level folder comes out as itself, renamed to avoid the original.
+        assert!(rep.pairs[0][1].ends_with("/proj copy"), "{:?}", rep.pairs);
+        assert_eq!(std::fs::read_to_string(d.join("proj copy/src/main.rs")).unwrap(), "fn main(){}");
     }
 }
