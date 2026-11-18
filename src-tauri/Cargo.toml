@@ -1,6 +1,6 @@
 [package]
 name = "fathom"
-version = "0.7.0"
+version = "0.10.0"
 description = "Fathom — a lean twin-pane file manager for macOS. The daily essentials, done the way Linux managers do them."
 authors = ["Jason Peel"]
 edition = "2021"
@@ -30,6 +30,11 @@ trash = "5"
 # webview shows a preview without loading multi-MB screenshots whole.
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "webp", "bmp"] }
 base64 = "0.22"
+
+# statvfs() for the free-space readout in the status bar.
+libc = "0.2"
+notify = "8"
+tauri-plugin-window-state = "2"
 
 [profile.release]
 opt-level = 3

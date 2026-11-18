@@ -5,11 +5,50 @@ makes awkward, done the way the Linux managers (Nautilus, Dolphin, the twin-pane
 ones) do them. Started life as *File Finder*; the search is now just one mode of
 a proper browser.
 
-Same stack as **Pattern Studio** (Tauri 2 — Rust backend, single vanilla
-`index.html`, no npm), themed with the light/dark design system from the
+Same stack as **Pattern Studio** (Tauri 2 — Rust backend, vanilla HTML/CSS and
+native ES modules in `src/js/`, no npm, no bundler), themed with the light/dark design system from the
 **Fascia** VST.
 
-## What it does today (v0.7.0)
+## What it does today (v0.10.0)
+
+- **Folder shelf** (on by default; ⇧⌘F or the shelf button to toggle) — a
+  folder's sub-folders collapse into **one horizontally scrolling row of
+  folder tiles** above the file list, so you never scroll past thirty folders
+  to reach the files. Tiles behave exactly like rows: click/⌘/⇧ select,
+  double-click to open, F2 rename, drag, drop-onto, right-click. ← → step
+  through them. (Search results stay a plain list.)
+
+- **Places sidebar** (⌃⌘S / F9, or the sidebar button) — Home, Desktop,
+  Documents, Downloads, Pictures, Applications, iCloud Drive and mounted
+  volumes (with ⏏ eject). **Pin any folder** by dragging it onto the sidebar or
+  right-click → *Add to Places*; reorder/remove pins from their right-click
+  menu. Drop files onto a place to move them there (⌥ to copy).
+- **Tabs** — ⌘T new tab, ⌘W close, ⌃Tab / ⌘⇧[ ] to cycle, ⌘1…9 to jump.
+  Middle-click or ⌘-double-click a folder (or ⌘-click a place) to open it in a
+  new tab. Each tab keeps its own single/twin layout. The tab bar only shows
+  once you have two; drag files onto a tab to move them there (hover to open it).
+- **Breadcrumb path bar** — click any folder in the path to jump there; click a
+  **›** to list that folder's sub-folders; click blank space (or ⌘L) to type a
+  path (`~` works). Drop files on a path segment to move them up there.
+- **Auto-refresh** — folders on screen update by themselves when files change
+  (macOS FSEvents), keeping your selection, scroll and filter.
+- **Remembers your session** — tabs, folders, layouts and sort order come back
+  on relaunch, along with the window size and position.
+
+- **Create & rename** — **New Folder** (⇧⌘N, F10, ＋ next to Up, or right-click) and
+  **New Text File** (⌥⌘N) drop straight into an inline rename; **F2** renames
+  in place (the name is pre-selected without its extension). Never overwrites.
+- **Clipboard** — **⌘X / ⌘C / ⌘V** cut, copy and paste between folders and
+  panes (cut items dim until pasted); **⌘D** duplicates in place; right-click a
+  folder → *Paste into folder*.
+- **Undo** — **⌘Z** reverses renames, moves, copies, duplicates and new items
+  (last 50). Undoing a copy/new item sends it to the Bin, so it's recoverable.
+- **Live filter** — typing in a pane's search box filters the folder as you
+  type (wildcards ok); **⏎** searches all subfolders. ⌘F focuses it, ⌘L the path.
+- **Type-ahead** — type a name's first letters to jump to it.
+- **Folder menu** — right-click empty space for New Folder/File, Paste,
+  **Open Terminal Here** (⌥⌘T), Copy folder path, show hidden (⇧⌘.).
+- **Free space** for the current volume in each pane's status bar.
 
 - **Sort** — click any column header (**Name / Folder / Size / Modified**) to
   sort; click again to reverse. Name sorts A→Z first, size/date largest/newest
@@ -30,7 +69,7 @@ Same stack as **Pattern Studio** (Tauri 2 — Rust backend, single vanilla
     **Space/Esc** closes. After a move or trash it closes; after a copy it stays.
 
 
-- **Browse** — opens at your home folder; double-click a folder to enter, with
+- **Browse** — opens where you left off; double-click a folder to enter, with
   **Back / Forward / Up / Home** and an editable **path** bar (type a path, ⏎).
 - **Twin-pane** (◫ in the header, or ⌘\\) — two independent panes side by side,
   each with its own path, history, search and selection. The active pane is
@@ -48,7 +87,7 @@ Same stack as **Pattern Studio** (Tauri 2 — Rust backend, single vanilla
   Uses the **real macOS Trash — recoverable**, never a hard delete.
 - **Search within a pane's folder** — type in its search box (wildcards `*` `?`
   ok), ⏎ to run, Esc back to browsing.
-- **Open / Reveal / Copy path**, a **Hidden** toggle per pane, and a persisted
+- **Open / Reveal / Copy path**, a **Hidden files** toggle (◌ in the header, remembered), and a persisted
   **light / dark** theme (◐).
 
 ### Keyboard
@@ -62,15 +101,33 @@ Same stack as **Pattern Studio** (Tauri 2 — Rust backend, single vanilla
 | F5 / F6 | Copy / Move selection to the other pane (twin view) |
 | ↑ / ↓ | Move selection (⇧ to extend) |
 | ⌘A / Esc | Select all / clear |
+| ⇧⌘N / F10 | New folder (then type its name) |
+| ⌥⌘N | New text file |
+| F2 | Rename in place |
+| ⌘X / ⌘C / ⌘V | Cut / copy / paste |
+| ⌘D | Duplicate |
+| ⌘Z | Undo last file operation |
+| ⌘F / ⌘L | Focus filter / type a path |
+| ⇧⌘. | Show / hide hidden files |
+| ⌥⌘T | Open Terminal here |
+| a–z | Jump to name (type-ahead) |
 | ⌘\\ | Toggle single / twin pane |
 | ⌘↑ | Up a folder |
 | ⌘[ / ⌘] | Back / Forward |
+| ⌘T / ⌘W | New tab / close tab |
+| ⌃Tab · ⌘⇧[ ] · ⌘1…9 | Switch tabs |
+| ⌃⌘S / F9 | Toggle Places sidebar |
+| ⇧⌘F | Toggle the folder shelf |
+| ← / → | Step through the folder shelf |
+| ⇧⌘H | Home |
+| ⌘R | Refresh |
 
-## Roadmap (added a slice at a time, as needs come up)
+## Roadmap
 
-- **PDF thumbnails** — the Quick Look path already added for video covers PDFs
-  too; just needs wiring in (a page-one thumbnail).
-- New folder, rename in place, and other essentials as they're missed.
+The goal is a Dolphin-class file manager for macOS, released publicly — see
+**[ROADMAP.md](ROADMAP.md)** for the feature-by-feature gap analysis against
+KDE Dolphin and the phased plan (sidebar, tabs, views, job progress, Finder
+tags, signing/notarisation…).
 
 ## Run it
 

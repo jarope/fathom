@@ -370,6 +370,9 @@ struct OpReport {
     renamed: usize,
     skipped: usize,
     errors: Vec<String>,
+    /// `[source, final_destination]` for every item that succeeded — the UI
+    /// keeps these so the operation can be undone.
+    pairs: Vec<[String; 2]>,
 }
 
 /// Shared move/copy engine. `do_move` picks move (rename, with copy+remove
@@ -428,11 +431,205 @@ fn transfer(sources: Vec<String>, dest_dir: String, do_move: bool) -> Result<OpR
                 if renamed {
                     rep.renamed += 1;
                 }
+                rep.pairs
+                    .push([s.clone(), target.to_string_lossy().into_owned()]);
             }
             Err(e) => rep.errors.push(format!("{name}: {e}")),
         }
     }
     Ok(rep)
+}
+
+/// Duplicate each item next to itself ("name copy.ext"), like Finder's ⌘D.
+/// Items may live in different folders (e.g. a search-result selection).
+fn duplicate(sources: Vec<String>) -> OpReport {
+    let mut rep = OpReport::default();
+    for s in &sources {
+        let src = Path::new(s);
+        let (Some(parent), Some(name)) = (src.parent(), src.file_name().and_then(|n| n.to_str()))
+        else {
+            rep.errors.push(format!("{s}: can't duplicate"));
+            continue;
+        };
+        let (target, _) = unique_dest(parent, name);
+        match copy_recursive(src, &target) {
+            Ok(()) => {
+                rep.done += 1;
+                rep.pairs
+                    .push([s.clone(), target.to_string_lossy().into_owned()]);
+            }
+            Err(e) => rep.errors.push(format!("{name}: {e}")),
+        }
+    }
+    rep
+}
+
+#[tauri::command]
+async fn duplicate_paths(sources: Vec<String>) -> Result<OpReport, String> {
+    tauri::async_runtime::spawn_blocking(move || duplicate(sources))
+        .await
+        .map_err(|e| format!("duplicate task panicked: {e}"))
+}
+
+/// Move each `[from, to]` pair to exactly `to` — used to undo a move. Refuses
+/// (per item) if `to` is already occupied, so an undo can never overwrite.
+fn move_exact(pairs: Vec<[String; 2]>) -> OpReport {
+    let mut rep = OpReport::default();
+    for [from, to] in pairs {
+        let (src, dst) = (Path::new(&from), Path::new(&to));
+        if !src.exists() {
+            rep.errors.push(format!("{from}: no longer exists"));
+            continue;
+        }
+        if dst.exists() {
+            rep.errors.push(format!("{to}: something is already there"));
+            continue;
+        }
+        let res = match std::fs::rename(src, dst) {
+            Ok(()) => Ok(()),
+            Err(_) => copy_recursive(src, dst).and_then(|_| remove_path(src)),
+        };
+        match res {
+            Ok(()) => {
+                rep.done += 1;
+                rep.pairs.push([from, to]);
+            }
+            Err(e) => rep.errors.push(format!("{from}: {e}")),
+        }
+    }
+    rep
+}
+
+#[tauri::command]
+async fn move_exact_paths(pairs: Vec<[String; 2]>) -> Result<OpReport, String> {
+    tauri::async_runtime::spawn_blocking(move || move_exact(pairs))
+        .await
+        .map_err(|e| format!("move task panicked: {e}"))
+}
+
+// --- Create / rename ---------------------------------------------------------
+
+/// Reject names that can't be a single path component.
+fn check_name(name: &str) -> Result<&str, String> {
+    let n = name.trim();
+    if n.is_empty() {
+        return Err("A name can't be empty.".into());
+    }
+    if n == "." || n == ".." {
+        return Err(format!("“{n}” is reserved."));
+    }
+    if n.contains('/') || n.contains('\0') {
+        return Err("Names can't contain “/”.".into());
+    }
+    Ok(n)
+}
+
+/// `dir/base`, or `dir/base 2`, `dir/base 3`… — the first free one.
+fn unique_new(dir: &Path, base: &str) -> PathBuf {
+    let first = dir.join(base);
+    if !first.exists() {
+        return first;
+    }
+    let p = Path::new(base);
+    let stem = p.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_else(|| base.into());
+    let ext = p.extension().map(|e| format!(".{}", e.to_string_lossy())).unwrap_or_default();
+    (2u32..)
+        .map(|n| dir.join(format!("{stem} {n}{ext}")))
+        .find(|c| !c.exists())
+        .expect("unbounded range")
+}
+
+/// Create a new folder (or empty file) inside `parent`, picking a free name
+/// based on `name`. Returns the created path.
+#[tauri::command]
+fn create_item(parent: String, name: String, is_dir: bool) -> Result<String, String> {
+    let name = check_name(&name)?;
+    let dir = Path::new(&parent);
+    if !dir.is_dir() {
+        return Err(format!("Not a folder: {parent}"));
+    }
+    let target = unique_new(dir, name);
+    if is_dir {
+        std::fs::create_dir(&target)
+    } else {
+        std::fs::OpenOptions::new().write(true).create_new(true).open(&target).map(|_| ())
+    }
+    .map_err(|e| format!("Couldn't create {}: {e}", target.display()))?;
+    Ok(target.to_string_lossy().into_owned())
+}
+
+/// Rename `path` to `new_name` in place. Never overwrites an existing item —
+/// except a case-only rename of the item itself (APFS is case-insensitive).
+#[tauri::command]
+fn rename_path(path: String, new_name: String) -> Result<String, String> {
+    let new_name = check_name(&new_name)?;
+    let src = Path::new(&path);
+    let parent = src.parent().ok_or("Can't rename the root.")?;
+    let target = parent.join(new_name);
+    if target == src {
+        return Ok(path);
+    }
+    if target.exists() {
+        let same = match (std::fs::canonicalize(src), std::fs::canonicalize(&target)) {
+            (Ok(a), Ok(b)) => a == b,
+            _ => false,
+        };
+        if !same {
+            return Err(format!("“{new_name}” already exists here."));
+        }
+    }
+    std::fs::rename(src, &target).map_err(|e| format!("Couldn't rename: {e}"))?;
+    Ok(target.to_string_lossy().into_owned())
+}
+
+// --- Volume info / Terminal --------------------------------------------------
+
+#[derive(Serialize)]
+struct Space {
+    free: u64,
+    total: u64,
+}
+
+/// Free / total bytes on the volume holding `path`.
+#[tauri::command]
+fn free_space(path: String) -> Result<Space, String> {
+    #[cfg(unix)]
+    {
+        use std::ffi::CString;
+        let c = CString::new(path.as_bytes()).map_err(|_| "bad path".to_string())?;
+        let mut st: libc::statvfs = unsafe { std::mem::zeroed() };
+        if unsafe { libc::statvfs(c.as_ptr(), &mut st) } != 0 {
+            return Err(std::io::Error::last_os_error().to_string());
+        }
+        let frag = st.f_frsize as u64;
+        Ok(Space {
+            free: st.f_bavail as u64 * frag,
+            total: st.f_blocks as u64 * frag,
+        })
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = path;
+        Err("Free space is only available on Unix.".into())
+    }
+}
+
+/// Open Terminal.app at `path` (Dolphin's "Open Terminal Here").
+#[tauri::command]
+fn open_terminal(path: String) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .args(["-a", "Terminal", &path])
+            .spawn()
+            .map_err(|e| format!("could not open Terminal: {e}"))?;
+        Ok(())
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = path;
+        Err("Open Terminal is only available on macOS.".into())
+    }
 }
 
 /// Move items into `dest_dir`. Runs on a blocking thread (big trees).
@@ -601,17 +798,200 @@ fn open_path(path: String) -> Result<(), String> {
     Ok(())
 }
 
+// --- Places (sidebar) ---------------------------------------------------------
+
+#[derive(Serialize)]
+struct Place {
+    name: String,
+    path: String,
+    kind: &'static str,
+}
+
+#[derive(Serialize)]
+struct Volume {
+    name: String,
+    path: String,
+    is_root: bool,
+}
+
+#[derive(Serialize)]
+struct Places {
+    home: String,
+    standard: Vec<Place>,
+    icloud: Option<String>,
+    volumes: Vec<Volume>,
+}
+
+fn canon(p: &Path) -> String {
+    std::fs::canonicalize(p)
+        .unwrap_or_else(|_| p.to_path_buf())
+        .to_string_lossy()
+        .into_owned()
+}
+
+/// Everything the Places sidebar shows: standard folders that exist, iCloud
+/// Drive (if set up), and mounted volumes. Paths are canonical so they match
+/// the pane's `cwd` for highlighting.
+#[tauri::command]
+fn places() -> Result<Places, String> {
+    let home = PathBuf::from(std::env::var("HOME").map_err(|_| "No HOME".to_string())?);
+    let mut standard = vec![Place { name: "Home".into(), path: canon(&home), kind: "home" }];
+    for (name, kind) in [
+        ("Desktop", "desktop"),
+        ("Documents", "documents"),
+        ("Downloads", "downloads"),
+        ("Pictures", "pictures"),
+    ] {
+        let p = home.join(name);
+        if p.is_dir() {
+            standard.push(Place { name: name.into(), path: canon(&p), kind });
+        }
+    }
+    if Path::new("/Applications").is_dir() {
+        standard.push(Place { name: "Applications".into(), path: "/Applications".into(), kind: "applications" });
+    }
+    let icloud = home.join("Library/Mobile Documents/com~apple~CloudDocs");
+    let icloud = icloud.is_dir().then(|| canon(&icloud));
+
+    let mut volumes = Vec::new();
+    if let Ok(rd) = std::fs::read_dir("/Volumes") {
+        for de in rd.flatten() {
+            let name = de.file_name().to_string_lossy().into_owned();
+            if name.starts_with('.') || name.starts_with("com.apple.") {
+                continue;
+            }
+            let p = de.path();
+            if !p.is_dir() {
+                continue;
+            }
+            let c = canon(&p);
+            let is_root = c == "/";
+            volumes.push(Volume { name, path: if is_root { "/".into() } else { p.to_string_lossy().into_owned() }, is_root });
+        }
+    }
+    volumes.sort_by(|a, b| b.is_root.cmp(&a.is_root).then_with(|| a.name.to_lowercase().cmp(&b.name.to_lowercase())));
+    Ok(Places { home: canon(&home), standard, icloud, volumes })
+}
+
+/// Eject / unmount a volume (`diskutil eject`). Blocking — disks can take a moment.
+#[tauri::command]
+async fn eject_volume(path: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        #[cfg(target_os = "macos")]
+        {
+            let out = std::process::Command::new("diskutil")
+                .args(["eject", &path])
+                .output()
+                .map_err(|e| format!("diskutil failed to run: {e}"))?;
+            if out.status.success() {
+                Ok(())
+            } else {
+                let msg = String::from_utf8_lossy(&out.stderr).trim().to_string();
+                let msg = if msg.is_empty() { String::from_utf8_lossy(&out.stdout).trim().to_string() } else { msg };
+                Err(if msg.is_empty() { "Couldn't eject — is something using it?".into() } else { msg })
+            }
+        }
+        #[cfg(not(target_os = "macos"))]
+        {
+            let _ = path;
+            Err("Eject is only available on macOS.".to_string())
+        }
+    })
+    .await
+    .map_err(|e| format!("eject task panicked: {e}"))?
+}
+
+// --- Folder watching (auto-refresh) ------------------------------------------
+
+/// One FSEvents-backed watcher for the folders currently on screen. When
+/// anything inside a watched folder changes we emit `fs-changed` with that
+/// folder's path; the UI debounces and refreshes the matching panes.
+struct WatchState {
+    watcher: std::sync::Mutex<Option<notify::RecommendedWatcher>>,
+    dirs: std::sync::Arc<std::sync::Mutex<std::collections::HashSet<PathBuf>>>,
+}
+
+#[tauri::command]
+fn watch_dirs(
+    app: tauri::AppHandle,
+    state: tauri::State<WatchState>,
+    paths: Vec<String>,
+) -> Result<(), String> {
+    use notify::{EventKind, RecursiveMode, Watcher};
+    use std::collections::HashSet;
+    use tauri::Emitter;
+
+    let mut guard = state.watcher.lock().map_err(|_| "watcher poisoned")?;
+    if guard.is_none() {
+        let dirs = state.dirs.clone();
+        let w = notify::recommended_watcher(move |res: notify::Result<notify::Event>| {
+            let Ok(ev) = res else { return };
+            if matches!(ev.kind, EventKind::Access(_)) {
+                return;
+            }
+            let hit: HashSet<PathBuf> = {
+                let Ok(dirs) = dirs.lock() else { return };
+                ev.paths
+                    .iter()
+                    .filter_map(|p| {
+                        if dirs.contains(p) {
+                            Some(p.clone())
+                        } else {
+                            p.parent().filter(|par| dirs.contains(*par)).map(Path::to_path_buf)
+                        }
+                    })
+                    .collect()
+            };
+            for d in hit {
+                let _ = app.emit("fs-changed", d.to_string_lossy().into_owned());
+            }
+        })
+        .map_err(|e| format!("can't start watcher: {e}"))?;
+        *guard = Some(w);
+    }
+    let watcher = guard.as_mut().expect("just set");
+
+    let new: HashSet<PathBuf> = paths.iter().map(PathBuf::from).collect();
+    // Swap the set first and release its lock before touching the watcher —
+    // the event callback takes the same lock on another thread.
+    let old = {
+        let mut dirs = state.dirs.lock().map_err(|_| "watch set poisoned")?;
+        std::mem::replace(&mut *dirs, new.clone())
+    };
+    for gone in old.difference(&new) {
+        let _ = watcher.unwatch(gone);
+    }
+    for added in new.difference(&old) {
+        let _ = watcher.watch(added, RecursiveMode::NonRecursive);
+    }
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_window_state::Builder::default().build())
+        .manage(WatchState {
+            watcher: std::sync::Mutex::new(None),
+            dirs: Default::default(),
+        })
         .invoke_handler(tauri::generate_handler![
+            places,
+            eject_volume,
+            watch_dirs,
             list_dir,
             home_dir,
             search,
             move_to_trash,
             move_paths,
             copy_paths,
+            duplicate_paths,
+            move_exact_paths,
+            create_item,
+            rename_path,
+            free_space,
+            open_terminal,
             thumbnail,
             ql_thumbnail,
             svg_data_uri,
@@ -620,4 +1000,73 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running Fathom");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn tmp(tag: &str) -> PathBuf {
+        let d = std::env::temp_dir().join(format!("fathom-test-{tag}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&d);
+        std::fs::create_dir_all(&d).unwrap();
+        d
+    }
+    fn s(p: &Path) -> String {
+        p.to_string_lossy().into_owned()
+    }
+
+    #[test]
+    fn create_picks_free_names() {
+        let d = tmp("create");
+        let a = create_item(s(&d), "New Folder".into(), true).unwrap();
+        let b = create_item(s(&d), "New Folder".into(), true).unwrap();
+        let f = create_item(s(&d), "New File.txt".into(), false).unwrap();
+        let g = create_item(s(&d), "New File.txt".into(), false).unwrap();
+        assert!(a.ends_with("/New Folder") && b.ends_with("/New Folder 2"));
+        assert!(f.ends_with("/New File.txt") && g.ends_with("/New File 2.txt"));
+        assert!(create_item(s(&d), "a/b".into(), true).is_err());
+        assert!(create_item(s(&d), "  ".into(), true).is_err());
+    }
+
+    #[test]
+    fn rename_never_overwrites_but_allows_case_change() {
+        let d = tmp("rename");
+        std::fs::write(d.join("a.txt"), "A").unwrap();
+        std::fs::write(d.join("b.txt"), "B").unwrap();
+        assert!(rename_path(s(&d.join("a.txt")), "b.txt".into()).is_err());
+        assert_eq!(std::fs::read_to_string(d.join("b.txt")).unwrap(), "B");
+        let np = rename_path(s(&d.join("a.txt")), "A.txt".into()).unwrap();
+        assert!(np.ends_with("/A.txt"));
+        let names: Vec<_> = std::fs::read_dir(&d).unwrap().map(|e| e.unwrap().file_name()).collect();
+        assert!(names.iter().any(|n| n == "A.txt"));
+    }
+
+    #[test]
+    fn move_exact_refuses_occupied_target_and_undo_roundtrips() {
+        let d = tmp("mvx");
+        let (src, dst) = (d.join("src"), d.join("dst"));
+        std::fs::create_dir_all(&src).unwrap();
+        std::fs::create_dir_all(&dst).unwrap();
+        std::fs::write(src.join("f"), "1").unwrap();
+        let rep = transfer(vec![s(&src.join("f"))], s(&dst), true).unwrap();
+        assert_eq!(rep.pairs.len(), 1);
+        // Undo: move back to the exact original spot.
+        let back = move_exact(rep.pairs.iter().map(|[a, b]| [b.clone(), a.clone()]).collect());
+        assert_eq!(back.done, 1);
+        assert!(src.join("f").exists());
+        // Occupied target is refused, nothing clobbered.
+        std::fs::write(dst.join("f"), "2").unwrap();
+        let r = move_exact(vec![[s(&src.join("f")), s(&dst.join("f"))]]);
+        assert_eq!(r.done, 0);
+        assert_eq!(std::fs::read_to_string(dst.join("f")).unwrap(), "2");
+    }
+
+    #[test]
+    fn duplicate_lands_next_to_source() {
+        let d = tmp("dup");
+        std::fs::write(d.join("x.png"), "x").unwrap();
+        let rep = duplicate(vec![s(&d.join("x.png"))]);
+        assert!(rep.pairs[0][1].ends_with("/x copy.png"));
+    }
 }
