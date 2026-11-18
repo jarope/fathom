@@ -434,7 +434,8 @@ pub fn run(items: Vec<Item>, do_move: bool, ctl: &mut Ctl) -> OpReport {
                         rep.errors.push(format!("{}: can't replace a folder that contains it", p.name));
                         continue;
                     }
-                    if let Err(e) = trash::delete(&first) {
+                    let binned = crate::bin_ops::trash_paths(&[first.to_string_lossy().into_owned()]);
+                    if let Some(e) = binned.errors.first() {
                         rep.errors.push(format!("{}: couldn't move the existing item to the Bin: {e}", p.name));
                         continue;
                     }

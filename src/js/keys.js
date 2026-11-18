@@ -1,7 +1,7 @@
 // Global keyboard: routes to the active pane. Text fields keep their own keys.
 
 import { app } from "./core.js";
-import { undo, setClip, paste, duplicateSel, transferToOther, openTerminal, batchRename } from "./ops.js";
+import { undo, redo, setClip, paste, duplicateSel, transferToOther, openTerminal, batchRename } from "./ops.js";
 import { openTab, closeTab, cycleTab, gotoTab, setView } from "./tabs.js";
 import { showPreviewFor, closePreview, previewStep, toggleDock } from "./preview.js";
 import { hideCtx } from "./menu.js";
@@ -57,6 +57,7 @@ export function initKeys() {
     if (e.key === "F2") return k(() => { const s = P.selectedEntries(); if (s.length === 1) P.startRename(s[0].path); else if (s.length > 1) batchRename(P); });
     if (mod && e.altKey && code === "KeyT") return k(() => P.cwd && openTerminal(P, P.cwd));
     if (mod && !e.shiftKey && code === "KeyZ") return k(undo);
+    if (mod && e.shiftKey && code === "KeyZ") return k(redo);
     if (mod && code === "KeyC") return k(() => setClip(P, false));
     if (mod && code === "KeyX") return k(() => setClip(P, true));
     if (mod && e.altKey && code === "KeyV") return k(() => paste(P, null, { move: true })); // Finder's "Move Item Here"

@@ -45,7 +45,7 @@ Status key: ✅ done · 🟡 partial · ⬜ not started
 | **Customisable shortcuts** | Any action (26.04) | ⬜ |
 | **Folder shelf** (Fathom original) | — | ✅ sub-folders as one scrolling row of tiles above the files |
 | **Native file icons / thumbnails** | | 🟡 emoji + Quick Look thumbs |
-| **Drag to/from other apps** | | ⬜ next (Phase 3b) — internal drag only today |
+| **Drag to/from other apps** | | ✅ native drag sessions both ways |
 
 ## Phases
 
@@ -58,7 +58,7 @@ Frontend split into ES modules (`src/js/`, no npm); Places sidebar with pins,
 iCloud and volumes (eject); tabs; breadcrumb path bar with sub-folder
 drop-downs; FSEvents auto-refresh; session + window-size restore. Long folders
 use `content-visibility` for cheap rendering — a true **virtualised list**
-moves to Phase 4 alongside the grid view, which needs the same machinery.
+moves to Phase 5 alongside the grid view, which needs the same machinery.
 
 ### Phase 3 — Operations done properly ✅ (v0.11.0)
 Job engine with progress, speed/ETA and cancel; conflict dialog (keep both /
@@ -70,30 +70,63 @@ covers all of it (merged moves undo piece by piece).
 ⌘+ / ⌘− / ⌘0 and an **Aa** menu: whole-window zoom 75–160%, remembered;
 the title bar stays 64pt so the traffic lights stay aligned.
 
-### Phase 3b — Drag & drop with other apps
-- **Drag in** from Finder/Desktop and **drag out** to Finder, Mail, Slack…
-  Needs Tauri's native drag-drop (and a native drag session for drag-out),
-  which can interfere with Fathom's own pane-to-pane HTML drag — so it needs
-  hands-on testing in the real app, not just the headless harness.
-- **Redo** (⇧⌘Z), and undo for Move to Bin (Finder's "Put Back").
+### Phase 3b — Drag & drop with other apps ✅ (v0.13.0)
+All drags are native macOS drag sessions: files drag out to Finder, Mail,
+Slack…, and drops from anywhere (Fathom included) arrive through Tauri's drop
+events, hit-tested against rows, tiles, breadcrumbs, tabs and the sidebar.
+Finder's copy/move rules (same disk = move, ⌥ copy, ⌘ move). **Redo** (⇧⌘Z)
+and **undo for Move to Bin** (Bin location recorded; Finder's Put Back works
+too). Symlinks go to the Bin via NSFileManager — Finder can't bin them by path.
 
-### Phase 4 — Views & information (v0.11)
-- **Virtualised list** (only on-screen rows in the DOM) for 50k-entry folders.
-- **Icons/grid view** with Quick Look thumbnails + zoom (⌘+ / ⌘−).
-- **Columns view** (Miller columns — Finder users will expect it).
-- **Expandable folders** in details view.
-- **Information panel**: metadata, PDF page one, text/code preview, folder size.
-- **Properties / Get Info** (⌘I): recursive size, permissions, dates, Open With.
-- Native file-type icons (NSWorkspace) instead of emoji.
+### Phase 4 — Mac-native power (next)
+Shipped in four steps:
 
-### Phase 5 — Mac-native power (v0.12)
-- **Finder tags** (read/write `com.apple.metadata:_kMDItemUserTags`), tag
-  colours, filter by tag — Dolphin's tags/ratings, the Mac way.
-- **Spotlight content search** (`mdfind -onlyin`).
-- **Git status** colouring for repos.
-- **User actions** (Dolphin service menus): shell snippets in a config file,
-  shown in the context menu with `%f` substitution.
-- Customisable keyboard shortcuts; preferences window.
+**v0.14 — Tags & system integration**
+- **Finder tags**: coloured dots on rows (read from Finder's own tag data, so
+  tags set in either app show in both); tag/untag from the right-click colour
+  row and ⌃⌘1–7 (⌃⌘0 clears); written through NSURL so Spotlight stays right.
+- **Tags in the sidebar**: click one to list every file with that tag (Spotlight).
+- **Open With ▸**: apps that can open the selection (default first) + Other….
+- **Share ▸**: the standard macOS share menu (AirDrop, Messages, Mail…).
+- **Real Quick Look on Space** (QLPreviewPanel): PDFs, video, Office, code…
+  replaces Fathom's image-only full preview; ↑ ↓ keep moving the selection.
+
+**v0.15 — Spotlight search**
+- Filter box gets a **Name / Contents** switch; Contents = Spotlight
+  (`mdfind -onlyin`), results stream in; this folder or the whole Mac.
+- Query helpers: `kind:pdf`, `modified:<7d`, `size:>100MB`, `tag:Red`.
+- **Saved searches** pinned in the sidebar (Smart Folders).
+
+**v0.16 — Git**
+- Rows coloured/badged: modified, new, staged, conflicted; ignored dimmed;
+  folders roll up their contents' status; branch + ahead/behind in the status bar.
+- Refreshes on file changes (FSEvents watcher already in place).
+- **Simple commit & push**: right-click → *Commit…* (pick files, message,
+  commit) and *Push* to the tracking remote — progress card, errors shown in
+  full; anything fancier stays in your git tools.
+
+**v0.17 — User actions, Preferences, Shortcuts**
+- **User actions** (Dolphin service menus): right-click entries defined in
+  `~/.config/fathom/actions.json` **and** editable in Preferences (same file).
+  `%f` file, `%F` all selected, `%d` current folder; filter by type / folders /
+  multi; run in background (progress card) or in Terminal. Ships with examples.
+- **Preferences window**: start folder, defaults (hidden, shelf), date format,
+  terminal app (Terminal / iTerm / Ghostty / Warp), session restore.
+- **Shortcut editor**: rebind any action, clash warnings.
+
+### Phase 5 — Views & information (after Phase 4)
+- **Display engine**: shared per-pane model (entries, sort, filter, selection)
+  + views that draw only what's on screen — 50k-entry folders stay smooth;
+  selection, rename, type-ahead, drag & drop, menus work in every view.
+- **Details view**: expandable folders (tree), choosable/resizable columns
+  (Kind, Created, Added, Extension, Permissions), per-folder view memory.
+- **Grid view** with Quick Look thumbnails, icon size, rubber-band selection.
+- **Columns view** (Miller columns) with a preview column.
+- **Real file icons** (NSWorkspace) instead of emoji, cached per type.
+- **Information panel** (Dolphin F11) replacing the preview dock: preview,
+  metadata (dimensions, duration, EXIF), folder size on demand.
+- **Get Info** (⌘I): recursive size, permissions, dates, Open With, tags.
+- Open questions: ⌘+/⌘− in grid view = icon size (window zoom → ⌥⌘+/−)?
 
 ### Phase 6 — Public release (v1.0)
 - **Name check**: "Fathom" is already used by Fathom Analytics and the Fathom
@@ -113,4 +146,6 @@ the title bar stays 64pt so the traffic lights stay aligned.
 Deferred on purpose — features first, then a polish pass.
 - Header: confirm traffic-light vertical alignment and wordmark spacing on a real build.
 - Folder shelf: optional mouse-wheel → sideways scroll while hovering the shelf.
+- Drag cursor always shows the "+" (copy) badge over Fathom, even when the
+  drop will move — Tauri's drop handler always answers "copy" to AppKit.
 - Other header/layout tweaks noted during v0.8–0.10 review (to be listed).

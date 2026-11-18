@@ -1,6 +1,6 @@
 [package]
 name = "fathom"
-version = "0.12.0"
+version = "0.13.0"
 description = "Fathom — a lean twin-pane file manager for macOS. The daily essentials, done the way Linux managers do them."
 authors = ["Jason Peel"]
 edition = "2021"
@@ -42,8 +42,9 @@ lto = true
 codegen-units = 1
 strip = true
 
-# Native pasteboard (file URLs) so ⌘C / ⌘V interoperate with Finder.
+# Native pasteboard (⌘C/⌘V with Finder), drag sessions to other apps, and
+# Move to Bin that reports where items went (for Put Back).
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"
-objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSArray", "NSString", "NSURL"] }
-objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSPasteboard", "NSPasteboardItem"] }
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSArray", "NSString", "NSURL", "NSFileManager", "NSError", "NSGeometry", "NSDate", "NSObjCRuntime"] }
+objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSPasteboard", "NSPasteboardItem", "NSApplication", "NSResponder", "NSDragging", "NSDraggingItem", "NSDraggingSession", "NSEvent", "NSGraphics", "NSGraphicsContext", "NSImage", "NSView", "NSWindow", "NSWorkspace"] }

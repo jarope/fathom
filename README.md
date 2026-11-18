@@ -9,7 +9,7 @@ Same stack as **Pattern Studio** (Tauri 2 — Rust backend, vanilla HTML/CSS and
 native ES modules in `src/js/`, no npm, no bundler), themed with the light/dark design system from the
 **Fascia** VST.
 
-## What it does today (v0.12.0)
+## What it does today (v0.13.0)
 
 - **Progress & cancel** — copies, moves, duplicates and archive jobs run in the
   background; anything that takes more than a moment gets a card (bottom-right)
@@ -65,8 +65,16 @@ native ES modules in `src/js/`, no npm, no bundler), themed with the light/dark 
 - **Clipboard** — **⌘X / ⌘C / ⌘V** cut, copy and paste between folders and
   panes (cut items dim until pasted); **⌘D** duplicates in place; right-click a
   folder → *Paste into folder*.
-- **Undo** — **⌘Z** reverses renames, moves, copies, duplicates and new items
-  (last 50). Undoing a copy/new item sends it to the Bin, so it's recoverable.
+- **Undo / Redo** — **⌘Z** reverses renames, moves, copies, duplicates, new
+  items and **Move to Bin** (it puts the items back where they were); **⇧⌘Z**
+  redoes (last 50). Undoing a copy/new item sends it to the Bin, and Redo
+  brings it back out. Items binned by Fathom also get Finder's own "Put Back".
+
+- **Drag & drop with other apps** — drag files out of Fathom into Finder,
+  the Desktop, Mail, Slack…, and drag files in from anywhere. Copy or move
+  follows Finder's rules: **same disk = move, another disk = copy, hold ⌥ to
+  copy, ⌘ to move**. Drops work on rows, folder tiles, breadcrumbs, tabs and
+  the sidebar.
 - **Live filter** — typing in a pane's search box filters the folder as you
   type (wildcards ok); **⏎** searches all subfolders. ⌘F focuses it, ⌘L the path.
 - **Type-ahead** — type a name's first letters to jump to it.
@@ -99,8 +107,8 @@ native ES modules in `src/js/`, no npm, no bundler), themed with the light/dark 
   each with its own path, history, search and selection. The active pane is
   accent-highlighted.
 - **Move / copy** —
-  - **Drag** a selection to the other pane (or onto a folder) to **move** it;
-    hold **⌥** (or **⌃**) while dragging to **copy**.
+  - **Drag** a selection to the other pane (or onto a folder): same disk
+    **moves**, another disk **copies**; hold **⌥** to copy, **⌘** to move.
   - **F6** moves / **F5** copies the selection to the *other* pane.
   - Single-pane: right-click → **Move to… / Copy to…** opens a folder picker.
   - Collisions are never overwritten — a colliding item is auto-renamed
@@ -131,7 +139,7 @@ native ES modules in `src/js/`, no npm, no bundler), themed with the light/dark 
 | ⌘X / ⌘C / ⌘V | Cut / copy / paste (shared with Finder) |
 | ⌥⌘V | Move clipboard files here |
 | ⌘D | Duplicate |
-| ⌘Z | Undo last file operation |
+| ⌘Z / ⇧⌘Z | Undo / redo last file operation |
 | ⌘F / ⌘L | Focus filter / type a path |
 | ⇧⌘. | Show / hide hidden files |
 | ⌥⌘T | Open Terminal here |

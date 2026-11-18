@@ -3,10 +3,10 @@
 
 import { app, invoke, el, icon, fmtSize, fmtDate } from "./core.js";
 import { isImage, isVideo } from "./previews.js";
-import { pushUndo, refreshAll, selectEverywhere, performTransfer } from "./ops.js";
+import { pushUndo, refreshAll, selectEverywhere, trashPaths } from "./ops.js";
 import { openContextMenu, showMenu } from "./menu.js";
 import { setActive, openTab } from "./tabs.js";
-import { closePreview } from "./preview.js";
+import { registerDropZone, startDrag } from "./dnd.js";
 
 const TEMPLATE = `
   <div class="ptoolbar">
@@ -27,7 +27,6 @@ const TEMPLATE = `
   <div class="pstatus"></div>`;
 
 const globRe = (f) => new RegExp("^" + f.replace(/[.+^${}()|\\]/g, "\\$&").replace(/\*/g, ".*").replace(/\?/g, ".") + "$", "i");
-const dropCopy = (ev) => ev.altKey || ev.ctrlKey;
 
 export function createPane(key) {
   const root = el("div", "pane " + key);
@@ -177,22 +176,9 @@ export function createPane(key) {
   });
   els.path.addEventListener("blur", endEdit);
   // Drop onto a breadcrumb segment → move/copy into that ancestor folder.
-  els.crumbs.addEventListener("dragover", (ev) => {
-    const cr = ev.target.closest(".crumb");
-    els.crumbs.querySelectorAll(".drop-into").forEach((n) => n !== cr && n.classList.remove("drop-into"));
-    if (!app.dragData || !cr || cr.dataset.path === P.cwd) return;
-    ev.preventDefault();
-    ev.dataTransfer.dropEffect = dropCopy(ev) ? "copy" : "move";
-    cr.classList.add("drop-into");
-  });
-  els.crumbs.addEventListener("dragleave", (ev) => { if (!els.crumbs.contains(ev.relatedTarget)) els.crumbs.querySelectorAll(".drop-into").forEach((n) => n.classList.remove("drop-into")); });
-  els.crumbs.addEventListener("drop", (ev) => {
-    const cr = ev.target.closest(".crumb");
-    els.crumbs.querySelectorAll(".drop-into").forEach((n) => n.classList.remove("drop-into"));
-    if (!app.dragData || !cr) return;
-    ev.preventDefault();
-    const paths = app.dragData.paths; app.dragData = null;
-    performTransfer(paths, cr.dataset.path, dropCopy(ev));
+  registerDropZone({
+    root: els.crumbs,
+    over: (n) => { const cr = n.closest(".crumb"); return cr && cr.dataset.path !== P.cwd ? { el: cr, dest: cr.dataset.path } : null; },
   });
 
   // ----------------------------------------------- live filter / recursive search
@@ -332,14 +318,8 @@ export function createPane(key) {
     else sel.filter((x) => !x.is_dir).forEach((x) => invoke("open_path", { path: x.path }));
   };
 
-  P.trashSelected = async () => {
-    const sel = P.selectedPaths(); if (!sel.length) return;
-    try {
-      const n = await invoke("move_to_trash", { paths: sel });
-      await P.reload(); P.flash(`Moved ${n} to Bin ↩`);
-      if (app.previewOpen) closePreview();
-    } catch (e) { P.flash("⚠ " + e, "warn"); }
-  };
+  P.trashSelected = () => trashPaths(P, P.selectedPaths());
+
 
   // ------------------------------------------------------------------- sort
   P.applySort = () => {
@@ -455,38 +435,26 @@ export function createPane(key) {
   });
 
   // ------------------------------------------------------------ drag & drop
+  // Dragging rows starts a native macOS drag (see dnd.js), so files can go
+  // to Finder and other apps too; drops land here via registerDropZone.
   els.listing.addEventListener("dragstart", (ev) => {
     const row = ev.target.closest(".row"); if (!row) return;
+    ev.preventDefault();
     const i = +row.dataset.i;
     if (!P.selected.has(P.entries[i].path)) P.selectSingle(i);
     setActive(P);
-    const sel = P.selectedEntries();
-    app.dragData = { paths: sel.map((e) => e.path), dirs: sel.filter((e) => e.is_dir).map((e) => e.path), source: P };
-    ev.dataTransfer.effectAllowed = "copyMove";
-    ev.dataTransfer.setData("text/plain", app.dragData.paths.join("\n"));
+    startDrag(P, P.selectedEntries());
   });
-  const clearDropCue = () => { els.listing.classList.remove("drop-target"); els.listing.querySelectorAll(".row.drop-into").forEach((r) => r.classList.remove("drop-into")); };
-  els.listing.addEventListener("dragover", (ev) => {
-    if (!app.dragData) return;
-    ev.preventDefault();
-    ev.dataTransfer.dropEffect = dropCopy(ev) ? "copy" : "move";
-    const row = ev.target.closest(".row");
-    const overFolder = row && P.entries[+row.dataset.i].is_dir && !app.dragData.paths.includes(P.entries[+row.dataset.i].path);
-    clearDropCue();
-    if (overFolder) row.classList.add("drop-into"); else els.listing.classList.add("drop-target");
+  registerDropZone({
+    root: els.listing,
+    over: (n, data) => {
+      if (!P.cwd && !n.closest(".row")) return null;
+      const row = n.closest(".row");
+      const e = row && P.entries[+row.dataset.i];
+      if (e && e.is_dir && !data.paths.includes(e.path)) return { el: row, dest: e.path };
+      return P.cwd && P.mode === "browse" ? { el: els.listing, cls: "drop-target", dest: P.cwd } : null;
+    },
   });
-  els.listing.addEventListener("dragleave", (ev) => { if (!els.listing.contains(ev.relatedTarget)) clearDropCue(); });
-  els.listing.addEventListener("drop", (ev) => {
-    if (!app.dragData) return;
-    ev.preventDefault();
-    const row = ev.target.closest(".row");
-    let dest = P.cwd;
-    if (row) { const e = P.entries[+row.dataset.i]; if (e.is_dir && !app.dragData.paths.includes(e.path)) dest = e.path; }
-    const paths = app.dragData.paths;
-    clearDropCue(); app.dragData = null;
-    if (dest) performTransfer(paths, dest, dropCopy(ev));
-  });
-  els.listing.addEventListener("dragend", clearDropCue);
 
   els.listing.addEventListener("contextmenu", (ev) => {
     ev.preventDefault();

@@ -14,36 +14,87 @@ const flashActive = (msg, cls) => (app.active || app.tab.panes[0]).flash(msg, cl
 export const refreshAll = () => Promise.all(visiblePanes().map((p) => p.reload()));
 export const selectEverywhere = (paths) => visiblePanes().forEach((p) => p.selectPaths(paths));
 
-// ---- Undo (global, like Dolphin's) ----
-// Each op knows how to reverse itself without ever overwriting:
-//   rename / batch → rename back; move → exact move back (refused if occupied);
-//   copy / duplicate / create / compress / extract → created items go to the Bin.
+// ---- Undo / Redo (global, like Dolphin's) ----
+// Every op can be reversed and re-applied without ever overwriting:
+//   rename / batch → rename back · move → exact move back (refused if occupied)
+//   copy / create (also duplicate, compress, extract) → created items go to the
+//     Bin; redo brings them back out of it
+//   trash → Put Back from the Bin; redo bins them again
+// A new action clears the redo stack, as everywhere else.
 export const undoStack = [];
-export const pushUndo = (op) => { undoStack.push(op); if (undoStack.length > 50) undoStack.shift(); };
+export const redoStack = [];
+export const pushUndo = (op) => { undoStack.push(op); if (undoStack.length > 50) undoStack.shift(); redoStack.length = 0; };
 
-export async function undo() {
-  const op = undoStack.pop();
-  if (!op) { flashActive("Nothing to undo"); return; }
+const moveExact = async (pairs) => {
+  const rep = await invoke("move_exact_paths", { pairs });
+  if (rep.errors.length) throw rep.errors[0];
+};
+const toBin = async (paths) => {
+  const b = await invoke("move_to_trash", { paths });
+  if (b.errors.length && !b.count) throw b.errors[0];
+  return b;
+};
+const fromBin = async (pairs, what) => {
+  if (!pairs || !pairs.length) throw `can't find ${what} in the Bin any more`;
+  await moveExact(pairs.map(([orig, inBin]) => [inBin, orig]));
+};
+
+/** Apply `op` backwards (dir -1, undo) or forwards (dir +1, redo). Returns paths to select. */
+async function apply(op, dir) {
+  const undoing = dir < 0;
+  switch (op.kind) {
+    case "rename":
+      await invoke("rename_path", undoing ? { path: op.to, newName: baseName(op.from) } : { path: op.from, newName: baseName(op.to) });
+      return [undoing ? op.from : op.to];
+    case "batch":
+      await invoke("batch_rename_cmd", { items: op.pairs.map(([f, t]) => (undoing ? [t, baseName(f)] : [f, baseName(t)])) });
+      return op.pairs.map((x) => x[undoing ? 0 : 1]);
+    case "move":
+      await moveExact(undoing ? op.pairs.map(([s, d]) => [d, s]).reverse() : op.pairs);
+      return op.pairs.map((x) => x[undoing ? 0 : 1]);
+    case "trash":
+      if (undoing) { await fromBin(op.pairs, "them"); return op.pairs.map((x) => x[0]); }
+      op.pairs = (await toBin(op.pairs.map((x) => x[0]))).pairs;
+      return [];
+    default: // copy / create: the op made new items
+      if (undoing) { op.binned = (await toBin(op.created)).pairs; return []; }
+      await fromBin(op.binned, "them"); op.binned = null;
+      return op.created;
+  }
+}
+
+async function step(from, to, dir) {
+  const op = from.pop();
+  if (!op) { flashActive(dir < 0 ? "Nothing to undo" : "Nothing to redo"); return; }
   try {
-    if (op.kind === "rename") {
-      await invoke("rename_path", { path: op.to, newName: baseName(op.from) });
-    } else if (op.kind === "batch") {
-      await invoke("batch_rename_cmd", { items: op.pairs.map(([from, to]) => [to, baseName(from)]) });
-    } else if (op.kind === "move") {
-      const rep = await invoke("move_exact_paths", { pairs: op.pairs.map(([s, d]) => [d, s]).reverse() });
-      if (rep.errors.length) throw rep.errors[0];
-    } else {
-      await invoke("move_to_trash", { paths: op.created });
-    }
+    const sel = await apply(op, dir);
+    to.push(op);
     await refreshAll();
-    if (op.kind === "rename") selectEverywhere([op.from]);
-    if (op.kind === "batch" || op.kind === "move") selectEverywhere(op.pairs.map((x) => x[0]));
-    const binned = !["rename", "batch", "move"].includes(op.kind);
-    flashActive(`Undid ${op.label}${binned ? " — moved to Bin" : ""}${op.replacedNote ? " (replaced items are still in the Bin)" : ""}`);
+    if (sel.length) selectEverywhere(sel);
+    const binned = (op.kind === "trash" && dir > 0) || (["copy", "create"].includes(op.kind) && dir < 0);
+    const putBack = op.kind === "trash" && dir < 0;
+    flashActive(`${dir < 0 ? "Undid" : "Redid"} ${op.label}${binned ? " — moved to Bin" : putBack ? " — put back from the Bin" : ""}${op.replacedNote && dir < 0 ? " (replaced items are still in the Bin)" : ""}`);
   } catch (e) {
     await refreshAll();
-    flashActive("⚠ Undo failed: " + e, "warn");
+    flashActive(`⚠ ${dir < 0 ? "Undo" : "Redo"} failed: ${e}`, "warn");
   }
+}
+
+export const undo = () => step(undoStack, redoStack, -1);
+export const redo = () => step(redoStack, undoStack, 1);
+
+/** Move paths to the Bin, remembering where they went so ⌘Z puts them back. */
+export async function trashPaths(P, paths) {
+  if (!paths.length) return;
+  let b;
+  try { b = await invoke("move_to_trash", { paths }); }
+  catch (e) { P.flash("⚠ " + e, "warn"); return; }
+  if (b.pairs.length) pushUndo({ kind: "trash", pairs: b.pairs, label: `Move to Bin of ${plural(b.pairs.length, "item")}` });
+  await refreshAll();
+  if (app.previewOpen) closePreview();
+  let msg = b.count ? `Moved ${plural(b.count, "item")} to the Bin${b.pairs.length ? " · ⌘Z puts back" : ""}` : "Nothing was moved to the Bin";
+  if (b.errors.length) msg += ` · ⚠ ${b.errors[0]}`;
+  P.flash(msg, b.errors.length ? "warn" : "msg");
 }
 
 // ---- Clipboard: ⌘C / ⌘X / ⌘V, shared with Finder via the system pasteboard ----

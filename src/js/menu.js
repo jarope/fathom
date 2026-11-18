@@ -2,7 +2,7 @@
 // sub-folder drop-downs, the sidebar and tabs.
 
 import { app, invoke, el, icon, plural } from "./core.js";
-import { undoStack, undo, setClip, paste, duplicateSel, transferToOther, pickAndTransfer, openTerminal, compressSel, extractSel, batchRename, isArchive } from "./ops.js";
+import { undoStack, redoStack, undo, redo, setClip, paste, duplicateSel, transferToOther, pickAndTransfer, openTerminal, compressSel, extractSel, batchRename, isArchive } from "./ops.js";
 import { openTab } from "./tabs.js";
 import { addBookmarks } from "./sidebar.js";
 import { toggleHidden } from "./view.js";
@@ -68,6 +68,7 @@ export function openContextMenu(P, x, y) {
       { label: app.showHidden ? "Hide hidden files" : "Show hidden files", fn: toggleHidden, key: "⇧⌘." },
       "sep",
       undoStack.length && { label: `Undo ${undoStack[undoStack.length - 1].label}`, fn: undo, key: "⌘Z" },
+      redoStack.length && { label: `Redo ${redoStack[redoStack.length - 1].label}`, fn: redo, key: "⇧⌘Z" },
     ], x, y);
     return;
   }

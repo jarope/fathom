@@ -5,7 +5,7 @@
 import { app, el, icon, baseName } from "./core.js";
 import { createPane } from "./pane.js";
 import { placeDock } from "./preview.js";
-import { performTransfer } from "./ops.js";
+import { registerDropZone } from "./dnd.js";
 import { showMenu } from "./menu.js";
 
 let seq = 0;
@@ -144,25 +144,15 @@ export function initTabs() {
   });
 
   // Drag files over a tab: it highlights; hold to spring it open; drop to move there.
-  let spring = null;
-  const clearCue = () => { bar.querySelectorAll(".drop-into").forEach((n) => n.classList.remove("drop-into")); clearTimeout(spring); spring = null; };
-  bar.addEventListener("dragover", (ev) => {
-    const n = ev.target.closest(".tab");
-    if (!app.dragData || !n) { clearCue(); return; }
-    ev.preventDefault();
-    ev.dataTransfer.dropEffect = ev.altKey || ev.ctrlKey ? "copy" : "move";
-    if (!n.classList.contains("drop-into")) {
-      clearCue(); n.classList.add("drop-into");
-      const t = app.tabs[+n.dataset.i];
-      spring = setTimeout(() => { if (t !== app.tab) switchTo(t); }, 750);
-    }
-  });
-  bar.addEventListener("dragleave", (ev) => { if (!bar.contains(ev.relatedTarget)) clearCue(); });
-  bar.addEventListener("drop", (ev) => {
-    const t = tabOf(ev); clearCue();
-    if (!app.dragData || !t) return;
-    ev.preventDefault();
-    const paths = app.dragData.paths; app.dragData = null;
-    performTransfer(paths, (t.active || t.panes[0]).cwd, ev.altKey || ev.ctrlKey);
+  let spring = null, springTab = null;
+  registerDropZone({
+    root: bar,
+    over: (n) => {
+      const tn = n.closest(".tab"); if (!tn) return null;
+      const t = app.tabs[+tn.dataset.i];
+      if (t !== springTab) { clearTimeout(spring); springTab = t; spring = setTimeout(() => { if (t !== app.tab) switchTo(t); }, 750); }
+      return { el: tn, dest: (t.active || t.panes[0]).cwd };
+    },
+    leave: () => { clearTimeout(spring); spring = null; springTab = null; },
   });
 }

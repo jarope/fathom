@@ -10,6 +10,7 @@ import { initSidebar, loadPlaces, markActive } from "./sidebar.js";
 import { initWatch, syncWatch } from "./watch.js";
 import { saveSession, restoreSession } from "./session.js";
 import { initJobs } from "./jobs.js";
+import { initDnd } from "./dnd.js";
 
 app.showHidden = !!store.get("fathom-hidden", 0);
 app.sidebar = store.get("fathom-sidebar", true) !== false;
@@ -26,7 +27,6 @@ initPreview();
 initTabs();
 initSidebar();
 initKeys();
-document.addEventListener("dragend", () => { app.dragData = null; });
 
 (async () => {
   if (!invoke) {
@@ -37,6 +37,7 @@ document.addEventListener("dragend", () => { app.dragData = null; });
   loadPlaces();
   await initWatch();
   await initJobs();
+  await initDnd();
   if (!(await restoreSession())) await openTab(app.home);
   syncWatch();
 })();

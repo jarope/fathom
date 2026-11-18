@@ -13,6 +13,8 @@ use serde::{Deserialize, Serialize};
 use walkdir::{DirEntry, WalkDir};
 
 mod archive;
+mod bin_ops;
+mod dnd;
 mod batch;
 mod jobs;
 mod pasteboard;
@@ -274,31 +276,6 @@ async fn search(req: SearchReq) -> Result<SearchResult, String> {
 // ---------------------------------------------------------------------------
 // Operations
 // ---------------------------------------------------------------------------
-
-/// Move one or more paths to the OS Bin. Recoverable — this is NOT a delete.
-/// Reports how many were binned, and surfaces any that failed.
-#[tauri::command]
-async fn move_to_trash(paths: Vec<String>) -> Result<usize, String> {
-    tauri::async_runtime::spawn_blocking(move || trash_all(paths))
-        .await
-        .map_err(|e| format!("trash task panicked: {e}"))?
-}
-
-fn trash_all(paths: Vec<String>) -> Result<usize, String> {
-    let mut binned = 0usize;
-    let mut errors = Vec::new();
-    for p in &paths {
-        match trash::delete(p) {
-            Ok(()) => binned += 1,
-            Err(e) => errors.push(format!("{p}: {e}")),
-        }
-    }
-    if errors.is_empty() {
-        Ok(binned)
-    } else {
-        Err(errors.join("; "))
-    }
-}
 
 // --- Move / Copy (twin-pane and "…to" pickers) -----------------------------
 
@@ -876,7 +853,10 @@ pub fn run() {
             list_dir,
             home_dir,
             search,
-            move_to_trash,
+            bin_ops::move_to_trash,
+            dnd::start_drag,
+            dnd::drop_action,
+            dnd::classify_paths,
             jobs::plan_transfer,
             jobs::start_transfer,
             jobs::start_duplicate,

@@ -30,6 +30,7 @@ export function toggleSidebar() {
 // Remembered between launches, so a laptop and a big monitor can each get a comfy size.
 const ZOOMS = [0.75, 0.85, 0.9, 1, 1.1, 1.2, 1.3, 1.45, 1.6];
 let zoom = 1;
+export const getZoom = () => zoom;
 const pct = (z) => Math.round(z * 100) + "%";
 
 function applyZoom(z) {

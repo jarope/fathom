@@ -6,7 +6,8 @@
 import { app, invoke, el, icon, store, baseName } from "./core.js";
 import { showMenu } from "./menu.js";
 import { openTab, other } from "./tabs.js";
-import { performTransfer, openTerminal } from "./ops.js";
+import { openTerminal } from "./ops.js";
+import { registerDropZone } from "./dnd.js";
 
 let places = null;
 let bookmarks = store.get("fathom-places", []); // [{ name, path }]
@@ -121,27 +122,13 @@ export function initSidebar() {
   });
 
   // Drag & drop: onto a place = move/copy into it; onto blank space = pin folders.
-  const clearCue = () => { sb.classList.remove("drop-target"); sb.querySelectorAll(".drop-into").forEach((n) => n.classList.remove("drop-into")); };
-  sb.addEventListener("dragover", (ev) => {
-    if (!app.dragData) return;
-    const n = placeOf(ev);
-    clearCue();
-    if (n) {
-      ev.preventDefault();
-      ev.dataTransfer.dropEffect = ev.altKey || ev.ctrlKey ? "copy" : "move";
-      n.classList.add("drop-into");
-    } else if (app.dragData.dirs.length) {
-      ev.preventDefault();
-      ev.dataTransfer.dropEffect = "link";
-      sb.classList.add("drop-target");
-    }
-  });
-  sb.addEventListener("dragleave", (ev) => { if (!sb.contains(ev.relatedTarget)) clearCue(); });
-  sb.addEventListener("drop", (ev) => {
-    const n = placeOf(ev); clearCue();
-    const d = app.dragData; if (!d) return;
-    ev.preventDefault(); app.dragData = null;
-    if (n) performTransfer(d.paths, n.dataset.path, ev.altKey || ev.ctrlKey);
-    else if (d.dirs.length) addBookmarks(d.dirs);
+  registerDropZone({
+    root: sb,
+    over: (n, data) => {
+      const pl = n.closest(".place");
+      if (pl) return { el: pl, dest: pl.dataset.path };
+      if (data.dirs === null || data.dirs.length) return { el: sb, cls: "drop-target", act: (d) => d.dirs && d.dirs.length && addBookmarks(d.dirs) };
+      return null;
+    },
   });
 }
