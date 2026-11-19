@@ -42,6 +42,12 @@ function moveBookmark(path, dir) {
   renderSidebar();
 }
 
+/** Standard places + pinned folders (Copy to / Move to targets). */
+export const placeTargets = () => [
+  ...(places ? places.standard.map((p) => ({ name: p.name, path: p.path })) : []),
+  ...bookmarks.map((b) => ({ name: b.name, path: b.path })),
+];
+
 export function renderSidebar() {
   sb.classList.toggle("hidden", !app.sidebar);
   document.getElementById("sidebarToggle").classList.toggle("on", app.sidebar);

@@ -103,7 +103,7 @@ export function createGrid(P) {
 
   function cell(i) {
     const e = P.entries[i], clip = app.clip;
-    const c = el("div", "row cell"); c.dataset.i = i; c.setAttribute("draggable", "true");
+    const c = el("div", "row cell"); c.dataset.i = i;
     c.title = P.mode === "search" && e.parent ? `${e.name}\n${e.parent}` : e.name;
     if (P.selected.has(e.path)) c.classList.add("sel");
     if (clip && clip.cut && clip.paths.includes(e.path)) c.classList.add("cut");

@@ -1,13 +1,19 @@
-// Drag & drop, all native. Dragging rows starts a real macOS drag session
-// (so files can go to Finder, Mail, Slack…), and every drop into Fathom —
-// from itself or any other app — arrives as Tauri's drag events with a
-// position. Drop zones (lists, breadcrumbs, tabs, sidebar) register here and
-// are hit-tested with elementFromPoint.
+// Drag & drop.
+//
+// Inside the window a drag is handled by the page itself: press on a row and
+// move, a ghost follows the pointer, and drop zones (lists, folders, tabs,
+// breadcrumbs, sidebar) light up and take the drop. No macOS drag session is
+// involved, so nothing can reject it.
+//
+// Leave the window with the button still held and the drag becomes a real
+// macOS drag (started from the original mouse-down, see dnd.rs), so files can
+// go to Finder, Mail, Slack… Drops from other apps arrive as Tauri's drag
+// events and use the same drop zones.
 //
 // Copy or move follows Finder: same disk = move, other disk = copy,
 // ⌥ = copy, ⌘ = move (decided by the backend at drop time).
 
-import { app, invoke, listen } from "./core.js";
+import { app, invoke, listen, el, kindIcon } from "./core.js";
 import { getZoom } from "./view.js";
 import { performTransfer } from "./ops.js";
 
@@ -21,20 +27,14 @@ let hotZone = null; // zone currently under the pointer
  */
 export function registerDropZone(zone) { zones.push(zone); }
 
-/** Start a native drag of the given entries (called from a row's dragstart). */
-export function startDrag(P, entries) {
-  app.dragData = { paths: entries.map((e) => e.path), dirs: entries.filter((e) => e.is_dir).map((e) => e.path), source: P };
-  invoke("start_drag", { paths: app.dragData.paths }).catch((e) => { app.dragData = null; P.flash("⚠ " + e, "warn"); });
-}
-
 function setCue(t) {
   if (cue && (!t || cue.el !== t.el || cue.cls !== (t.cls || "drop-into"))) { cue.el.classList.remove(cue.cls); cue = null; }
   if (t && !cue) { cue = { el: t.el, cls: t.cls || "drop-into" }; cue.el.classList.add(cue.cls); }
 }
 
-function targetAt(pos) {
-  const z = getZoom();
-  const el = document.elementFromPoint(pos.x / z, pos.y / z);
+/** Drop target under a point in page (CSS) coordinates. */
+function targetAt(x, y) {
+  const el = document.elementFromPoint(x, y);
   if (!el || !app.dragData) return { zone: null, t: null };
   for (const zone of zones) {
     if (!zone.root.isConnected || !zone.root.contains(el)) continue;
@@ -42,12 +42,15 @@ function targetAt(pos) {
   }
   return { zone: null, t: null };
 }
+// Tauri reports window points; the page may be zoomed.
+const fromNative = (pos) => { const z = getZoom(); return [pos.x / z, pos.y / z]; };
 
-function hover(pos) {
-  const { zone, t } = targetAt(pos);
+function hover(x, y) {
+  const { zone, t } = targetAt(x, y);
   if (hotZone && hotZone !== zone && hotZone.leave) hotZone.leave();
   hotZone = zone;
   setCue(t);
+  return t;
 }
 
 function reset() {
@@ -59,11 +62,7 @@ function reset() {
 /** A plain move onto the folder the items already live in does nothing. */
 const parentOf = (p) => p.replace(/\/+$/, "").replace(/\/[^/]*$/, "") || "/";
 
-async function drop(pos) {
-  const { t } = targetAt(pos);
-  const data = app.dragData;
-  reset();
-  app.dragData = null;
+async function dropOn(t, data) {
   if (!t || !data) return;
   if (t.act) { t.act(data); return; }
   if (!t.dest) return;
@@ -73,6 +72,59 @@ async function drop(pos) {
   performTransfer(data.paths, t.dest, copy);
 }
 
+// ---------------------------------------------------------------- in-page drag
+/**
+ * Start dragging entries of pane P (called once the pointer has moved a few
+ * pixels with the button down). `down` is the original mousedown event.
+ */
+export function startDrag(P, entries, down) {
+  const data = { paths: entries.map((e) => e.path), dirs: entries.filter((e) => e.is_dir).map((e) => e.path), source: P };
+  app.dragData = data;
+  const ghost = el("div", "drag-ghost");
+  ghost.append(kindIcon(entries[0].name, entries[0].is_dir), el("span", "dg-name", entries.length === 1 ? entries[0].name : `${entries.length} items`));
+  if (entries.length > 1) ghost.append(el("span", "dg-count", String(entries.length)));
+  document.body.append(ghost);
+  document.body.classList.add("dragging");
+  const place = (e) => { ghost.style.transform = `translate(${e.clientX + 14}px, ${e.clientY + 10}px)`; };
+  place(down);
+
+  let done = false;
+  const finish = () => {
+    if (done) return; done = true;
+    window.removeEventListener("mousemove", move, true);
+    window.removeEventListener("mouseup", up, true);
+    window.removeEventListener("keydown", key, true);
+    ghost.remove();
+    document.body.classList.remove("dragging");
+    reset();
+  };
+  const outside = (e) => e.clientX < 0 || e.clientY < 0 || e.clientX >= window.innerWidth || e.clientY >= window.innerHeight;
+  const move = (e) => {
+    place(e);
+    ghost.classList.toggle("copy", e.altKey);
+    if (outside(e)) {
+      // Leaving the window: carry on as a real macOS drag (Finder, Mail…).
+      finish();
+      invoke("start_drag", { paths: data.paths }).catch((err) => { app.dragData = null; P.flash("⚠ " + err, "warn"); });
+      return;
+    }
+    hover(e.clientX, e.clientY);
+  };
+  const up = (e) => {
+    const t = hover(e.clientX, e.clientY);
+    finish();
+    app.dragData = null;
+    dropOn(t, data);
+  };
+  const key = (e) => {
+    if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); finish(); app.dragData = null; }
+  };
+  window.addEventListener("mousemove", move, true);
+  window.addEventListener("mouseup", up, true);
+  window.addEventListener("keydown", key, true);
+}
+
+// --------------------------------------------------- drops from other apps
 export async function initDnd() {
   if (!listen) return;
   await listen("tauri://drag-enter", (e) => {
@@ -83,17 +135,21 @@ export async function initDnd() {
       app.dragData = d;
       invoke("classify_paths", { paths }).then((isDir) => { d.dirs = paths.filter((_, i) => isDir[i]); }).catch(() => { d.dirs = []; });
     }
-    hover(e.payload.position);
+    hover(...fromNative(e.payload.position));
   });
-  await listen("tauri://drag-over", (e) => { if (app.dragData) hover(e.payload.position); });
+  await listen("tauri://drag-over", (e) => { if (app.dragData) hover(...fromNative(e.payload.position)); });
   await listen("tauri://drag-drop", (e) => {
     if (!app.dragData && e.payload.paths?.length) app.dragData = { paths: e.payload.paths, dirs: [], source: null, external: true };
-    drop(e.payload.position);
+    const data = app.dragData;
+    const { t } = targetAt(...fromNative(e.payload.position));
+    reset();
+    app.dragData = null;
+    dropOn(t, data);
   });
   await listen("tauri://drag-leave", () => {
     reset();
-    if (app.dragData && app.dragData.external) app.dragData = null; // ours may come back in
+    if (app.dragData && app.dragData.external) app.dragData = null;
   });
-  // Our own drag finished (dropped anywhere, or cancelled).
+  // Our own macOS drag finished (dropped anywhere, or cancelled).
   await listen("native-drag-end", () => setTimeout(() => { reset(); app.dragData = null; }, 0));
 }

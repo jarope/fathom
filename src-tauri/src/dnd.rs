@@ -1,9 +1,9 @@
 //! Native drag & drop.
 //!
-//! Every drag of files out of a Fathom list is a real macOS drag session, so
-//! the files can land in Finder, Mail, Slack, the Desktop… and drops coming
-//! back into Fathom (from itself or any other app) arrive through Tauri's
-//! drop events. The source offers copy *and* move, so the receiver applies
+//! Drags inside the window are handled by the page (dnd.js). When one leaves
+//! the window it becomes a real macOS drag session, started from the
+//! mouse-down that began it, so the files can land in Finder, Mail, Slack,
+//! the Desktop… Drops from other apps arrive through Tauri's drop events. The source offers copy *and* move, so the receiver applies
 //! Finder's rules: same disk = move, another disk = copy, ⌥ = copy.
 
 use serde::Serialize;
@@ -69,6 +69,14 @@ pub fn start_drag(window: tauri::WebviewWindow, paths: Vec<String>) -> Result<()
     }
 }
 
+/// Remember every left mouse-down (call once, on the main thread). A drag
+/// out of the window is started from the mouse-down that began it — the only
+/// event recent macOS accepts for a drag session that destinations will see.
+pub fn install_mouse_monitor() {
+    #[cfg(target_os = "macos")]
+    imp::install_monitor();
+}
+
 #[cfg(target_os = "macos")]
 mod imp {
     use objc2::rc::Retained;
@@ -83,6 +91,19 @@ mod imp {
 
     thread_local! {
         static CURRENT: std::cell::RefCell<Option<Retained<DragSource>>> = const { std::cell::RefCell::new(None) };
+        static LAST_DOWN: std::cell::RefCell<Option<Retained<NSEvent>>> = const { std::cell::RefCell::new(None) };
+        static MONITOR: std::cell::RefCell<Option<Retained<objc2::runtime::AnyObject>>> = const { std::cell::RefCell::new(None) };
+    }
+
+    pub fn install_monitor() {
+        use objc2_app_kit::NSEventMask;
+        let block = block2::RcBlock::new(|e: std::ptr::NonNull<NSEvent>| -> *mut NSEvent {
+            let ev: &NSEvent = unsafe { e.as_ref() };
+            LAST_DOWN.with(|d| *d.borrow_mut() = unsafe { Retained::retain(ev as *const NSEvent as *mut NSEvent) });
+            e.as_ptr()
+        });
+        let m = unsafe { NSEvent::addLocalMonitorForEventsMatchingMask_handler(NSEventMask::LeftMouseDown, &block) };
+        MONITOR.with(|x| *x.borrow_mut() = m);
     }
 
     pub struct SourceIvars {
@@ -103,7 +124,8 @@ mod imp {
             fn mask(&self, _session: &NSDraggingSession, _context: NSDraggingContext) -> NSDragOperation {
                 // Let the receiver choose (Finder: move on the same disk,
                 // copy across disks, ⌥ copy).
-                NSDragOperation::Copy | NSDragOperation::Move | NSDragOperation::Generic
+                let m = NSDragOperation::Copy | NSDragOperation::Move | NSDragOperation::Generic;
+                m
             }
 
             #[unsafe(method(draggingSession:endedAtPoint:operation:))]
@@ -121,13 +143,29 @@ mod imp {
         }
     }
 
+    /// The WKWebView inside Tauri's container view.
+    fn find_webview(v: &NSView) -> Option<Retained<NSView>> {
+        for sub in v.subviews().iter() {
+            let n = sub.class().name().to_str().unwrap_or("");
+            if n.contains("WryWebView") && !n.contains("Parent") { return Some(sub.clone()); }
+            if let Some(f) = find_webview(&sub) { return Some(f); }
+        }
+        None
+    }
+
     pub fn start(window: &tauri::WebviewWindow, paths: &[String]) -> Result<(), String> {
         let mtm = MainThreadMarker::new().ok_or("drag must start on the main thread")?;
         let ptr = window.ns_view().map_err(|e| e.to_string())?;
         let view: &NSView = unsafe { &*(ptr as *const NSView) };
         let win = view.window().ok_or("no window")?;
         let content = win.contentView().ok_or("no content view")?;
-        let at = win.mouseLocationOutsideOfEventStream();
+        // Start the drag on the web view itself, from the mouse-down that began
+        // it. A synthetic event (the old way) gets tracked and drawn but is
+        // never offered to any destination on recent macOS (seen on 27.2).
+        let dview = find_webview(&content).unwrap_or_else(|| content.clone());
+        let cur = LAST_DOWN.with(|d| d.borrow().clone()).filter(|e| e.windowNumber() == win.windowNumber());
+        let at_win = cur.as_ref().map(|e| e.locationInWindow()).unwrap_or_else(|| win.mouseLocationOutsideOfEventStream());
+        let at = dview.convertPoint_fromView(at_win, None);
 
         let ws = NSWorkspace::sharedWorkspace();
         let items = NSMutableArray::<NSDraggingItem>::new();
@@ -145,22 +183,24 @@ mod imp {
             items.addObject(&item);
         }
 
-        let ts = NSApp(mtm).currentEvent().map(|e| e.timestamp()).unwrap_or(0.0);
-        let event = NSEvent::mouseEventWithType_location_modifierFlags_timestamp_windowNumber_context_eventNumber_clickCount_pressure(
+        let event = match cur {
+            Some(e) => e,
+            None => NSEvent::mouseEventWithType_location_modifierFlags_timestamp_windowNumber_context_eventNumber_clickCount_pressure(
             NSEventType::LeftMouseDragged,
-            at,
+            at_win,
             NSEventModifierFlags::empty(),
-            ts,
+            NSApp(mtm).currentEvent().map(|e| e.timestamp()).unwrap_or(0.0),
             win.windowNumber(),
             None,
             0,
             1,
             1.0,
         )
-        .ok_or("couldn't create the drag event")?;
+        .ok_or("couldn't create the drag event")?,
+        };
 
         let source = DragSource::new(window.app_handle().clone(), mtm);
-        let session = content.beginDraggingSessionWithItems_event_source(&items, &event, ProtocolObject::from_ref(&*source));
+        let session = dview.beginDraggingSessionWithItems_event_source(&items, &event, ProtocolObject::from_ref(&*source));
         session.setAnimatesToStartingPositionsOnCancelOrFail(true);
         // Keep the source alive for the whole drag (replaced by the next one).
         CURRENT.with(|c| *c.borrow_mut() = Some(source));

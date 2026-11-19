@@ -40,7 +40,7 @@ export const COLUMNS = {
   perms:    { label: "Permissions", w: 104, text: permString, cls: "c-perm" },
 };
 export const COLUMN_ORDER = ["size", "modified", "created", "added", "kind", "ext", "perms"];
-const MIN_W = 48;
+const MIN_W = 48, NAME_MIN = 120, GAP = 12, ROW_PAD = 20;
 
 const shownColumns = () => {
   const c = prefs.columns && Array.isArray(prefs.columns.show) ? prefs.columns.show.filter((k) => COLUMNS[k]) : ["size", "modified"];
@@ -89,7 +89,18 @@ export function createDetails(P) {
   const L = P.els.listing;
   let vbody = null, nDirs = 0, rows = new Map(), cols = [], paintQueued = 0;
 
-  const template = () => `minmax(150px, 1fr)${P.mode === "search" ? " minmax(140px, 1fr)" : ""} ${cols.map((k) => widthOf(k) + "px").join(" ")}`;
+  // Name fills the spare room until you size it; then it's fixed and an empty
+  // track at the end takes up the slack. Too wide for the pane → scroll sideways.
+  const nameW = () => { const w = prefs.columns && prefs.columns.widths && prefs.columns.widths.name; return w ? Math.max(NAME_MIN, w) : 0; };
+  const template = () => {
+    const nw = nameW(), search = P.mode === "search";
+    return `${nw ? nw + "px" : "minmax(150px, 1fr)"}${search ? " minmax(140px, 1fr)" : ""} ${cols.map((k) => widthOf(k) + "px").join(" ")}${nw && !search ? " 1fr" : ""}`;
+  };
+  const setLayout = () => {
+    L.style.setProperty("--cols", template());
+    const tracks = [nameW() || 150, ...(P.mode === "search" ? [140] : []), ...cols.map(widthOf)];
+    L.style.setProperty("--minw", ROW_PAD + tracks.reduce((a, b) => a + b, 0) + GAP * (tracks.length - 1) + "px");
+  };
 
   function head() {
     const h = el("div", "head");
@@ -100,30 +111,31 @@ export function createDetails(P) {
       c.addEventListener("click", (ev) => { if (!ev.target.closest(".rz")) P.sortBy(k); });
       return c;
     };
-    h.append(cell("Name", "name"));
-    if (P.mode === "search") h.append(cell("Folder", "folder"));
-    cols.forEach((k) => {
-      const c = cell(COLUMNS[k].label, k, COLUMNS[k].right ? "right" : "");
-      // Drag the left edge of a column to resize it (Name takes what's left).
+    // Each column's right edge is its grip: drag right = wider (Finder).
+    const grip = (c, k) => {
       const rz = el("span", "rz"); rz.title = "Drag to resize · double-click to reset";
-      rz.addEventListener("mousedown", (ev) => startResize(ev, k));
+      rz.addEventListener("mousedown", (ev) => startResize(ev, k, c));
+      rz.addEventListener("click", (ev) => ev.stopPropagation());
       rz.addEventListener("dblclick", (ev) => { ev.stopPropagation(); const w = { ...(prefs.columns && prefs.columns.widths) }; delete w[k]; setColumns(shownColumns(), w); });
-      c.prepend(rz);
-      h.append(c);
-    });
+      c.append(rz);
+      return c;
+    };
+    h.append(grip(cell("Name", "name"), "name"));
+    if (P.mode === "search") h.append(cell("Folder", "folder"));
+    cols.forEach((k) => h.append(grip(cell(COLUMNS[k].label, k, COLUMNS[k].right ? "right" : ""), k)));
     h.addEventListener("contextmenu", (ev) => { ev.preventDefault(); ev.stopPropagation(); columnMenu(ev.clientX, ev.clientY); });
     return h;
   }
 
-  function startResize(ev, k) {
+  function startResize(ev, k, c) {
     ev.preventDefault(); ev.stopPropagation();
-    const x0 = ev.clientX, w0 = widthOf(k);
+    const x0 = ev.clientX, w0 = k === "name" ? Math.round(c.getBoundingClientRect().width) : widthOf(k);
     const widths = { ...((prefs.columns && prefs.columns.widths) || {}) };
     document.body.classList.add("col-resizing");
     const move = (e) => {
-      widths[k] = Math.max(MIN_W, Math.round(w0 + (x0 - e.clientX))); // left edge: drag left = wider
+      widths[k] = Math.max(k === "name" ? NAME_MIN : MIN_W, Math.round(w0 + (e.clientX - x0)));
       prefs.columns = { show: shownColumns(), widths };
-      L.style.setProperty("--cols", template());
+      setLayout();
     };
     const up = () => {
       document.body.classList.remove("col-resizing");
@@ -136,7 +148,7 @@ export function createDetails(P) {
 
   function tile(i) {
     const h = P.entries[i], clip = app.clip;
-    const t = el("div", "row tile"); t.dataset.i = i; t.setAttribute("draggable", "true"); t.title = h.name;
+    const t = el("div", "row tile"); t.dataset.i = i; t.title = h.name;
     if (P.selected.has(h.path)) t.classList.add("sel");
     if (clip && clip.cut && clip.paths.includes(h.path)) t.classList.add("cut");
     const nm = el("span", "nm");
@@ -150,7 +162,7 @@ export function createDetails(P) {
 
   function row(i) {
     const h = P.entries[i], clip = app.clip;
-    const r = el("div", "row"); r.dataset.i = i; r.setAttribute("draggable", "true");
+    const r = el("div", "row"); r.dataset.i = i;
     r.style.transform = `translateY(${(i - nDirs) * ROW_H}px)`;
     if (P.selected.has(h.path)) r.classList.add("sel");
     if (clip && clip.cut && clip.paths.includes(h.path)) r.classList.add("cut");
@@ -208,7 +220,7 @@ export function createDetails(P) {
       return;
     }
     cols = shownColumns();
-    L.style.setProperty("--cols", template());
+    setLayout();
     // Folder shelf: top-level folders as a strip of tiles above the rows.
     nDirs = 0;
     if (app.folderShelf && P.mode === "browse") {

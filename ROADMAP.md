@@ -141,6 +141,14 @@ glyphs and tints, Reduce Transparency / Increase Contrast, glass opacity.
 - **Rubber-band selection** in both views (auto-scrolls; ⌘/⇧ add).
 - Folder menu gains **View ▸** and **Sort By ▸** (the grid has no header).
 - Fixed: ↑ in Details could leave the row under the column header.
+- v0.20.1: column dividers resize the column on their left (drag right =
+  wider, Name included; sideways scroll when too wide). **Copy to ▸ / Move
+  to ▸** list the other pane, recent destinations and Places, and "Other
+  Folder…" opens a folder browser inside Fathom instead of the macOS panel.
+  Drag & drop fixed: dragging *out* of Fathom had never worked on macOS 27
+  (drags were drawn but no app was offered them). Drags inside the window are
+  now handled by the page (ghost label, ⌥ copy, Esc); leaving the window hands
+  over to a macOS drag started from the original mouse-down.
 
 Still to do:
 - **Columns view** (Miller columns) with a preview column.

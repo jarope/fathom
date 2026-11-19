@@ -1,6 +1,6 @@
 [package]
 name = "fathom"
-version = "0.20.0"
+version = "0.20.1"
 description = "Fathom — a lean twin-pane file manager for macOS. The daily essentials, done the way Linux managers do them."
 authors = ["Jason Peel"]
 edition = "2021"
@@ -49,7 +49,7 @@ strip = true
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"
 objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSArray", "NSString", "NSURL", "NSFileManager", "NSError", "NSGeometry", "NSDate", "NSObjCRuntime", "NSDictionary", "NSData", "NSValue", "NSNotification", "NSUserDefaults"] }
-objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSPasteboard", "NSPasteboardItem", "NSApplication", "NSResponder", "NSDragging", "NSDraggingItem", "NSDraggingSession", "NSEvent", "NSGraphics", "NSGraphicsContext", "NSImage", "NSView", "NSWindow", "NSWorkspace", "NSBitmapImageRep", "NSImageRep", "NSSharingService", "NSPanel", "NSColorSpace", "NSAccessibility", "objc2-core-graphics"] }
+objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSPasteboard", "NSPasteboardItem", "NSApplication", "NSResponder", "NSDragging", "NSDraggingItem", "NSDraggingSession", "NSEvent", "NSGraphics", "NSGraphicsContext", "NSImage", "NSView", "NSWindow", "NSWorkspace", "NSBitmapImageRep", "NSImageRep", "NSSharingService", "NSPanel", "NSColorSpace", "NSAccessibility", "objc2-core-graphics", "block2"] }
 objc2-quick-look-ui = { version = "0.3", default-features = false, features = ["std", "QLPreviewPanel", "QLPreviewItem", "objc2-app-kit"] }
 # Grid view: real Quick Look thumbnails, or the Finder icon when there is none.
 objc2-quick-look-thumbnailing = { version = "0.3", default-features = false, features = ["std", "QLThumbnailGenerator", "QLThumbnailGenerationRequest", "QLThumbnailRepresentation", "block2", "bitflags", "objc2-core-graphics", "objc2-core-foundation"] }

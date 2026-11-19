@@ -3,7 +3,7 @@
 // extract, batch rename, and undo. Nothing is ever overwritten in place: a
 // "Replace" sends the existing item to the Bin first.
 
-import { app, invoke, dialog, baseName, plural } from "./core.js";
+import { app, invoke, store, baseName, plural } from "./core.js";
 import { visiblePanes } from "./tabs.js";
 import { closePreview } from "./preview.js";
 import { runJob } from "./jobs.js";
@@ -218,11 +218,18 @@ export async function batchRename(P) {
   P.flash(`Renamed ${plural(pairs.length, "item")} · ⌘Z undoes`);
 }
 
-export async function pickAndTransfer(P, copy) {
-  if (!dialog) return;
+/** Copy to / Move to: dest from the submenu, or (none) Fathom's folder browser. */
+export async function pickAndTransfer(P, copy, dest = null) {
   const sel = P.selectedPaths(); if (!sel.length) return;
-  const dest = await dialog.open({ directory: true, multiple: false, defaultPath: P.cwd, title: copy ? "Copy to…" : "Move to…" });
-  if (typeof dest === "string") performTransfer(sel, dest, copy);
+  if (!dest) {
+    const { pickFolder } = await import("./picker.js");
+    const dirs = P.selectedEntries().filter((e) => e.is_dir).map((e) => e.path);
+    dest = await pickFolder({ start: recentDests()[0] || P.cwd, title: copy ? "Copy to…" : "Move to…", verb: copy ? "Copy" : "Move", exclude: dirs });
+  }
+  if (!dest) return;
+  store.set("fathom-recent-dest", [dest, ...recentDests().filter((d) => d !== dest)].slice(0, 5));
+  performTransfer(sel, dest, copy);
 }
+export const recentDests = () => store.get("fathom-recent-dest", []);
 
 export const openTerminal = (P, path) => invoke("open_terminal", { path, app: prefs.terminal }).catch((e) => P.flash("⚠ " + e, "warn"));

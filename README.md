@@ -10,7 +10,7 @@ native ES modules in `src/js/`, no npm, no bundler). The look follows
 [`DESIGN.md`](DESIGN.md): neutral greys, one accent colour, macOS glass on the
 sidebar and popovers, the system font plus JetBrains Mono.
 
-## What it does today (v0.20.0)
+## What it does today (v0.20.1)
 
 - **Progress & cancel** — copies, moves, duplicates and archive jobs run in the
   background; anything that takes more than a moment gets a card (bottom-right)
@@ -124,7 +124,9 @@ sidebar and popovers, the system font plus JetBrains Mono.
   the Desktop, Mail, Slack…, and drag files in from anywhere. Copy or move
   follows Finder's rules: **same disk = move, another disk = copy, hold ⌥ to
   copy, ⌘ to move**. Drops work on rows, folder tiles, breadcrumbs, tabs and
-  the sidebar.
+  the sidebar. Inside Fathom (pane to pane, onto a folder) a label follows the
+  pointer — ⌥ shows a green +, Esc cancels; carry on out of the window to drop
+  into another app.
 - **Live filter** — typing in a pane's search box filters the folder as you
   type (wildcards ok); **⏎** searches all subfolders. ⌘F focuses it, ⌘L the path.
 - **Type-ahead** — type a name's first letters to jump to it.
@@ -159,7 +161,8 @@ sidebar and popovers, the system font plus JetBrains Mono.
   - **Drag** a selection to the other pane (or onto a folder): same disk
     **moves**, another disk **copies**; hold **⌥** to copy, **⌘** to move.
   - **F6** moves / **F5** copies the selection to the *other* pane.
-  - Single-pane: right-click → **Move to… / Copy to…** opens a folder picker.
+  - Right-click → **Copy to ▸ / Move to ▸**: the other pane, recent
+    destinations, your Places, or **Other Folder…** to browse for one.
   - Collisions are never overwritten — a colliding item is auto-renamed
     *"… copy"* (Finder-style). Cross-volume moves fall back to copy-then-remove.
 - **Select** — click, ⌘-click to toggle, ⇧-click for a range, ⌘A for all,
@@ -172,7 +175,9 @@ sidebar and popovers, the system font plus JetBrains Mono.
   **light / dark** switch (◐).
 - **Details view** — click a folder's ▸ (or press → / ←) to open it in place
   as a tree; right-click the column header to add Kind, Created, Date Added,
-  Extension or Permissions; drag a column's left edge to resize. Each folder
+  Extension or Permissions; drag the divider on a column's right edge to resize
+  it (Name too — too wide for the pane scrolls sideways; double-click a divider
+  to reset). Each folder
   remembers its sort. Only the rows on screen are drawn, so folders with tens
   of thousands of files stay smooth. Apps and other packages open rather than
   browse. (With the folder shelf on, top-level folders are tiles; turn it off

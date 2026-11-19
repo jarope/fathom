@@ -3,9 +3,10 @@
 
 import { isFolder } from "./core.js";
 import { app, invoke, el, icon, plural } from "./core.js";
-import { undoStack, redoStack, undo, redo, setClip, paste, duplicateSel, transferToOther, pickAndTransfer, openTerminal, compressSel, extractSel, batchRename, isArchive } from "./ops.js";
+import { undoStack, redoStack, undo, redo, setClip, paste, duplicateSel, transferToOther, pickAndTransfer, recentDests, openTerminal, compressSel, extractSel, batchRename, isArchive } from "./ops.js";
 import { openTab } from "./tabs.js";
-import { addBookmarks } from "./sidebar.js";
+import { addBookmarks, placeTargets } from "./sidebar.js";
+import { other } from "./tabs.js";
 import { toggleHidden } from "./view.js";
 import { menuTagRow, editTagsDialog, clearTags } from "./tags.js";
 import { openWithEntries, share, quickLook } from "./system.js";
@@ -86,6 +87,27 @@ export function showMenu(entries, x, y) {
   ctx.classList.add("show");
   ctx.scrollTop = 0;
   place(ctx, x, y);
+}
+
+/** Copy to ▸ / Move to ▸: the other pane, recent places you sent things, Places, or browse. */
+function destEntries(P, copy) {
+  const here = P.cwd, sel = new Set(P.selectedPaths());
+  const ok = (d) => d && d !== here && ![...sel].some((s) => d === s || d.startsWith(s + "/"));
+  const item = (name, path, ic) => ({ label: name, icon: ic, fn: () => pickAndTransfer(P, copy, path) });
+  const nameOf = (p) => (p === "/" ? "Macintosh HD" : p.split("/").pop());
+  const o = app.tab.view === "twin" ? other(P) : null;
+  const seen = new Set();
+  const uniq = (list) => list.filter((x) => ok(x.path) && !seen.has(x.path) && seen.add(x.path));
+  const pane = o && uniq([{ path: o.cwd }]).map((x) => item(`${nameOf(x.path)} (other pane)`, x.path, "folder"));
+  const recent = uniq(recentDests().map((p) => ({ path: p }))).map((x) => item(nameOf(x.path), x.path, "folder"));
+  const placesL = uniq(placeTargets()).map((x) => item(x.name, x.path, "folder"));
+  return [
+    ...(pane || []),
+    ...(recent.length ? [pane && pane.length ? "sep" : null, { heading: "Recent" }, ...recent] : []),
+    ...(placesL.length ? ["sep", { heading: "Places" }, ...placesL] : []),
+    "sep",
+    { label: "Other Folder…", fn: () => pickAndTransfer(P, copy) },
+  ];
 }
 
 /** View ▸ — the pane's view mode. */
@@ -173,8 +195,8 @@ export function openContextMenu(P, x, y) {
     "sep",
     twin && { label: "Copy to other pane", fn: () => transferToOther(P, true), key: keyHint("copyOther") },
     twin && { label: "Move to other pane", fn: () => transferToOther(P, false), key: keyHint("moveOther") },
-    { label: "Copy to…", fn: () => pickAndTransfer(P, true) },
-    { label: "Move to…", fn: () => pickAndTransfer(P, false) },
+    { label: "Copy to", sub: () => destEntries(P, true) },
+    { label: "Move to", sub: () => destEntries(P, false) },
     "sep",
     { label: `Move ${sel.length > 1 ? sel.length + " items " : ""}to Bin`, fn: P.trashSelected, danger: true, key: keyHint("trash") },
   ], x, y);

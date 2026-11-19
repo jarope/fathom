@@ -888,6 +888,7 @@ fn watch_dirs(
     Ok(())
 }
 
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -953,6 +954,11 @@ pub fn run() {
             reveal_in_finder,
             open_path
         ])
+        // Remember mouse-downs: a drag that leaves the window starts from one.
+        .setup(|_| {
+            dnd::install_mouse_monitor();
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running Fathom");
 }

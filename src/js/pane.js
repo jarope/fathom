@@ -403,7 +403,6 @@ export function createPane(key) {
     const input = el("input", "rename");
     input.value = e.name; input.spellcheck = false; input.autocomplete = "off";
     row.querySelector(".nm").replaceWith(input);
-    row.setAttribute("draggable", "false");
     P.renaming = true;
     input.focus();
     const dot = e.is_dir ? -1 : e.name.lastIndexOf("."); // select the stem, not ".ext"
@@ -601,16 +600,28 @@ export function createPane(key) {
   });
 
   // ------------------------------------------------------------ drag & drop
-  // Dragging rows starts a native macOS drag (see dnd.js), so files can go
-  // to Finder and other apps too; drops land here via registerDropZone.
-  els.listing.addEventListener("dragstart", (ev) => {
+  // Press on a row and move: an in-page drag (see dnd.js) that turns into a
+  // real macOS drag if it leaves the window. Drops land via registerDropZone.
+  let suppressClick = false;
+  els.listing.addEventListener("mousedown", (ev) => {
+    if (ev.button !== 0 || ev.ctrlKey || ev.target.closest(".disc, input, .rz")) return;
     const row = ev.target.closest(".row"); if (!row) return;
-    ev.preventDefault();
-    const i = +row.dataset.i;
-    if (!P.selected.has(P.entries[i].path)) P.selectSingle(i);
-    setActive(P);
-    startDrag(P, P.selectedEntries());
+    const i = +row.dataset.i, x0 = ev.clientX, y0 = ev.clientY;
+    const move = (e) => {
+      if (Math.abs(e.clientX - x0) < 4 && Math.abs(e.clientY - y0) < 4) return;
+      stop();
+      const entry = P.entries[i]; if (!entry) return;
+      if (!P.selected.has(entry.path)) P.selectSingle(i);
+      setActive(P);
+      suppressClick = true; // the mouseup after a drag is not a click
+      startDrag(P, P.selectedEntries(), ev);
+    };
+    const stop = () => { window.removeEventListener("mousemove", move, true); window.removeEventListener("mouseup", stop, true); };
+    window.addEventListener("mousemove", move, true);
+    window.addEventListener("mouseup", stop, true);
   });
+  els.listing.addEventListener("click", (ev) => { if (suppressClick) { suppressClick = false; ev.stopImmediatePropagation(); } }, true);
+  window.addEventListener("mousedown", () => (suppressClick = false), true);
   registerDropZone({
     root: els.listing,
     over: (n, data) => {
