@@ -119,7 +119,7 @@ button { font: inherit; color: inherit; }
 .smode .smode-l:empty { display: none; }
 
 /* ---- File list (opaque content) ---- */
-.listing { flex: 1; min-height: 0; overflow-y: auto; background: var(--content); padding: 0 6px; }
+.listing { position: relative; flex: 1; min-height: 0; overflow-y: auto; background: var(--content); padding: 0 6px; }
 .listing::after { content: ""; display: block; height: 44px; } /* always some empty space for the folder menu */
 .listing.drop-target { box-shadow: inset 0 0 0 2px var(--accent); }
 .head, .row { display: grid; gap: 12px; align-items: center; padding: 0 10px; grid-template-columns: var(--cols, minmax(150px, 1fr) 84px 140px); }
@@ -468,3 +468,37 @@ textarea.pf-cmd { height: auto; padding: 7px 9px; resize: vertical; font: var(--
 .sc-reset.off { visibility: hidden; }
 .pf-pane > .pf-bar:first-child { position: sticky; top: 0; z-index: 1; padding-bottom: 6px; background: var(--content); }
 .pf-ctl > .pf-input, .pf-ctl > textarea.pf-cmd { flex: none; width: 100%; }
+
+/* ---- Grid view: icons / Quick Look thumbnails (grid.js) ---- */
+.gbody { position: relative; }
+.gbody > .row.cell { box-sizing: border-box; position: absolute; top: 0; left: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 4px; border-radius: var(--r-card); background: none; }
+.row.cell:hover { background: none; }
+.gpic { display: flex; align-items: center; justify-content: center; flex: none; border-radius: 10px; pointer-events: none; }
+.row.cell:hover .gpic { background: var(--row-hover); }
+.gpic > svg.ki { width: 56%; height: 56%; }
+.gpic > img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.gpic > img.thumb { border-radius: 4px; box-shadow: 0 0 0 0.5px var(--edge), 0 2px 6px -2px rgba(0, 0, 0, 0.25); background: var(--content); }
+.row.cell .nm { max-width: 100%; padding: 1px 6px; border-radius: 6px; font: var(--t-callout); text-align: center; color: var(--text); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; pointer-events: none; }
+/* Finder-style selection: a quiet plate behind the picture, the accent behind the name. */
+.row.cell.sel { background: none; }
+.row.cell.sel .gpic { background: var(--sel-quiet); }
+.row.cell.sel .nm { background: var(--accent); color: var(--on-accent) !important; font-weight: 400; }
+.row.cell.sel .ki { color: var(--ki) !important; }
+.row.cell.sel .link { color: var(--text) !important; }
+.panes.twin .pane:not(.active) .row.cell.sel { background: none; }
+.panes.twin .pane:not(.active) .row.cell.sel .nm { background: var(--sel-quiet); color: var(--text) !important; }
+.row.cell.drop-into .gpic { background: var(--accent-soft); box-shadow: inset 0 0 0 1.5px var(--accent); }
+.row.cell.drop-into { background: none; box-shadow: none; }
+.row.cell .link { position: absolute; left: calc(50% - var(--pic) / 2); top: calc(8px + var(--pic) - 16px); font-size: 11px; color: var(--text); background: var(--content); border-radius: 50%; width: 15px; height: 15px; display: flex; align-items: center; justify-content: center; }
+/* Tags and git badges sit on the picture's top corners, whatever the cell width. */
+.row.cell .tags { position: absolute; top: 6px; right: auto; left: calc(50% + var(--pic) / 2 - 10px); margin: 0; }
+.row.cell .gb { position: absolute; top: 6px; left: calc(50% - var(--pic) / 2 - 4px); margin: 0; }
+.row.cell input.rename { width: 100%; font: var(--t-callout); text-align: center; }
+.listing.grid::after { height: 12px; }
+
+/* Rubber-band selection box (both views) */
+.band { position: absolute; z-index: 5; pointer-events: none; background: var(--accent-soft); border: 1px solid var(--accent-ring); border-radius: 3px; }
+
+/* Icon-size slider in the status bar (grid panes) */
+.pstatus input.gsize { width: 84px; height: 14px; margin: 0 6px 0 4px; accent-color: var(--accent); }
+.row.cell.sel .gb { background: var(--gs); color: var(--on-accent); }

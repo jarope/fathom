@@ -133,14 +133,21 @@ glyphs and tints, Reduce Transparency / Increase Contrast, glass opacity.
   header right-click, resizable by dragging; per-folder sort memory.
 - App bundles and other packages act as files (open, don't browse).
 
+**v0.20 — Grid view** ✅
+- **Grid view** (⌥⌘1 / ⌥⌘2, header buttons): Quick Look thumbnails from
+  QLThumbnailGenerator (no process per file), Finder icons for the rest;
+  virtualized like Details; icon-size slider; ⌘+ / ⌘− size icons in grid like Finder (window zoom also
+  on ⌥⌘+ / ⌥⌘−); per-folder view.
+- **Rubber-band selection** in both views (auto-scrolls; ⌘/⇧ add).
+- Folder menu gains **View ▸** and **Sort By ▸** (the grid has no header).
+- Fixed: ↑ in Details could leave the row under the column header.
+
 Still to do:
-- **Grid view** with Quick Look thumbnails, icon size, rubber-band selection.
 - **Columns view** (Miller columns) with a preview column.
 - **Real file icons** (NSWorkspace) instead of emoji, cached per type.
 - **Information panel** (Dolphin F11) replacing the preview dock: preview,
   metadata (dimensions, duration, EXIF), folder size on demand.
 - **Get Info** (⌘I): recursive size, permissions, dates, Open With, tags.
-- Open questions: ⌘+/⌘− in grid view = icon size (window zoom → ⌥⌘+/−)?
 
 ### Phase 6 — Public release (v1.0)
 - **Name check**: "Fathom" is already used by Fathom Analytics and the Fathom

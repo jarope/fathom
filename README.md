@@ -10,7 +10,7 @@ native ES modules in `src/js/`, no npm, no bundler). The look follows
 [`DESIGN.md`](DESIGN.md): neutral greys, one accent colour, macOS glass on the
 sidebar and popovers, the system font plus JetBrains Mono.
 
-## What it does today (v0.19.0)
+## What it does today (v0.20.0)
 
 - **Progress & cancel** — copies, moves, duplicates and archive jobs run in the
   background; anything that takes more than a moment gets a card (bottom-right)
@@ -177,6 +177,14 @@ sidebar and popovers, the system font plus JetBrains Mono.
   of thousands of files stay smooth. Apps and other packages open rather than
   browse. (With the folder shelf on, top-level folders are tiles; turn it off
   to expand them in the list.)
+- **Grid view** (⌥⌘1, or the grid button; ⌥⌘2 back to Details) — icons and
+  real Quick Look thumbnails (photos, PDFs, video, documents) with the Finder
+  icon for everything else, custom folder and app icons included. Icon size
+  slider in the status bar, or ⌘+ / ⌘− as in Finder. ↑ ↓ ← → move through the grid;
+  right-click empty space → **View ▸** and **Sort By ▸**. Each folder remembers
+  its view.
+- **Rubber-band selection** — drag from empty space to select a box of files
+  (⌘ / ⇧ adds to the selection), in Grid and Details.
 - **Appearance** (Preferences → General) — Match the system / Light / Dark;
   accent colour follows your macOS accent, or pick Orange, Indigo, Teal or
   Graphite; glass opacity 50–100%. Respects **Reduce Transparency** and
@@ -215,10 +223,12 @@ Defaults below — change any of them in Preferences → Shortcuts.
 | ⌃Tab · ⌘⇧[ ] · ⌘1…9 | Switch tabs |
 | ⌃⌘S / F9 | Toggle Places sidebar |
 | ⇧⌘F | Toggle the folder shelf |
-| ⌘+ / ⌘− / ⌘0 | Zoom in / out / actual size |
+| ⌘+ / ⌘− / ⌘0 | Zoom in / out / actual size (in grid view ⌘+ / ⌘− size the icons; ⌥⌘+ / ⌥⌘− always zoom) |
 | Space | Quick Look |
 | ⌃⌘1…7 / ⌃⌘0 | Toggle favourite tag / clear tags |
-| ← / → | Step through the folder shelf |
+| ← / → | Open / close a folder (Details); step through the shelf and the grid |
+| ⌥⌘1 / ⌥⌘2 | Grid / Details view |
+| ⌘+ / ⌘− (grid) | Bigger / smaller icons |
 | ⇧⌘H | Home |
 | ⌘R | Refresh |
 

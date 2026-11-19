@@ -22,6 +22,7 @@ mod query;
 mod spotlight;
 mod system;
 mod tags;
+mod thumbs;
 mod batch;
 mod jobs;
 mod pasteboard;
@@ -901,6 +902,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             appearance::appearance,
+            thumbs::file_thumb,
             places,
             eject_volume,
             watch_dirs,

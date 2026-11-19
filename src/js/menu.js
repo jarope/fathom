@@ -88,6 +88,23 @@ export function showMenu(entries, x, y) {
   place(ctx, x, y);
 }
 
+/** View ▸ — the pane's view mode. */
+export const viewEntries = (P) => [
+  { label: "Grid", on: P.viewMode === "grid", fn: () => P.setViewMode("grid"), key: keyHint("viewGrid") },
+  { label: "Details", on: P.viewMode === "details", fn: () => P.setViewMode("details"), key: keyHint("viewDetails") },
+];
+/** Sort By ▸ — the grid has no column header, so sorting lives here too. */
+export function sortEntries(P) {
+  const keys = [["name", "Name"], ["kind", "Kind"], ["size", "Size"], ["modified", "Modified"], ["created", "Created"], ["added", "Date Added"], ["ext", "Extension"]];
+  if (P.mode === "search") keys.splice(1, 0, ["folder", "Folder"]);
+  return [
+    ...keys.map(([k, label]) => ({ label, on: P.sortKey === k, fn: () => P.sortBy(k) })),
+    "sep",
+    { label: "Ascending", on: P.sortDir === 1, fn: () => P.sortDir !== 1 && P.sortBy(P.sortKey) },
+    { label: "Descending", on: P.sortDir === -1, fn: () => P.sortDir !== -1 && P.sortBy(P.sortKey) },
+  ];
+}
+
 /** Right-click menu for pane P. Acts on its current selection; empty selection → folder menu. */
 export function openContextMenu(P, x, y) {
   const sel = P.selectedEntries();
@@ -107,6 +124,9 @@ export function openContextMenu(P, x, y) {
       { label: "Open Terminal Here", fn: () => openTerminal(P, P.cwd), key: keyHint("terminal") },
       { label: "Add to Places", fn: () => addBookmarks([P.cwd]) },
       { label: "Copy folder path", fn: () => { navigator.clipboard.writeText(P.cwd); P.flash("Copied path"); } },
+      "sep",
+      { label: "View", sub: () => viewEntries(P) },
+      { label: "Sort By", sub: () => sortEntries(P) },
       { label: app.showHidden ? "Hide hidden files" : "Show hidden files", fn: toggleHidden, key: keyHint("hidden") },
       "sep",
       P.git && { label: "Git", sub: () => gitMenu(P) },

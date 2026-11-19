@@ -16,6 +16,13 @@ export function updateTitle() {
   n.title = P.cwd;
 }
 
+/** The View buttons show the active pane's mode. */
+export function syncViewButtons() {
+  const P = app.active, m = P ? P.viewMode : "details";
+  document.getElementById("vmGrid")?.classList.toggle("on", m === "grid");
+  document.getElementById("vmDetails")?.classList.toggle("on", m === "details");
+}
+
 export function toggleHidden() {
   app.showHidden = !app.showHidden;
   store.set("fathom-hidden", app.showHidden ? 1 : 0);
@@ -51,7 +58,7 @@ function applyZoom(z) {
   if (wv?.setZoom) wv.setZoom(z).catch(() => { document.documentElement.style.zoom = z; });
   else document.documentElement.style.zoom = z; // browser harness
   const b = document.getElementById("zoomBtn");
-  if (b) { b.title = `Zoom ${pct(z)} — ⌘+ / ⌘− / ⌘0`; b.classList.toggle("on", z !== 1); }
+  if (b) { b.title = `Zoom ${pct(z)} — ⌥⌘+ / ⌥⌘− / ⌘0 (⌘+ / ⌘− too, except in grid view where they size icons)`; b.classList.toggle("on", z !== 1); }
 }
 
 export function setZoom(z, announce = true) {
@@ -68,8 +75,8 @@ export const zoomStep = (dir) => {
 function zoomMenu(btn) {
   const r = btn.getBoundingClientRect();
   showMenu([
-    { label: "Larger", fn: () => zoomStep(1), key: "⌘+" },
-    { label: "Smaller", fn: () => zoomStep(-1), key: "⌘−" },
+    { label: "Larger", fn: () => zoomStep(1), key: "⌥⌘+" },
+    { label: "Smaller", fn: () => zoomStep(-1), key: "⌥⌘−" },
     { label: "Actual Size", fn: () => setZoom(1), key: "⌘0" },
     "sep",
     ...ZOOMS.map((z) => ({ label: pct(z), fn: () => setZoom(z), on: Math.abs(z - zoom) < 0.001 })),
@@ -90,6 +97,9 @@ export function initHeader() {
   $("shelfToggle").classList.toggle("on", app.folderShelf);
   $("shelfToggle").addEventListener("click", toggleShelf);
   $("viewSingle").addEventListener("click", () => setView("single"));
+  $("vmGrid").addEventListener("click", () => app.active && app.active.setViewMode("grid"));
+  $("vmDetails").addEventListener("click", () => app.active && app.active.setViewMode("details"));
+  syncViewButtons();
   $("viewTwin").addEventListener("click", () => setView("twin"));
 
   // Header = title bar: its non-button parts drag the window (double-click zooms).

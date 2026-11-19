@@ -4,7 +4,7 @@ import { app, invoke, store } from "./core.js";
 import { initMenu } from "./menu.js";
 import { initPreview, refreshDock } from "./preview.js";
 import { initKeys } from "./keys.js";
-import { initHeader, updateTitle } from "./view.js";
+import { initHeader, updateTitle, syncViewButtons } from "./view.js";
 import { initTabs, openTab, renderTabs } from "./tabs.js";
 import { initSidebar, loadPlaces, markActive, renderSidebar } from "./sidebar.js";
 import { initWatch, syncWatch } from "./watch.js";
@@ -27,7 +27,8 @@ app.dockPreview = !!store.get("fathom-dock", false);
 app.folderShelf = store.get("fathom-shelf", true) !== false;
 
 app.hooks.changed = (P) => { if (app.tab && P === app.tab.panes[0]) refreshDock(); qlFollow(P); };
-app.hooks.navigated = () => { renderTabs(); markActive(); updateTitle(); syncWatch(); saveSession(); };
+app.hooks.navigated = () => { renderTabs(); markActive(); updateTitle(); syncViewButtons(); syncWatch(); saveSession(); };
+app.hooks.viewMode = () => syncViewButtons();
 app.hooks.save = saveSession;
 app.hooks.expanded = () => syncWatch();
 app.hooks.searchesChanged = () => renderSidebar();

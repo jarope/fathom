@@ -11,12 +11,19 @@ import { openTab, closeTab, cycleTab, gotoTab, setView } from "./tabs.js";
 import { showPreviewFor, closePreview, previewStep, toggleDock } from "./preview.js";
 import { hideCtx } from "./menu.js";
 import { toggleHidden, toggleSidebar, toggleShelf, setZoom, zoomStep } from "./view.js";
+import { gridSize, setGridSize } from "./grid.js";
 import { quickLook, closeQuickLook } from "./system.js";
 import { toggleNth, clearTags } from "./tags.js";
 import { commitDialog, push } from "./git.js";
 import { prefs } from "./settings.js";
 import { openPrefs } from "./prefs.js";
 import { actions, runOnSelection } from "./actions.js";
+
+function zoomOrIcons(P, dir) {
+  if (!P || P.viewMode !== "grid") { zoomStep(dir); return; }
+  setGridSize(gridSize() + dir * 16);
+  P.flash(`Icon size ${gridSize()} pt`);
+}
 
 const rename = (P) => { const s = P.selectedEntries(); if (s.length === 1) P.startRename(s[0].path); else if (s.length > 1) batchRename(P); };
 
@@ -59,10 +66,15 @@ export const COMMANDS = [
   { id: "twin", group: "Tabs & View", label: "Single / Twin Pane", keys: ["Cmd+Backslash"], run: () => setView(app.tab.view === "single" ? "twin" : "single") },
   { id: "sidebar", group: "Tabs & View", label: "Sidebar", keys: ["F9", "Ctrl+Cmd+KeyS"], run: toggleSidebar },
   { id: "hidden", group: "Tabs & View", label: "Show Hidden Files", keys: ["Shift+Cmd+Period"], run: toggleHidden },
+  { id: "viewGrid", group: "Tabs & View", label: "View as Grid", keys: ["Alt+Cmd+Digit1"], run: (P) => P.setViewMode("grid") },
+  { id: "viewDetails", group: "Tabs & View", label: "View as Details", keys: ["Alt+Cmd+Digit2"], run: (P) => P.setViewMode("details") },
   { id: "shelf", group: "Tabs & View", label: "Folder Shelf", keys: ["Shift+Cmd+KeyF"], run: toggleShelf },
   { id: "dock", group: "Tabs & View", label: "Preview Panel", keys: ["Cmd+KeyP"], run: toggleDock },
-  { id: "zoomIn", group: "Tabs & View", label: "Zoom In", keys: ["Cmd+Equal", "Cmd+NumpadAdd"], global: true, run: () => zoomStep(1) },
-  { id: "zoomOut", group: "Tabs & View", label: "Zoom Out", keys: ["Cmd+Minus", "Cmd+NumpadSubtract"], global: true, run: () => zoomStep(-1) },
+  // Like Finder: in a grid pane ⌘+ / ⌘− change the icon size; elsewhere they zoom the window.
+  { id: "zoomIn", group: "Tabs & View", label: "Zoom In (icon size in grid)", keys: ["Cmd+Equal", "Cmd+NumpadAdd"], global: true, run: (P) => zoomOrIcons(P, 1) },
+  { id: "zoomOut", group: "Tabs & View", label: "Zoom Out (icon size in grid)", keys: ["Cmd+Minus", "Cmd+NumpadSubtract"], global: true, run: (P) => zoomOrIcons(P, -1) },
+  { id: "winZoomIn", group: "Tabs & View", label: "Zoom Window In", keys: ["Alt+Cmd+Equal"], global: true, run: () => zoomStep(1) },
+  { id: "winZoomOut", group: "Tabs & View", label: "Zoom Window Out", keys: ["Alt+Cmd+Minus"], global: true, run: () => zoomStep(-1) },
   { id: "zoomReset", group: "Tabs & View", label: "Actual Size", keys: ["Cmd+Digit0", "Cmd+Numpad0"], global: true, run: () => setZoom(1) },
   // Git & app
   { id: "gitCommit", group: "Git", label: "Commit…", keys: [], run: (P) => P.git && commitDialog(P) },
@@ -157,9 +169,9 @@ export function initKeys() {
     if (e.metaKey && !e.shiftKey && !e.altKey && !e.ctrlKey && /^Digit[1-9]$/.test(code)) return k(() => gotoTab(+code.slice(5)));
     if (e.key === "Escape") { hideCtx(); if (P.selected.size || P.mode !== "search") P.clearSel(); else P.reload(); return; }
     if (e.key === "Enter" && !e.metaKey) return k(() => P.enterOrOpen());
-    if (e.key === "ArrowDown" && !e.metaKey) return k(() => P.moveCursor(1, e.shiftKey));
-    if (e.key === "ArrowUp" && !e.metaKey) return k(() => P.moveCursor(-1, e.shiftKey));
-    // ← → step through the folder shelf (and on into the files).
+    if (e.key === "ArrowDown" && !e.metaKey) return k(() => P.moveLine(1, e.shiftKey));
+    if (e.key === "ArrowUp" && !e.metaKey) return k(() => P.moveLine(-1, e.shiftKey));
+    // ← →: open/close folders in Details, step through the shelf and the grid.
     if (P.mode === "browse" && !e.metaKey && (e.key === "ArrowRight" || e.key === "ArrowLeft")) return k(() => P.arrowSide(e.key === "ArrowRight" ? 1 : -1, e.shiftKey));
     if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key.length === 1 && e.key !== " ") P.typeAhead(e.key);
   });

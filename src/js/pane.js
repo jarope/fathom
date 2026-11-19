@@ -3,6 +3,8 @@
 
 import { app, invoke, el, icon, store, fmtSize, isFolder } from "./core.js";
 import { createDetails, sortValue } from "./details.js";
+import { createGrid, gridSize, setGridSize, GRID_MIN, GRID_MAX } from "./grid.js";
+import { saveSettings } from "./settings.js";
 import { pushUndo, refreshAll, selectEverywhere, trashPaths } from "./ops.js";
 import { openContextMenu, showMenu } from "./menu.js";
 import { setActive, openTab } from "./tabs.js";
@@ -28,7 +30,7 @@ const TEMPLATE = `
   <div class="listing"></div>
   <div class="pstatus"></div>`;
 
-// Per-folder view memory (sort now; the view mode once there's more than one).
+// Per-folder view memory: sort column, direction and view mode (details / grid).
 const viewMemory = () => store.get("fathom-views", {});
 function rememberView(dir, v) {
   const m = viewMemory();
@@ -60,14 +62,16 @@ export function createPane(key) {
     anchor: -1, cursor: -1, mode: "browse", showHidden: false,
     history: [], hi: -1, msgTimer: null,
     sortKey: "name", sortDir: 1, // 1 asc, -1 desc; folders always first
+    viewMode: "details",          // "details" | "grid"
     renaming: false, pendingRefresh: false, editing: false,
     expanded: new Set(), // folders opened in place (tree)
     kids: new Map(),     // expanded folder path -> its entries
   };
   const changed = () => app.hooks.changed(P);
-  const view = createDetails(P);
-  const rowAt = (i) => view.rowAt(i);
-  const reveal = (i) => view.reveal(i);
+  const views = { details: createDetails(P), grid: createGrid(P) };
+  const V = () => views[P.viewMode] || views.details;
+  const rowAt = (i) => V().rowAt(i);
+  const reveal = (i) => V().reveal(i);
   P.reveal = reveal;
 
   // ---------------------------------------------------------------- status
@@ -81,9 +85,18 @@ export function createPane(key) {
     const gc = gitChip(P); if (gc) els.status.append(gc);
     if (extra && extra !== P.flashMsg) P.flashMsg = null; // a newer message replaces it
     extra = extra || P.flashMsg; // a recent message survives redraws
+    if (P.viewMode === "grid") els.status.append(sizeSlider());
     if (extra) els.status.append(extra);
     else if (P.space) els.status.append(el("span", "mono", `${fmtSize(P.space.free, false)} free of ${fmtSize(P.space.total, false)}`));
   };
+  // Icon size for the grid (one setting for every pane, like Finder's slider).
+  function sizeSlider() {
+    const r = el("input", "gsize"); r.type = "range"; r.min = GRID_MIN; r.max = GRID_MAX; r.step = 8;
+    r.value = gridSize(); r.title = "Icon size"; r.setAttribute("aria-label", "Icon size");
+    r.addEventListener("input", () => setGridSize(+r.value, false));
+    r.addEventListener("change", () => saveSettings());
+    return r;
+  }
   P.flash = (text, cls = "msg") => {
     P.flashMsg = el("span", cls, text);
     P.renderStatus();
@@ -107,7 +120,7 @@ export function createPane(key) {
     if (moved) {
       P.expanded.clear(); P.kids.clear();
       const v = viewMemory()[listing.dir];
-      if (v) { P.sortKey = v.sortKey; P.sortDir = v.sortDir; }
+      if (v) { P.sortKey = v.sortKey; P.sortDir = v.sortDir; if (v.viewMode) P.viewMode = v.viewMode; }
       // Never sorted + shelf on: the tiles have no column header to sort by,
       // so start from Name rather than whatever the last folder used.
       else if (app.folderShelf) { P.sortKey = "name"; P.sortDir = 1; }
@@ -142,7 +155,7 @@ export function createPane(key) {
   /** Open or close folder row i in place. open: true/false, or toggle. */
   P.setExpanded = async (i, open) => {
     const e = P.entries[i];
-    if (!isFolder(e) || P.mode !== "browse" || view.isTile(i)) return;
+    if (!isFolder(e) || P.mode !== "browse" || V().isTile(i)) return;
     if (open === undefined) open = !P.expanded.has(e.path);
     if (open === P.expanded.has(e.path)) return;
     if (open) { P.expanded.add(e.path); await loadKids([e.path]); if (!P.expanded.has(e.path)) { P.flash(`⚠ Can't open “${e.name}”`, "warn"); return; } }
@@ -163,8 +176,9 @@ export function createPane(key) {
   };
   /** ← / →: open / close folders in the list; move through tiles in the shelf. */
   P.arrowSide = (dir, extend) => {
+    if (P.viewMode === "grid") { P.moveCursor(dir, extend); return; }
     const i = P.cursor, e = P.entries[i];
-    if (e && !view.isTile(i) && P.mode === "browse") {
+    if (e && !V().isTile(i) && P.mode === "browse") {
       if (dir > 0 && isFolder(e)) { if (!P.expanded.has(e.path)) P.setExpanded(i, true); else if (P.entries[i + 1] && P.entries[i + 1].depth > (e.depth || 0)) { P.selectSingle(i + 1); reveal(i + 1); } return; }
       if (dir < 0) {
         if (isFolder(e) && P.expanded.has(e.path)) { P.setExpanded(i, false); return; }
@@ -276,7 +290,7 @@ export function createPane(key) {
       const sorted = list.slice().sort(cmp);
       for (const e of sorted) {
         e.depth = depth;
-        const open = isFolder(e) && P.expanded.has(e.path) && P.kids.has(e.path) && !(shelf && depth === 0);
+        const open = P.viewMode === "details" && isFolder(e) && P.expanded.has(e.path) && P.kids.has(e.path) && !(shelf && depth === 0);
         if (open) {
           const sub = []; walk(P.kids.get(e.path), depth + 1, sub);
           if (!test || test(e) || sub.length) out.push(e, ...sub);
@@ -443,13 +457,16 @@ export function createPane(key) {
     const c = app.clip;
     els.listing.querySelectorAll(".row").forEach((r) => r.classList.toggle("cut", !!(c && c.cut && c.paths.includes(P.entries[+r.dataset.i].path))));
   };
-  P.moveCursor = (dir, extend) => {
+  P.moveCursor = (dir, extend, step = 1) => {
     if (!P.entries.length) return;
     let i = P.cursor;
-    i = dir > 0 ? Math.min(P.entries.length - 1, i + 1) : Math.max(0, i < 0 ? 0 : i - 1);
+    if (i < 0) i = dir > 0 ? 0 : P.entries.length - 1;
+    else i = dir > 0 ? Math.min(P.entries.length - 1, i + step) : Math.max(0, i - step);
     if (extend && P.anchor >= 0) P.selectRange(P.anchor, i); else P.selectSingle(i);
     reveal(i);
   };
+  /** ↑ ↓: a row in Details, a line of cells in Grid. */
+  P.moveLine = (dir, extend) => P.moveCursor(dir, extend, V().perRow());
   // Type-ahead: typing letters jumps to the first matching name.
   let taBuf = "", taTimer = null;
   P.typeAhead = (ch) => {
@@ -489,11 +506,28 @@ export function createPane(key) {
     const selPaths = P.selectedPaths();
     P.rebuild(); P.cursor = -1; P.anchor = -1;
     P.renderList(); P.selectPaths(selPaths); changed(); app.hooks.save();
-    if (P.mode === "browse" && P.cwd) rememberView(P.cwd, { sortKey: P.sortKey, sortDir: P.sortDir });
+    P.remember();
+  };
+  P.remember = () => { if (P.mode === "browse" && P.cwd) rememberView(P.cwd, { sortKey: P.sortKey, sortDir: P.sortDir, viewMode: P.viewMode }); };
+
+  /** Switch this pane between Details and Grid (remembered for this folder). */
+  P.setViewMode = (m) => {
+    if (!views[m] || m === P.viewMode) return;
+    const cur = P.entries[P.cursor] ? P.entries[P.cursor].path : null;
+    const sel = new Set(P.selected);
+    P.viewMode = m;
+    P.rebuild(); P.selected = sel;
+    if (cur) P.cursor = P.anchor = P.entries.findIndex((e) => e.path === cur);
+    els.listing.scrollTop = 0;
+    P.renderList(); P.renderStatus();
+    if (P.cursor >= 0) reveal(P.cursor);
+    P.remember(); changed(); app.hooks.save();
+    if (app.hooks.viewMode) app.hooks.viewMode(P);
   };
 
   // ----------------------------------------------------------------- render
-  P.renderList = () => view.render();
+  P.resizeGrid = () => views.grid.resize();
+  P.renderList = () => { els.listing.classList.toggle("grid", P.viewMode === "grid"); V().render(); };
 
   // --------------------------------------------------------- pointer input
   root.addEventListener("mousedown", () => setActive(P), true);
@@ -501,11 +535,55 @@ export function createPane(key) {
     const disc = ev.target.closest(".disc.can");
     if (disc) { ev.stopPropagation(); P.setExpanded(+disc.closest(".row").dataset.i); return; }
     const row = ev.target.closest(".row");
-    if (!row) { if (!ev.target.closest(".head") && P.selected.size) P.clearSel(); return; } // empty space clears
+    if (!row) { if (!bandJustEnded && !ev.target.closest(".head") && P.selected.size) P.clearSel(); return; } // empty space clears
     const i = +row.dataset.i;
     if (ev.metaKey || ev.ctrlKey) P.toggleOne(i);
     else if (ev.shiftKey && P.anchor >= 0) P.selectRange(P.anchor, i);
     else P.selectSingle(i);
+  });
+  // Rubber band: drag from empty space to select what the box touches
+  // (⌘/⇧ add to the selection). Works in Details and Grid; hit-testing is
+  // geometric, so rows that aren't drawn yet are included.
+  let bandJustEnded = false;
+  els.listing.addEventListener("mousedown", (ev) => {
+    if (ev.button !== 0 || ev.target.closest(".row, .head, .shelf, input") || !P.entries.length) return;
+    const L = els.listing, lr = L.getBoundingClientRect();
+    if (ev.clientX - lr.left >= L.clientWidth) return; // the scrollbar
+    const pt = (e) => [e.clientX - lr.left + L.scrollLeft, e.clientY - lr.top + L.scrollTop];
+    const [x0, y0] = pt(ev);
+    const base = ev.metaKey || ev.shiftKey ? new Set(P.selected) : new Set();
+    let band = null, last = ev;
+    const update = () => {
+      let [x1, y1] = pt(last);
+      x1 = Math.max(0, Math.min(L.scrollWidth, x1)); y1 = Math.max(0, Math.min(L.scrollHeight, y1));
+      if (!band) {
+        if (Math.abs(x1 - x0) < 4 && Math.abs(y1 - y0) < 4) return;
+        band = el("div", "band"); L.append(band);
+      }
+      const [a, b, c, d] = [Math.min(x0, x1), Math.min(y0, y1), Math.max(x0, x1), Math.max(y0, y1)];
+      Object.assign(band.style, { left: a + "px", top: b + "px", width: c - a + "px", height: d - b + "px" });
+      const hit = V().indicesIn(a, b, c, d);
+      const sel = new Set(base);
+      hit.forEach((i) => { const p = P.entries[i].path; if (ev.metaKey && base.has(p)) sel.delete(p); else sel.add(p); });
+      P.selected = sel;
+      if (hit.length) { P.cursor = hit[hit.length - 1]; if (P.anchor < 0) P.anchor = hit[0]; }
+      P.reflect();
+    };
+    // Auto-scroll while the pointer is above / below the listing.
+    const scroller = setInterval(() => {
+      const y = last.clientY;
+      const dy = y < lr.top ? y - lr.top : y > lr.bottom ? y - lr.bottom : 0;
+      if (band && dy) { L.scrollTop += Math.max(-40, Math.min(40, dy)); update(); }
+    }, 30);
+    const move = (e) => { last = e; update(); };
+    const up = () => {
+      window.removeEventListener("mousemove", move); window.removeEventListener("mouseup", up, true);
+      clearInterval(scroller);
+      if (band) { band.remove(); bandJustEnded = true; setTimeout(() => (bandJustEnded = false), 0); }
+    };
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up, true);
+    ev.preventDefault(); // no text selection
   });
   els.listing.addEventListener("dblclick", (ev) => {
     if (ev.target.closest(".disc")) return;

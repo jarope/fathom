@@ -189,7 +189,7 @@ export function createDetails(P) {
     vbody.append(frag);
     applyGit(P);
   }
-  const queuePaint = () => { if (!paintQueued) paintQueued = requestAnimationFrame(paint); };
+  const queuePaint = () => { if (!paintQueued && P.viewMode !== "grid") paintQueued = requestAnimationFrame(paint); };
   L.addEventListener("scroll", queuePaint, { passive: true });
   if (window.ResizeObserver) new ResizeObserver(queuePaint).observe(L);
 
@@ -244,5 +244,24 @@ export function createDetails(P) {
   const rowAt = (i) => (i < nDirs ? L.querySelector(`.tile[data-i="${i}"]`) : rows.get(i) || null);
   const isTile = (i) => i < nDirs;
 
-  return { render, paint, reveal, rowAt, isTile };
+  /** Entries whose row or tile meets the rectangle (listing content coordinates). */
+  function indicesIn(x0, y0, x1, y1) {
+    const out = [];
+    if (nDirs) {
+      const lr = L.getBoundingClientRect();
+      L.querySelectorAll(".tile").forEach((t) => {
+        const r = t.getBoundingClientRect();
+        const tx = r.left - lr.left + L.scrollLeft, ty = r.top - lr.top + L.scrollTop;
+        if (tx < x1 && tx + r.width > x0 && ty < y1 && ty + r.height > y0) out.push(+t.dataset.i);
+      });
+    }
+    if (vbody) {
+      const top = vbody.offsetTop, n = P.entries.length - nDirs;
+      const a = Math.max(0, Math.floor((y0 - top) / ROW_H)), b = Math.min(n - 1, Math.floor((y1 - top) / ROW_H));
+      for (let j = a; j <= b; j++) out.push(j + nDirs);
+    }
+    return out;
+  }
+
+  return { render, paint, reveal, rowAt, isTile, indicesIn, perRow: () => 1 };
 }

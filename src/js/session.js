@@ -17,7 +17,7 @@ export function saveSession() {
       tabs: app.tabs.map((t) => ({
         view: t.view,
         active: Math.max(0, t.panes.indexOf(t.active)),
-        panes: t.panes.map((p) => ({ cwd: p.cwd, sortKey: p.sortKey, sortDir: p.sortDir })),
+        panes: t.panes.map((p) => ({ cwd: p.cwd, sortKey: p.sortKey, sortDir: p.sortDir, viewMode: p.viewMode })),
       })),
     });
   }, 300);
