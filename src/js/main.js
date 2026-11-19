@@ -4,7 +4,7 @@ import { app, invoke, store } from "./core.js";
 import { initMenu } from "./menu.js";
 import { initPreview, refreshDock } from "./preview.js";
 import { initKeys } from "./keys.js";
-import { initHeader } from "./view.js";
+import { initHeader, updateTitle } from "./view.js";
 import { initTabs, openTab, renderTabs } from "./tabs.js";
 import { initSidebar, loadPlaces, markActive, renderSidebar } from "./sidebar.js";
 import { initWatch, syncWatch } from "./watch.js";
@@ -19,6 +19,7 @@ import { loadSettings, prefs } from "./settings.js";
 import { loadActions, initActions } from "./actions.js";
 import { rebuildKeymap } from "./keys.js";
 import { openPrefs } from "./prefs.js";
+import { initAppearance } from "./appearance.js";
 
 app.showHidden = !!store.get("fathom-hidden", 0);
 app.sidebar = store.get("fathom-sidebar", true) !== false;
@@ -26,7 +27,7 @@ app.dockPreview = !!store.get("fathom-dock", false);
 app.folderShelf = store.get("fathom-shelf", true) !== false;
 
 app.hooks.changed = (P) => { if (app.tab && P === app.tab.panes[0]) refreshDock(); qlFollow(P); };
-app.hooks.navigated = () => { renderTabs(); markActive(); syncWatch(); saveSession(); };
+app.hooks.navigated = () => { renderTabs(); markActive(); updateTitle(); syncWatch(); saveSession(); };
 app.hooks.save = saveSession;
 app.hooks.searchesChanged = () => renderSidebar();
 app.hooks.actionsChanged = () => rebuildKeymap();
@@ -45,6 +46,7 @@ initKeys();
   }
   try { app.home = await invoke("home_dir"); } catch { app.home = "/"; }
   await loadSettings();
+  await initAppearance();
   rebuildKeymap(); // with any custom shortcuts
   document.getElementById("prefsBtn").addEventListener("click", () => openPrefs());
   loadPlaces();

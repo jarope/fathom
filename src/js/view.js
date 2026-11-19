@@ -5,6 +5,16 @@ import { app, store } from "./core.js";
 import { showMenu } from "./menu.js";
 import { setView } from "./tabs.js";
 import { renderSidebar } from "./sidebar.js";
+import { toggleTheme } from "./appearance.js";
+
+/** Toolbar title: the active pane's folder name, like Finder. */
+export function updateTitle() {
+  const n = document.getElementById("locName");
+  const P = app.active;
+  if (!n || !P || !P.cwd) return;
+  n.textContent = P.cwd === "/" ? "Macintosh HD" : P.cwd.split("/").pop();
+  n.title = P.cwd;
+}
 
 export function toggleHidden() {
   app.showHidden = !app.showHidden;
@@ -72,15 +82,7 @@ export function initHeader() {
   applyZoom(store.get("fathom-zoom", 1));
   $("zoomBtn").addEventListener("click", (e) => { e.stopPropagation(); zoomMenu($("zoomBtn")); });
 
-  // Theme (stored as a raw string — predates the JSON store).
-  let saved = null;
-  try { saved = localStorage.getItem("fathom-theme"); } catch {}
-  if (saved === "light" || saved === "dark") document.documentElement.setAttribute("data-theme", saved);
-  $("theme").addEventListener("click", () => {
-    const next = document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light";
-    document.documentElement.setAttribute("data-theme", next);
-    try { localStorage.setItem("fathom-theme", next); } catch {}
-  });
+  $("theme").addEventListener("click", toggleTheme);
 
   $("hiddenToggle").classList.toggle("on", app.showHidden);
   $("hiddenToggle").addEventListener("click", toggleHidden);
@@ -91,5 +93,5 @@ export function initHeader() {
   $("viewTwin").addEventListener("click", () => setView("twin"));
 
   // Header = title bar: its non-button parts drag the window (double-click zooms).
-  document.querySelectorAll(".header, .brand, .brand *, .header-right").forEach((n) => n.setAttribute("data-tauri-drag-region", ""));
+  document.querySelectorAll(".header, .loc, .loc-name, .header-right").forEach((n) => n.setAttribute("data-tauri-drag-region", ""));
 }

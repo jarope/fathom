@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 use walkdir::{DirEntry, WalkDir};
 
 mod actions;
+mod appearance;
 mod archive;
 mod bin_ops;
 mod dnd;
@@ -862,6 +863,7 @@ pub fn run() {
             dirs: Default::default(),
         })
         .invoke_handler(tauri::generate_handler![
+            appearance::appearance,
             places,
             eject_volume,
             watch_dirs,

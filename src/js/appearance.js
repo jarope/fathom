@@ -1,0 +1,88 @@
+// Appearance: light/dark, the accent colour, glass opacity, and the macOS
+// accessibility settings (Reduce Transparency, Increase Contrast). Resolves
+// Preferences → macOS → defaults and puts the result on <html> for theme.css.
+
+import { app, invoke } from "./core.js";
+import { prefs, saveSettings } from "./settings.js";
+
+export const ACCENTS = ["orange", "indigo", "teal", "graphite"]; // the in-app choices
+// macOS AppleAccentColor → our tuned palette (see theme.css). No value = Multicolour → Orange.
+const MAC_ACCENT = { "-1": "graphite", 0: "red", 1: "orange", 2: "yellow", 3: "green", 4: "blue", 5: "purple", 6: "pink" };
+
+let sys = { accent: null, reduce_transparency: false, increase_contrast: false };
+const darkMQ = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+let osDark = darkMQ ? darkMQ.matches : true;
+const win = () => window.__TAURI__?.window?.getCurrentWindow?.();
+
+export const systemAccent = () => (sys.accent == null ? "orange" : MAC_ACCENT[sys.accent] || "orange");
+export const resolvedTheme = () => (prefs.theme === "light" || prefs.theme === "dark" ? prefs.theme : osDark ? "dark" : "light");
+
+let lastWinTheme;
+export function applyAppearance() {
+  const root = document.documentElement;
+  const theme = resolvedTheme();
+  const accent = ACCENTS.includes(prefs.accent) ? prefs.accent : systemAccent();
+  root.setAttribute("data-theme", theme);
+  root.setAttribute("data-accent", accent);
+  try { localStorage.setItem("fathom-look", theme + " " + accent); } catch {}
+  const g = Math.min(100, Math.max(50, Number(prefs.glass) || 80));
+  root.style.setProperty("--glass-a", String(g / 100));
+  root.classList.toggle("rt", !!sys.reduce_transparency);
+  root.classList.toggle("hc", !!sys.increase_contrast);
+  // Keep the native window (sidebar vibrancy, traffic lights) in the same
+  // appearance. "system" hands control back to macOS.
+  const wt = prefs.theme === "light" || prefs.theme === "dark" ? prefs.theme : null;
+  if (wt !== lastWinTheme) {
+    lastWinTheme = wt;
+    const w = win();
+    if (w && w.setTheme) w.setTheme(wt).catch(() => {});
+  }
+}
+
+async function readSystem() {
+  if (!invoke) return;
+  try { sys = await invoke("appearance"); } catch {}
+}
+
+export async function initAppearance() {
+  // The pre-Preferences theme lived in localStorage; carry it over once.
+  if (!prefs.theme) {
+    let old = null;
+    try { old = localStorage.getItem("fathom-theme"); } catch {}
+    prefs.theme = old === "light" || old === "dark" ? old : "system";
+    if (old) { try { localStorage.removeItem("fathom-theme"); } catch {} saveSettings(); }
+  }
+  await readSystem();
+  applyAppearance();
+  if (darkMQ) darkMQ.addEventListener("change", (e) => {
+    // While the window is pinned to light/dark, this reports that, not macOS.
+    if (prefs.theme === "system") { osDark = e.matches; applyAppearance(); }
+  });
+  // Accent and accessibility changes happen in System Settings, so look
+  // again whenever Fathom comes back to the front.
+  window.addEventListener("focus", async () => { await readSystem(); applyAppearance(); });
+}
+
+/** Header button: flip between light and dark (pins the choice). */
+export function toggleTheme() {
+  prefs.theme = resolvedTheme() === "dark" ? "light" : "dark";
+  saveSettings();
+  applyAppearance();
+}
+
+/** Called when Preferences switches back to "Match the system". */
+export function followSystem() {
+  prefs.theme = "system";
+  // matchMedia is stale while the window was pinned; ask again once macOS has the window back.
+  applyAppearance();
+  setTimeout(() => { if (darkMQ) osDark = darkMQ.matches; applyAppearance(); }, 120);
+}
+
+// Paint the last look straight away, before settings load, so there's no flash.
+{
+  let look = null;
+  try { look = localStorage.getItem("fathom-look"); } catch {}
+  const [t, a] = (look || "").split(" ");
+  document.documentElement.setAttribute("data-theme", t === "light" || t === "dark" ? t : osDark ? "dark" : "light");
+  if (a) document.documentElement.setAttribute("data-accent", a);
+}

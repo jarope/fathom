@@ -6,10 +6,11 @@ ones) do them. Started life as *File Finder*; the search is now just one mode of
 a proper browser.
 
 Same stack as **Pattern Studio** (Tauri 2 — Rust backend, vanilla HTML/CSS and
-native ES modules in `src/js/`, no npm, no bundler), themed with the light/dark design system from the
-**Fascia** VST.
+native ES modules in `src/js/`, no npm, no bundler). The look follows
+[`DESIGN.md`](DESIGN.md): neutral greys, one accent colour, macOS glass on the
+sidebar and popovers, the system font plus JetBrains Mono.
 
-## What it does today (v0.17.0)
+## What it does today (v0.18.0)
 
 - **Progress & cancel** — copies, moves, duplicates and archive jobs run in the
   background; anything that takes more than a moment gets a card (bottom-right)
@@ -167,8 +168,14 @@ native ES modules in `src/js/`, no npm, no bundler), themed with the light/dark 
   Uses the **real macOS Trash — recoverable**, never a hard delete.
 - **Search within a pane's folder** — type in its search box (wildcards `*` `?`
   ok), ⏎ to run, Esc back to browsing.
-- **Open / Reveal / Copy path**, a **Hidden files** toggle (◌ in the header, remembered), and a persisted
-  **light / dark** theme (◐).
+- **Open / Reveal / Copy path**, a **Hidden files** toggle (◌ in the header, remembered), and a
+  **light / dark** switch (◐).
+- **Appearance** (Preferences → General) — Match the system / Light / Dark;
+  accent colour follows your macOS accent, or pick Orange, Indigo, Teal or
+  Graphite; glass opacity 50–100%. Respects **Reduce Transparency** and
+  **Increase Contrast**. The sidebar is real macOS glass (window vibrancy), so
+  Fathom ships outside the Mac App Store. Every file kind has its own icon
+  and tint; the toolbar shows the current folder's name.
 
 ### Keyboard
 
@@ -230,7 +237,9 @@ Open).
 ## Layout
 
 ```
-src/index.html          Frontend (single file, Fascia-themed, no npm)
+src/index.html          Frontend shell (no npm); src/js/ modules, src/css/
+src/css/theme.css       Every colour, font and size from DESIGN.md (tokens only)
+src/fonts/              JetBrains Mono (SIL OFL, bundled)
 src-tauri/src/lib.rs     Backend: list_dir / home_dir / search / move_to_trash / reveal / open
 src-tauri/src/main.rs    Entry point
 scripts/                 dev.sh, build.sh

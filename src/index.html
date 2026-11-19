@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,14 +8,16 @@
   </head>
   <body>
     <div class="panel">
+      <div class="sidebar-wrap">
+        <div class="side-top" data-tauri-drag-region></div>
+        <nav id="sidebar" class="sidebar" aria-label="Places"></nav>
+      </div>
+      <div class="main">
       <div class="header">
-        <div class="brand">
-          <div class="brand-row"><span class="live-dot"></span><span class="logo">FATHOM</span></div>
-          <span class="subtitle">file browser</span>
-        </div>
+        <div class="loc"><span class="loc-name" id="locName">Fathom</span></div>
         <div class="header-right">
           <!-- Layout: single vs twin pane (segmented — one is always on) -->
-          <div class="cap" role="group" aria-label="Layout">
+          <div class="cap segmented" role="group" aria-label="Layout">
             <button id="viewSingle" type="button" title="Single pane (⌘\)" aria-label="Single pane">
               <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.75" y="4" width="14.5" height="12" rx="2"/></svg>
             </button>
@@ -55,7 +57,6 @@
       <div id="tabbar" class="tabbar"></div>
 
       <div class="body">
-        <nav id="sidebar" class="sidebar" aria-label="Places"></nav>
         <div id="panes" class="panes single"></div>
       </div>
 
@@ -68,6 +69,7 @@
           <span class="dock-name" id="dockName"></span>
           <span class="dock-dim" id="dockDim"></span>
         </div>
+      </div>
       </div>
     </div>
 

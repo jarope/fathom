@@ -7,6 +7,7 @@ import { prefs, saveSettings, settingsProblem } from "./settings.js";
 import { actions, actionsProblem, saveActions, loadActions, EXAMPLES } from "./actions.js";
 import { allCommands, keysFor, keyLabel, comboOf, rebuildKeymap, commandFor, RESERVED, isFixed } from "./keys.js";
 import { toggleHidden, toggleShelf } from "./view.js";
+import { ACCENTS, applyAppearance, followSystem, systemAccent } from "./appearance.js";
 
 const TERMINALS = ["Terminal", "iTerm", "Ghostty", "Warp"];
 const redrawPanes = () => app.tabs.forEach((t) => t.panes.forEach((p) => p.cwd && p.mode === "browse" && p.renderList()));
@@ -50,6 +51,34 @@ function general() {
   const showFolder = () => fwrap.classList.toggle("off", prefs.startup !== "folder");
   box.append(field("At start-up", select([["restore", "Reopen my last tabs"], ["folder", "Open a folder"]], prefs.startup, (v) => { prefs.startup = v; saveSettings(); showFolder(); }), fwrap));
   showFolder();
+
+  // Appearance
+  box.append(field("Appearance", select([["system", "Match the system"], ["light", "Light"], ["dark", "Dark"]], prefs.theme || "system", (v) => {
+    if (v === "system") followSystem(); else { prefs.theme = v; applyAppearance(); }
+    saveSettings();
+  })));
+  const sw = el("div", "pf-swatches");
+  const cap = (s) => s[0].toUpperCase() + s.slice(1);
+  const accentNote = note("");
+  const paintSw = () => {
+    sw.querySelectorAll(".pf-swatch").forEach((b) => b.classList.toggle("on", b.dataset.v === (ACCENTS.includes(prefs.accent) ? prefs.accent : "system")));
+    accentNote.textContent = ACCENTS.includes(prefs.accent) ? cap(prefs.accent) : `Following macOS: ${cap(systemAccent())}`;
+  };
+  [["system", "Match macOS (System Settings › Appearance)"], ...ACCENTS.map((a) => [a, cap(a)])].forEach(([v, t]) => {
+    const b = el("button", "pf-swatch" + (v === "system" ? " sys" : "")); b.type = "button"; b.dataset.v = v; b.title = t; b.setAttribute("aria-label", t);
+    if (v !== "system") b.style.setProperty("--sw", `var(--sw-${v})`);
+    else b.style.setProperty("--sw", "var(--accent)");
+    b.addEventListener("click", () => { prefs.accent = v; saveSettings(); applyAppearance(); paintSw(); });
+    sw.append(b);
+  });
+  sw.append(accentNote); paintSw();
+  box.append(field("Accent colour", sw));
+  const rng = el("input"); rng.type = "range"; rng.min = 50; rng.max = 100; rng.step = 5; rng.value = prefs.glass;
+  const out = el("output", null, prefs.glass + "%");
+  rng.addEventListener("input", () => { prefs.glass = +rng.value; out.textContent = rng.value + "%"; applyAppearance(); });
+  rng.addEventListener("change", () => saveSettings());
+  const rwrap = el("div", "pf-range"); rwrap.append(rng, out);
+  box.append(field("Glass", rwrap, note("Sidebar, toolbar and menus. 100% is solid, the same as Reduce Transparency in System Settings › Accessibility.")));
 
   const sample = Math.floor(Date.now() / 1000) - 3600 * 26;
   const dateOpts = [["iso", "ISO"], ["locale", "System style"], ["relative", "Relative"]].map(([v, l]) => [v, `${l} — ${fmtDate(sample, v)}`]);

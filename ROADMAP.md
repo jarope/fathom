@@ -78,7 +78,7 @@ Finder's copy/move rules (same disk = move, ⌥ copy, ⌘ move). **Redo** (⇧�
 and **undo for Move to Bin** (Bin location recorded; Finder's Put Back works
 too). Symlinks go to the Bin via NSFileManager — Finder can't bin them by path.
 
-### Phase 4 — Mac-native power (next)
+### Phase 4 — Mac-native power ✅ (v0.14.0–v0.17.0)
 Shipped in four steps:
 
 **v0.14 — Tags & system integration** ✅
@@ -114,7 +114,15 @@ Shipped in four steps:
   terminal app (Terminal / iTerm / Ghostty / Warp), session restore.
 - **Shortcut editor**: rebind any action, clash warnings.
 
-### Phase 5 — Views & information (after Phase 4)
+### Visual redesign ✅ (v0.18.0)
+The `DESIGN.md` spec, done before Phase 5 so the new views are built in the
+final look once: colour tokens for light/dark in one theme file, accent from
+macOS or Orange/Indigo/Teal/Graphite, real window vibrancy behind the
+sidebar (`macOSPrivateApi` — rules out the Mac App Store), glass popovers,
+system font + bundled JetBrains Mono, capsule controls, 34pt rows, file-kind
+glyphs and tints, Reduce Transparency / Increase Contrast, glass opacity.
+
+### Phase 5 — Views & information (next)
 - **Display engine**: shared per-pane model (entries, sort, filter, selection)
   + views that draw only what's on screen — 50k-entry folders stay smooth;
   selection, rename, type-ahead, drag & drop, menus work in every view.
@@ -144,7 +152,8 @@ Shipped in four steps:
 
 ## Polish backlog (after feature-complete, before daily-driver)
 Deferred on purpose — features first, then a polish pass.
-- Header: confirm traffic-light vertical alignment and wordmark spacing on a real build.
+- DESIGN.md kind tints Document / Video / Code are ~2.9:1 on dark content
+  (spec only promises ≥3:1 on light); consider lighter dark-mode variants.
 - Folder shelf: optional mouse-wheel → sideways scroll while hovering the shelf.
 - Drag cursor always shows the "+" (copy) badge over Fathom, even when the
   drop will move — Tauri's drop handler always answers "copy" to AppKit.

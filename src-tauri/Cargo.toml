@@ -1,6 +1,6 @@
 [package]
 name = "fathom"
-version = "0.17.0"
+version = "0.18.0"
 description = "Fathom — a lean twin-pane file manager for macOS. The daily essentials, done the way Linux managers do them."
 authors = ["Jason Peel"]
 edition = "2021"
@@ -14,7 +14,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["macos-private-api"] }
 tauri-plugin-dialog = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -48,6 +48,6 @@ strip = true
 # Move to Bin that reports where items went (for Put Back).
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"
-objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSArray", "NSString", "NSURL", "NSFileManager", "NSError", "NSGeometry", "NSDate", "NSObjCRuntime", "NSDictionary", "NSData", "NSValue", "NSNotification"] }
-objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSPasteboard", "NSPasteboardItem", "NSApplication", "NSResponder", "NSDragging", "NSDraggingItem", "NSDraggingSession", "NSEvent", "NSGraphics", "NSGraphicsContext", "NSImage", "NSView", "NSWindow", "NSWorkspace", "NSBitmapImageRep", "NSImageRep", "NSSharingService", "NSPanel", "NSColorSpace"] }
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSArray", "NSString", "NSURL", "NSFileManager", "NSError", "NSGeometry", "NSDate", "NSObjCRuntime", "NSDictionary", "NSData", "NSValue", "NSNotification", "NSUserDefaults"] }
+objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSPasteboard", "NSPasteboardItem", "NSApplication", "NSResponder", "NSDragging", "NSDraggingItem", "NSDraggingSession", "NSEvent", "NSGraphics", "NSGraphicsContext", "NSImage", "NSView", "NSWindow", "NSWorkspace", "NSBitmapImageRep", "NSImageRep", "NSSharingService", "NSPanel", "NSColorSpace", "NSAccessibility"] }
 objc2-quick-look-ui = { version = "0.3", default-features = false, features = ["std", "QLPreviewPanel", "QLPreviewItem", "objc2-app-kit"] }

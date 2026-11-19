@@ -1,8 +1,7 @@
 // A file pane: breadcrumb path bar, live filter / recursive search, listing,
 // selection, rename, drag & drop and status line. Tabs own two of these.
 
-import { app, invoke, el, icon, fmtSize, fmtDate } from "./core.js";
-import { isImage, isVideo } from "./previews.js";
+import { app, invoke, el, icon, kindIcon, fmtSize, fmtDate } from "./core.js";
 import { pushUndo, refreshAll, selectEverywhere, trashPaths } from "./ops.js";
 import { openContextMenu, showMenu } from "./menu.js";
 import { setActive, openTab } from "./tabs.js";
@@ -14,17 +13,17 @@ import { usesSpotlight, startSpotlight, cancelSpotlight, searchMenu, placeholder
 const TEMPLATE = `
   <div class="ptoolbar">
     <div class="navbtns">
-      <button class="nb b-back" type="button" title="Back (⌘[)">◀</button>
-      <button class="nb b-fwd" type="button" title="Forward (⌘])">▶</button>
-      <button class="nb b-up" type="button" title="Up (⌘↑)">▲</button>
-      <button class="nb b-new" type="button" title="New folder (⇧⌘N)">＋</button>
-      <button class="nb b-home" type="button" title="Home">⌂</button>
+      <button class="nb b-back" type="button" title="Back (⌘[)" aria-label="Back"></button>
+      <button class="nb b-fwd" type="button" title="Forward (⌘])" aria-label="Forward"></button>
+      <button class="nb b-up" type="button" title="Up (⌘↑)" aria-label="Enclosing folder"></button>
+      <button class="nb b-new" type="button" title="New folder (⇧⌘N)" aria-label="New folder"></button>
+      <button class="nb b-home" type="button" title="Home" aria-label="Home"></button>
     </div>
     <div class="pathwrap" title="Click a folder to go there · › lists sub-folders · click blank space or ⌘L to type a path">
       <div class="crumbs"></div>
       <input class="path" type="text" spellcheck="false" autocomplete="off" />
     </div>
-    <div class="searchwrap"><button class="smode" type="button" title="Search options — names or contents, here or the whole Mac">🔍<span class="smode-l"></span></button><input class="search" type="text" spellcheck="false" autocomplete="off" /></div>
+    <div class="searchwrap"><button class="smode" type="button" title="Search options — names or contents, here or the whole Mac" aria-label="Search options"><span class="smode-l"></span></button><input class="search" type="text" spellcheck="false" autocomplete="off" /></div>
   </div>
   <div class="listing"></div>
   <div class="pstatus"></div>`;
@@ -41,6 +40,9 @@ export function createPane(key) {
     listing: q(".listing"), status: q(".pstatus"),
     back: q(".b-back"), fwd: q(".b-fwd"), up: q(".b-up"), home: q(".b-home"), newb: q(".b-new"),
   };
+  els.back.append(icon("back")); els.fwd.append(icon("forward")); els.up.append(icon("up"));
+  els.newb.append(icon("newFolder")); els.home.append(icon("home"));
+  els.smode.prepend(icon("search"));
 
   const P = {
     key, root, els, tab: null,
@@ -459,7 +461,7 @@ export function createPane(key) {
       if (P.selected.has(h.path)) row.classList.add("sel");
       if (clip && clip.cut && clip.paths.includes(h.path)) row.classList.add("cut");
       const name = el("div", "c-name" + (h.is_dir ? " dir" : ""));
-      name.append(el("span", "ic", h.is_dir ? "📁" : isVideo(h.name) ? "🎬" : isImage(h.name) ? "🖼" : "📄"));
+      name.append(kindIcon(h.name, h.is_dir));
       name.append(el("span", "nm", h.name));
       if (h.is_symlink) name.append(el("span", "link", "↳"));
       const td = tagDots(h.tags); if (td) name.append(td);

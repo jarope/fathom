@@ -1,0 +1,144 @@
+/* Theme: every colour, font and size from DESIGN.md lives here. app.css only
+ * uses these tokens, so it never contains raw colour values.
+ *
+ * <html> carries:
+ *   data-theme  "light" | "dark"   (resolved from Preferences or the system)
+ *   data-accent orange | indigo | teal | graphite | red | yellow | green | blue | purple | pink
+ *   .rt         Reduce Transparency (glass becomes solid)
+ *   .hc         Increase Contrast
+ *   --glass-a   glass opacity, 0.5–1 (Preferences, default 0.8)
+ */
+
+@font-face { font-family: "JetBrains Mono"; src: url("../fonts/JetBrainsMono-Regular.woff2") format("woff2"); font-weight: 400; font-display: block; }
+@font-face { font-family: "JetBrains Mono"; src: url("../fonts/JetBrainsMono-SemiBold.woff2") format("woff2"); font-weight: 600; font-display: block; }
+
+:root {
+  /* ---- Type: two families only ---- */
+  --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+  --t-large: 700 26px/32px var(--font-ui);   /* Large Title: empty states */
+  --t-title2: 600 17px/22px var(--font-ui);  /* Title 2: dialog / inspector heading */
+  --t-title3: 600 15px/20px var(--font-ui);  /* Title 3: toolbar location name, group headers */
+  --t-headline: 600 13px/16px var(--font-ui);/* Headline: emphasised labels */
+  --t-body: 400 13px/16px var(--font-ui);    /* Body: file names, rows, menus */
+  --t-callout: 400 12px/15px var(--font-ui); /* Callout: secondary metadata, tooltips */
+  --t-sub: 600 11px/14px var(--font-ui);     /* Subheadline (+0.02em): sidebar labels, column headers */
+  --t-foot: 400 10px/13px var(--font-ui);    /* Footnote: status bar */
+  --t-mono: 400 12px/16px var(--font-mono);  /* Mono: path bar, Go to folder, hashes, code */
+
+  /* ---- Shape ---- */
+  --r-cap: 999px;   /* controls */
+  --r-row: 8px;     /* rows, sidebar items */
+  --r-card: 14px;   /* cards, popovers */
+  --row-h: 34px;
+  --side-h: 30px;
+  --hdr-h: 64px;    /* title bar, holds the traffic lights */
+
+  /* ---- Finder tag colours (the user's real tags, not chrome) ---- */
+  --tag1: #8e8e93; --tag2: #34c759; --tag3: #af52de; --tag4: #0a84ff; --tag5: #ffd60a; --tag6: #ff453a; --tag7: #ff9f0a;
+
+  /* ---- File-kind icon tints ---- */
+  --k-folder: #3F76DE; --k-doc: #5E6B80; --k-image: #23905F; --k-video: #7C52CC;
+  --k-audio: #C8457F; --k-code: #5B5BD6; --k-archive: #93703A; --k-app: #14909B;
+
+  --glass-a: 0.8;
+}
+
+/* ---- Light ---- */
+:root, :root[data-theme="light"] {
+  color-scheme: light;
+  --window: #F4F5F7;
+  --content: #FBFBFC;
+  --row-hover: #F0F1F4;
+  --separator: rgba(20, 24, 33, 0.08);
+  --edge: rgba(20, 24, 33, 0.14);          /* field / control outline: a stronger hairline */
+  --text: #1B1D22;
+  --text2: #5A6070;
+  --text3: #656B7A;
+  --disabled: #B4B9C4;
+  --on-accent: #FFFFFF;
+  --success: #1C7F46; --warning: #9A5B00; --danger: #C02D2B; --new: #0B7480;
+  --sel-quiet: rgba(20, 24, 33, 0.09);     /* selection in the inactive pane; current sidebar place */
+
+  --glass-rgb: 236 238 242;
+  --glass-sheen: rgba(255, 255, 255, 0.45);
+  --glass-hi: rgba(255, 255, 255, 0.90);
+  --cap-fill: rgba(255, 255, 255, 0.72);
+  --cap-hi: rgba(255, 255, 255, 0.90);
+
+  --pop-shadow: 0 18px 44px -12px rgba(20, 24, 33, 0.28), 0 0 0 0.5px rgba(20, 24, 33, 0.10);
+  --card-shadow: 0 30px 80px -20px rgba(20, 24, 33, 0.35);
+  --scrim: rgba(20, 22, 26, 0.32);
+  --ql-scrim: rgba(6, 6, 8, 0.74);         /* Quick Look backdrop: always dark */
+  --ql-cap: rgba(0, 0, 0, 0.42); --ql-text: #ECEEF2; --ql-text2: #A4AAB6; --ql-edge: rgba(255, 255, 255, 0.12);
+}
+
+/* ---- Dark ---- */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --window: #14161A;
+  --content: #202329;
+  --row-hover: #2A2E36;
+  --separator: rgba(255, 255, 255, 0.07);
+  --edge: rgba(255, 255, 255, 0.12);
+  --text: #ECEEF2;
+  --text2: #A4AAB6;
+  --text3: #9096A3;
+  --disabled: #555B67;
+  --on-accent: #14161A;
+  --success: #52C58D; --warning: #EDB24E; --danger: #F27873; --new: #4CC2CB;
+  --sel-quiet: rgba(255, 255, 255, 0.10);
+
+  --glass-rgb: 42 45 52;
+  --glass-sheen: rgba(255, 255, 255, 0.05);
+  --glass-hi: rgba(255, 255, 255, 0.10);
+  --cap-fill: rgba(255, 255, 255, 0.06);
+  --cap-hi: rgba(255, 255, 255, 0.10);
+
+  --pop-shadow: 0 18px 44px -12px rgba(0, 0, 0, 0.6), 0 0 0 0.5px rgba(0, 0, 0, 0.5);
+  --card-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.7);
+  --scrim: rgba(0, 0, 0, 0.45);
+}
+
+/* ---- Accent: one colour. App choice, else the macOS accent, else Orange ---- */
+:root                                          { --accent: #C8480C; }
+:root[data-theme="dark"]                       { --accent: #FF9A52; }
+:root[data-accent="indigo"]                    { --accent: #4A55D0; }
+:root[data-accent="indigo"][data-theme="dark"] { --accent: #8E96F2; }
+:root[data-accent="teal"]                      { --accent: #0B7480; }
+:root[data-accent="teal"][data-theme="dark"]   { --accent: #4CC2CB; }
+:root[data-accent="graphite"]                  { --accent: #464B57; }
+:root[data-accent="graphite"][data-theme="dark"] { --accent: #BAC0CB; }
+/* The other macOS accents, tuned to the same AA rule (4.5:1 for text on the
+ * fill and for the colour on content). */
+:root[data-accent="red"]                       { --accent: #C42B2B; }
+:root[data-accent="red"][data-theme="dark"]    { --accent: #FF7A73; }
+:root[data-accent="yellow"]                    { --accent: #8A6300; }
+:root[data-accent="yellow"][data-theme="dark"] { --accent: #F0C24A; }
+:root[data-accent="green"]                     { --accent: #1C7F46; }
+:root[data-accent="green"][data-theme="dark"]  { --accent: #52C58D; }
+:root[data-accent="blue"]                      { --accent: #1F63D6; }
+:root[data-accent="blue"][data-theme="dark"]   { --accent: #6EA8FF; }
+:root[data-accent="purple"]                    { --accent: #8340C8; }
+:root[data-accent="purple"][data-theme="dark"] { --accent: #C29BF5; }
+:root[data-accent="pink"]                      { --accent: #BF2A6C; }
+:root[data-accent="pink"][data-theme="dark"]   { --accent: #F47FB3; }
+
+/* Tints derived from the accent (drop targets, focus halo) */
+:root {
+  --accent-soft: color-mix(in srgb, var(--accent) 16%, transparent);
+  --accent-ring: color-mix(in srgb, var(--accent) 40%, transparent);
+  --glass-fill: rgb(var(--glass-rgb) / var(--glass-a));
+}
+
+/* ---- Reduce Transparency: glass becomes solid ---- */
+:root.rt { --glass-a: 1; }
+
+/* ---- Increase Contrast: firmer edges, no faint text ---- */
+:root.hc { --text3: var(--text2); --glass-a: 1; }
+:root.hc[data-theme="light"], :root.hc:not([data-theme]) { --separator: rgba(20, 24, 33, 0.32); --edge: rgba(20, 24, 33, 0.55); --cap-fill: #FFFFFF; }
+:root.hc[data-theme="dark"] { --separator: rgba(255, 255, 255, 0.30); --edge: rgba(255, 255, 255, 0.55); --cap-fill: #2A2E36; }
+
+/* Swatches for the accent picker (each shows its own colour in the current theme) */
+:root { --sw-system: conic-gradient(#C42B2B, #C8480C, #8A6300, #1C7F46, #1F63D6, #8340C8, #BF2A6C, #C42B2B); --sw-orange: #C8480C; --sw-indigo: #4A55D0; --sw-teal: #0B7480; --sw-graphite: #464B57; }
+:root[data-theme="dark"] { --sw-orange: #FF9A52; --sw-indigo: #8E96F2; --sw-teal: #4CC2CB; --sw-graphite: #BAC0CB; }

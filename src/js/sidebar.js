@@ -49,7 +49,7 @@ export function renderSidebar() {
   if (!places) return;
   const sec = (t) => sb.append(el("div", "side-sec", t));
   const item = (name, path, kind, extra = {}) => {
-    const n = el("div", "place");
+    const n = el("div", "place" + (extra.fav ? " fav" : ""));
     n.dataset.path = path; n.dataset.kind = extra.bookmark ? "bookmark" : extra.volume ? "volume" : "std";
     n.title = path;
     n.append(icon(kind), el("span", "pname", name));
@@ -61,8 +61,8 @@ export function renderSidebar() {
   };
 
   sec("Favourites");
-  places.standard.forEach((p) => item(p.name, p.path, p.kind));
-  bookmarks.forEach((b) => item(b.name, b.path, "folder", { bookmark: true }));
+  places.standard.forEach((p) => item(p.name, p.path, p.kind, { fav: true }));
+  bookmarks.forEach((b) => item(b.name, b.path, "folder", { bookmark: true, fav: true }));
   if (!bookmarks.length) sb.append(el("div", "side-hint", "Drag folders here to pin them"));
   if (places.icloud) { sec("iCloud"); item("iCloud Drive", places.icloud, "cloud"); }
   if (places.volumes.length) {

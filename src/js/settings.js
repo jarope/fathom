@@ -1,6 +1,6 @@
 // Preferences, kept in ~/.config/fathom/settings.json (hand-editable).
-// Window toggles that predate this file (hidden files, shelf, sidebar, zoom,
-// theme) stay where they were; Preferences just shows them too.
+// Window toggles that predate this file (hidden files, shelf, sidebar, zoom)
+// stay where they were; Preferences just shows them too.
 
 import { app, invoke } from "./core.js";
 
@@ -9,6 +9,9 @@ export const DEFAULTS = {
   startFolder: "",      // used when startup = "folder" ("" = Home)
   dateFormat: "iso",    // "iso" | "locale" | "relative"
   terminal: "Terminal", // Terminal | iTerm | Ghostty | Warp
+  theme: "",            // "system" | "light" | "dark" ("" until first run picks one)
+  accent: "system",     // "system" (macOS accent) | orange | indigo | teal | graphite
+  glass: 80,            // glass opacity, 50–100 (100 = solid)
   shortcuts: {},        // command id -> ["Cmd+KeyT", …] (only the ones you changed)
 };
 
