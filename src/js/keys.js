@@ -68,6 +68,7 @@ export const COMMANDS = [
   { id: "hidden", group: "Tabs & View", label: "Show Hidden Files", keys: ["Shift+Cmd+Period"], run: toggleHidden },
   { id: "viewGrid", group: "Tabs & View", label: "View as Grid", keys: ["Alt+Cmd+Digit1"], run: (P) => P.setViewMode("grid") },
   { id: "viewDetails", group: "Tabs & View", label: "View as Details", keys: ["Alt+Cmd+Digit2"], run: (P) => P.setViewMode("details") },
+  { id: "viewColumns", group: "Tabs & View", label: "View as Columns", keys: ["Alt+Cmd+Digit3"], run: (P) => P.setViewMode("columns") },
   { id: "shelf", group: "Tabs & View", label: "Folder Shelf", keys: ["Shift+Cmd+KeyF"], run: toggleShelf },
   { id: "dock", group: "Tabs & View", label: "Preview Panel", keys: ["Cmd+KeyP"], run: toggleDock },
   // Like Finder: in a grid pane ⌘+ / ⌘− change the icon size; elsewhere they zoom the window.

@@ -10,7 +10,7 @@ native ES modules in `src/js/`, no npm, no bundler). The look follows
 [`DESIGN.md`](DESIGN.md): neutral greys, one accent colour, macOS glass on the
 sidebar and popovers, the system font plus JetBrains Mono.
 
-## What it does today (v0.20.1)
+## What it does today (v0.21.0)
 
 - **Progress & cancel** — copies, moves, duplicates and archive jobs run in the
   background; anything that takes more than a moment gets a card (bottom-right)
@@ -188,6 +188,11 @@ sidebar and popovers, the system font plus JetBrains Mono.
   slider in the status bar, or ⌘+ / ⌘− as in Finder. ↑ ↓ ← → move through the grid;
   right-click empty space → **View ▸** and **Sort By ▸**. Each folder remembers
   its view.
+- **Columns view** (⌥⌘3, or the columns button) — Finder's column view: the
+  folders above on the left with the path highlighted, the current folder,
+  and a preview column (a folder's contents, or a file's picture, kind, size
+  and dates). → opens the selected folder, ← goes back; click in any column
+  to work there. Drop files on any folder or column. Searches show as Details.
 - **Rubber-band selection** — drag from empty space to select a box of files
   (⌘ / ⇧ adds to the selection), in Grid and Details.
 - **Appearance** (Preferences → General) — Match the system / Light / Dark;
@@ -232,7 +237,7 @@ Defaults below — change any of them in Preferences → Shortcuts.
 | Space | Quick Look |
 | ⌃⌘1…7 / ⌃⌘0 | Toggle favourite tag / clear tags |
 | ← / → | Open / close a folder (Details); step through the shelf and the grid |
-| ⌥⌘1 / ⌥⌘2 | Grid / Details view |
+| ⌥⌘1 / ⌥⌘2 / ⌥⌘3 | Grid / Details / Columns view |
 | ⌘+ / ⌘− (grid) | Bigger / smaller icons |
 | ⇧⌘H | Home |
 | ⌘R | Refresh |

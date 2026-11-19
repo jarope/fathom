@@ -21,6 +21,7 @@ export function syncViewButtons() {
   const P = app.active, m = P ? P.viewMode : "details";
   document.getElementById("vmGrid")?.classList.toggle("on", m === "grid");
   document.getElementById("vmDetails")?.classList.toggle("on", m === "details");
+  document.getElementById("vmColumns")?.classList.toggle("on", m === "columns");
 }
 
 export function toggleHidden() {
@@ -99,6 +100,7 @@ export function initHeader() {
   $("viewSingle").addEventListener("click", () => setView("single"));
   $("vmGrid").addEventListener("click", () => app.active && app.active.setViewMode("grid"));
   $("vmDetails").addEventListener("click", () => app.active && app.active.setViewMode("details"));
+  $("vmColumns").addEventListener("click", () => app.active && app.active.setViewMode("columns"));
   syncViewButtons();
   $("viewTwin").addEventListener("click", () => setView("twin"));
 

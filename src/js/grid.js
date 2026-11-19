@@ -77,6 +77,9 @@ function loadPic(host, e, size) {
   order.push(key); // started by paint(), once the cell is in the page
 }
 
+/** Picture for one entry outside the grid (Columns preview). */
+export function thumbInto(host, e, size) { loadPic(host, e, size); pump(); }
+
 // ---- The view ----
 export function createGrid(P) {
   const L = P.els.listing;

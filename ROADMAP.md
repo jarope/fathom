@@ -150,8 +150,16 @@ glyphs and tints, Reduce Transparency / Increase Contrast, glass opacity.
   now handled by the page (ghost label, ⌥ copy, Esc); leaving the window hands
   over to a macOS drag started from the original mouse-down.
 
+**v0.21 — Columns view** ✅
+- **Columns view** (⌥⌘3): ancestors with the path highlighted, the current
+  folder (all selection / rename / menus / drag & drop / git work as usual),
+  and a preview column — a folder's contents or a file's picture and facts.
+  → / ← move in and out; clicking another column works there; the first
+  column stays put while you browse inside it (Finder). Every column is
+  virtualized. Searches fall back to Details.
+- Fixed: renaming a file scrolled out of view did nothing.
+
 Still to do:
-- **Columns view** (Miller columns) with a preview column.
 - **Real file icons** (NSWorkspace) instead of emoji, cached per type.
 - **Information panel** (Dolphin F11) replacing the preview dock: preview,
   metadata (dimensions, duration, EXIF), folder size on demand.

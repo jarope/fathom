@@ -29,7 +29,7 @@ export function createTab({ view = "single", panes: specs = [] } = {}) {
     p.tab = tab;
     p.showHidden = app.showHidden;
     const s = specs[i];
-    if (s) { p.sortKey = s.sortKey || "name"; p.sortDir = s.sortDir || 1; if (s.viewMode === "grid") p.viewMode = "grid"; }
+    if (s) { p.sortKey = s.sortKey || "name"; p.sortDir = s.sortDir || 1; if (s.viewMode === "grid" || s.viewMode === "columns") p.viewMode = s.viewMode; }
   });
   tab.active = tab.panes[0];
   return tab;

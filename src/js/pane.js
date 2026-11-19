@@ -4,6 +4,7 @@
 import { app, invoke, el, icon, store, fmtSize, isFolder } from "./core.js";
 import { createDetails, sortValue } from "./details.js";
 import { createGrid, gridSize, setGridSize, GRID_MIN, GRID_MAX } from "./grid.js";
+import { createColumns } from "./columns.js";
 import { saveSettings } from "./settings.js";
 import { pushUndo, refreshAll, selectEverywhere, trashPaths } from "./ops.js";
 import { openContextMenu, showMenu } from "./menu.js";
@@ -62,14 +63,16 @@ export function createPane(key) {
     anchor: -1, cursor: -1, mode: "browse", showHidden: false,
     history: [], hi: -1, msgTimer: null,
     sortKey: "name", sortDir: 1, // 1 asc, -1 desc; folders always first
-    viewMode: "details",          // "details" | "grid"
+    viewMode: "details",          // "details" | "grid" | "columns"
+    colRoot: null,                // Columns view: the first (leftmost) folder
     renaming: false, pendingRefresh: false, editing: false,
     expanded: new Set(), // folders opened in place (tree)
     kids: new Map(),     // expanded folder path -> its entries
   };
   const changed = () => app.hooks.changed(P);
-  const views = { details: createDetails(P), grid: createGrid(P) };
-  const V = () => views[P.viewMode] || views.details;
+  const views = { details: createDetails(P), grid: createGrid(P), columns: createColumns(P) };
+  // Search / tag results are a flat list: Columns shows them as Details.
+  const V = () => (P.viewMode === "columns" && P.mode !== "browse" ? views.details : views[P.viewMode] || views.details);
   const rowAt = (i) => V().rowAt(i);
   const reveal = (i) => V().reveal(i);
   P.reveal = reveal;
@@ -120,7 +123,8 @@ export function createPane(key) {
     if (moved) {
       P.expanded.clear(); P.kids.clear();
       const v = viewMemory()[listing.dir];
-      if (v) { P.sortKey = v.sortKey; P.sortDir = v.sortDir; if (v.viewMode) P.viewMode = v.viewMode; }
+      // Browsing in Columns stays in Columns (Finder); otherwise the folder's own view.
+      if (v) { P.sortKey = v.sortKey; P.sortDir = v.sortDir; if (v.viewMode && P.viewMode !== "columns") P.viewMode = v.viewMode; }
       // Never sorted + shelf on: the tiles have no column header to sort by,
       // so start from Name rather than whatever the last folder used.
       else if (app.folderShelf) { P.sortKey = "name"; P.sortDir = 1; }
@@ -177,6 +181,7 @@ export function createPane(key) {
   /** ← / →: open / close folders in the list; move through tiles in the shelf. */
   P.arrowSide = (dir, extend) => {
     if (P.viewMode === "grid") { P.moveCursor(dir, extend); return; }
+    if (P.viewMode === "columns" && P.mode === "browse") { columnStep(dir); return; }
     const i = P.cursor, e = P.entries[i];
     if (e && !V().isTile(i) && P.mode === "browse") {
       if (dir > 0 && isFolder(e)) { if (!P.expanded.has(e.path)) P.setExpanded(i, true); else if (P.entries[i + 1] && P.entries[i + 1].depth > (e.depth || 0)) { P.selectSingle(i + 1); reveal(i + 1); } return; }
@@ -188,6 +193,18 @@ export function createPane(key) {
     }
     if (app.folderShelf && P.mode === "browse") P.moveCursor(dir, extend);
   };
+  /** Columns: → opens the selected folder (selecting its first item), ← goes back out. */
+  async function columnStep(dir) {
+    if (dir > 0) {
+      const sel = P.selectedEntries();
+      if (sel.length !== 1 || !isFolder(sel[0])) return;
+      if (await P.navigate(sel[0].path) && P.entries.length) { P.selectSingle(0); reveal(0); }
+      return;
+    }
+    if (!P.parent) return;
+    const from = P.cwd;
+    if (await P.navigate(P.parent)) P.selectPaths([from]);
+  }
   P.reload = () => (P.cwd ? P.navigate(P.cwd, { push: false, keepFilter: true, keepSel: true }) : Promise.resolve(false));
   /** Auto-refresh entry point: never disturbs an inline rename or search results. */
   P.refresh = () => {
@@ -397,8 +414,8 @@ export function createPane(key) {
   P.startRename = (path) => {
     const i = P.entries.findIndex((e) => e.path === path); if (i < 0) return;
     P.selectSingle(i);
+    reveal(i); // draws the row if it was scrolled out of view
     const row = rowAt(i); if (!row) return;
-    row.scrollIntoView({ block: "nearest" });
     const e = P.entries[i];
     const input = el("input", "rename");
     input.value = e.name; input.spellcheck = false; input.autocomplete = "off";
@@ -438,6 +455,7 @@ export function createPane(key) {
   P.selectedPaths = () => P.selectedEntries().map((e) => e.path);
   P.reflect = () => {
     els.listing.querySelectorAll(".row").forEach((r) => r.classList.toggle("sel", P.selected.has(P.entries[+r.dataset.i].path)));
+    if (V().selChanged) V().selChanged();
     P.renderStatus(); changed();
   };
   P.selectSingle = (i) => { P.selected = new Set([P.entries[i].path]); P.anchor = i; P.cursor = i; P.reflect(); };
@@ -494,6 +512,8 @@ export function createPane(key) {
     if (r === 0) r = a.name.toLowerCase().localeCompare(b.name.toLowerCase());
     return r * P.sortDir;
   }
+  /** A sorted copy of any listing, by this pane's rules (Columns' side columns). */
+  P.sortEntries = (list) => list.slice().sort(cmp);
   /** Sort in place (search results; browsing goes through P.rebuild). */
   P.applySort = () => {
     if (P.mode === "browse" && P.expanded.size) { P.rebuild(); return; }
@@ -526,7 +546,11 @@ export function createPane(key) {
 
   // ----------------------------------------------------------------- render
   P.resizeGrid = () => views.grid.resize();
-  P.renderList = () => { els.listing.classList.toggle("grid", P.viewMode === "grid"); V().render(); };
+  P.renderList = () => {
+    els.listing.classList.toggle("grid", P.viewMode === "grid");
+    els.listing.classList.toggle("columns", V() === views.columns);
+    V().render();
+  };
 
   // --------------------------------------------------------- pointer input
   root.addEventListener("mousedown", () => setActive(P), true);
@@ -545,7 +569,7 @@ export function createPane(key) {
   // geometric, so rows that aren't drawn yet are included.
   let bandJustEnded = false;
   els.listing.addEventListener("mousedown", (ev) => {
-    if (ev.button !== 0 || ev.target.closest(".row, .head, .shelf, input") || !P.entries.length) return;
+    if (ev.button !== 0 || V().noBand || ev.target.closest(".row, .head, .shelf, input") || !P.entries.length) return;
     const L = els.listing, lr = L.getBoundingClientRect();
     if (ev.clientX - lr.left >= L.clientWidth) return; // the scrollbar
     const pt = (e) => [e.clientX - lr.left + L.scrollLeft, e.clientY - lr.top + L.scrollTop];
@@ -629,6 +653,11 @@ export function createPane(key) {
       const row = n.closest(".row");
       const e = row && P.entries[+row.dataset.i];
       if (isFolder(e) && !data.paths.includes(e.path)) return { el: row, dest: e.path };
+      // Columns: a folder in a side column, or a column's empty space = that folder.
+      const mr = !row && n.closest(".mrow");
+      if (mr && mr.dataset.dir && !data.paths.includes(mr.dataset.path)) return { el: mr, dest: mr.dataset.path };
+      const col = n.closest(".mcol[data-path]");
+      if (col && P.mode === "browse") return { el: col, cls: "drop-target", dest: col.dataset.path };
       return P.cwd && P.mode === "browse" ? { el: els.listing, cls: "drop-target", dest: P.cwd } : null;
     },
   });
