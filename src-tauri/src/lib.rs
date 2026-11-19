@@ -47,10 +47,41 @@ pub(crate) struct Entry {
     size: u64,
     /// Last-modified time, seconds since the Unix epoch (None if unavailable).
     modified: Option<u64>,
+    /// Creation (birth) time, seconds since the epoch.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    created: Option<u64>,
+    /// When it was put in its folder (Finder's "Date Added"), seconds since the epoch.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    added: Option<u64>,
+    /// Unix permission bits (e.g. 0o755); 0 when unknown.
+    mode: u32,
     /// Finder tags (omitted when untagged, which is almost always).
     #[serde(skip_serializing_if = "Vec::is_empty")]
     tags: Vec<tags::Tag>,
 }
+
+/// Finder's "Date Added" (ATTR_CMN_ADDEDTIME), without following symlinks.
+#[cfg(target_os = "macos")]
+pub(crate) fn added_secs(path: &std::path::Path) -> Option<u64> {
+    use std::os::unix::ffi::OsStrExt;
+    let c = std::ffi::CString::new(path.as_os_str().as_bytes()).ok()?;
+    let mut req: libc::attrlist = unsafe { std::mem::zeroed() };
+    req.bitmapcount = libc::ATTR_BIT_MAP_COUNT;
+    req.commonattr = libc::ATTR_CMN_ADDEDTIME;
+    #[repr(C, packed(4))]
+    struct Buf { len: u32, ts: libc::timespec }
+    let mut buf: Buf = unsafe { std::mem::zeroed() };
+    let r = unsafe {
+        libc::getattrlist(c.as_ptr(), &mut req as *mut _ as *mut libc::c_void, &mut buf as *mut _ as *mut libc::c_void,
+            std::mem::size_of::<Buf>(), libc::FSOPT_NOFOLLOW as u32)
+    };
+    // Volumes without the attribute return a short buffer.
+    if r != 0 || (buf.len as usize) < std::mem::size_of::<Buf>() { return None; }
+    let secs = buf.ts.tv_sec;
+    (secs > 0).then_some(secs as u64)
+}
+#[cfg(not(target_os = "macos"))]
+pub(crate) fn added_secs(_: &std::path::Path) -> Option<u64> { None }
 
 pub(crate) fn modified_secs(meta: &std::fs::Metadata) -> Option<u64> {
     meta.modified()
@@ -80,6 +111,12 @@ pub(crate) fn entry_from(
         is_symlink,
         size: follow_meta.filter(|m| m.is_file()).map(|m| m.len()).unwrap_or(0),
         modified: follow_meta.and_then(modified_secs),
+        created: follow_meta
+            .and_then(|m| m.created().ok())
+            .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
+            .map(|d| d.as_secs()),
+        added: added_secs(path),
+        mode: follow_meta.map(|m| { use std::os::unix::fs::PermissionsExt; m.permissions().mode() & 0o7777 }).unwrap_or(0),
         tags: tags::read_tags(path, is_symlink),
     }
 }
@@ -920,6 +957,21 @@ pub fn run() {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn entries_carry_created_added_and_mode() {
+        let d = std::env::temp_dir().join(format!("fathom-meta-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&d);
+        std::fs::create_dir_all(&d).unwrap();
+        let f = d.join("x.sh");
+        std::fs::write(&f, "echo").unwrap();
+        { use std::os::unix::fs::PermissionsExt; std::fs::set_permissions(&f, std::fs::Permissions::from_mode(0o750)).unwrap(); }
+        let e = super::entry_from(&f, f.metadata().ok().as_ref(), false);
+        assert_eq!(e.mode, 0o750);
+        assert!(e.created.is_some());
+        assert!(e.added.is_some(), "APFS records a date added");
+        let _ = std::fs::remove_dir_all(&d);
+    }
+
     use super::*;
 
     fn tmp(tag: &str) -> PathBuf {

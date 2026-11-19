@@ -12,6 +12,7 @@ export const DEFAULTS = {
   theme: "",            // "system" | "light" | "dark" ("" until first run picks one)
   accent: "system",     // "system" (macOS accent) | orange | indigo | teal | graphite
   glass: 80,            // glass opacity, 50–100 (100 = solid)
+  columns: { show: ["size", "modified"], widths: {} }, // details view columns (Name is always on)
   shortcuts: {},        // command id -> ["Cmd+KeyT", …] (only the ones you changed)
 };
 

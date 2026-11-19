@@ -1,6 +1,6 @@
 [package]
 name = "fathom"
-version = "0.18.0"
+version = "0.19.0"
 description = "Fathom — a lean twin-pane file manager for macOS. The daily essentials, done the way Linux managers do them."
 authors = ["Jason Peel"]
 edition = "2021"

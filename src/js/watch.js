@@ -13,7 +13,7 @@ let lastSet = "";
 export function syncWatch() {
   if (!invoke || !app.tab) return;
   const dirs = new Set(["/Volumes"]);
-  visiblePanes().forEach((p) => p.cwd && dirs.add(p.cwd));
+  visiblePanes().forEach((p) => { if (p.cwd) dirs.add(p.cwd); if (p.mode === "browse") p.expanded.forEach((d) => dirs.add(d)); });
   const key = [...dirs].sort().join("\n");
   if (key === lastSet) return;
   lastSet = key;
@@ -25,6 +25,6 @@ export async function initWatch() {
   await listen("fs-changed", (ev) => {
     const dir = ev.payload;
     if (dir === "/Volumes") later("volumes", loadPlaces, 600);
-    visiblePanes().forEach((p) => { if (p.cwd === dir) later(p, () => p.refresh()); });
+    visiblePanes().forEach((p) => { if (p.cwd === dir || p.expanded.has(dir)) later(p, () => p.refresh()); });
   });
 }

@@ -122,8 +122,7 @@ button { font: inherit; color: inherit; }
 .listing { flex: 1; min-height: 0; overflow-y: auto; background: var(--content); padding: 0 6px; }
 .listing::after { content: ""; display: block; height: 44px; } /* always some empty space for the folder menu */
 .listing.drop-target { box-shadow: inset 0 0 0 2px var(--accent); }
-.head, .row { display: grid; gap: 12px; align-items: center; padding: 0 10px; grid-template-columns: minmax(150px, 1.7fr) 84px 140px; }
-.searching .head, .searching .row { grid-template-columns: minmax(140px, 1.3fr) minmax(150px, 1.6fr) 80px 124px; }
+.head, .row { display: grid; gap: 12px; align-items: center; padding: 0 10px; grid-template-columns: var(--cols, minmax(150px, 1fr) 84px 140px); }
 .head {
   position: sticky; top: 0; z-index: 2; height: 30px; margin: 0 -6px; padding: 0 16px;
   background: var(--content); border-bottom: 1px solid var(--separator);
@@ -132,14 +131,30 @@ button { font: inherit; color: inherit; }
 .head .hcell { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
 .head .hcell:hover { color: var(--text2); }
 .head .hcell.active { color: var(--text); }
-.head .hcell.c-size, .head .hcell.c-date { justify-content: flex-end; }
+.head .hcell { position: relative; min-width: 0; }
+.head .hcell .hl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.head .hcell.right { justify-content: flex-end; }
+/* Column resize grip on each column's left edge */
+.head .rz { position: absolute; left: -9px; top: -8px; bottom: -8px; width: 8px; cursor: col-resize; }
+.head .rz::after { content: ""; position: absolute; left: 3px; top: 9px; bottom: 9px; width: 1px; background: var(--separator); }
+.head .rz:hover::after { background: var(--accent); width: 2px; }
+body.col-resizing, body.col-resizing * { cursor: col-resize !important; }
 .head .hcell .arrow { font-size: 8px; color: var(--accent); }
-.head + .row, .shelf + .row { margin-top: 4px; }
-.row { height: var(--row-h); border-radius: var(--r-row); cursor: default; content-visibility: auto; contain-intrinsic-size: auto var(--row-h); }
+/* Virtual window: only on-screen rows exist; each sits at its own offset */
+.vbody { position: relative; margin-top: 4px; }
+.vbody > .row { position: absolute; top: 0; left: 0; right: 0; }
+.row { height: var(--row-h); border-radius: var(--r-row); cursor: default; }
 .row:hover { background: var(--row-hover); }
 .row.cut { opacity: 0.45; }
 .c-name { display: flex; align-items: center; gap: 8px; font: var(--t-body); color: var(--text); white-space: nowrap; overflow: hidden; min-width: 0; }
 .c-name .ki { width: 17px; height: 17px; flex: none; }
+/* Tree disclosure (folders in the list open in place) */
+.c-name .disc { width: 14px; height: 14px; flex: none; margin-right: -3px; display: flex; align-items: center; justify-content: center; color: var(--text3); border-radius: 4px; }
+.c-name .disc svg { width: 11px; height: 11px; stroke-width: 2; transition: transform 0.12s ease; }
+.c-name .disc.can { cursor: pointer; }
+.c-name .disc.can:hover { color: var(--text); background: var(--sel-quiet); }
+.c-name .disc.open svg { transform: rotate(90deg); }
+.row.sel .disc { color: var(--on-accent); }
 .c-name .link { color: var(--text3); font-size: 11px; }
 .c-name .nm { overflow: hidden; text-overflow: ellipsis; }
 .c-name input.rename, .row.tile input.rename {
@@ -148,15 +163,16 @@ button { font: inherit; color: inherit; }
 }
 .c-folder { font: var(--t-callout); color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; direction: rtl; text-align: left; }
 .c-size, .c-date { font: var(--t-callout); font-variant-numeric: tabular-nums; color: var(--text2); white-space: nowrap; }
-.c-size { text-align: right; }
-.c-date { text-align: right; }
+.c-kind, .c-perm { font: var(--t-callout); color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.c-perm { font: var(--t-mono); font-size: 11.5px; }
+.right { text-align: right; }
 
 /* Selection: accent fill in the pane you're working in, a quiet grey in the other */
 .row.sel { background: var(--accent); }
-.row.sel, .row.sel .c-name, .row.sel .c-size, .row.sel .c-date, .row.sel .c-folder, .row.sel .link, .row.sel .ki, .row.sel .nm { color: var(--on-accent) !important; }
+.row.sel, .row.sel :is(.c-name, .c-size, .c-date, .c-folder, .c-kind, .c-perm, .link, .ki, .nm) { color: var(--on-accent) !important; }
 .row.sel .c-name { font-weight: 600; }
 .panes.twin .pane:not(.active) .row.sel { background: var(--sel-quiet); }
-.panes.twin .pane:not(.active) .row.sel :is(.c-name, .c-size, .c-date, .c-folder, .link, .nm) { color: var(--text) !important; }
+.panes.twin .pane:not(.active) .row.sel :is(.c-name, .c-size, .c-date, .c-folder, .c-kind, .c-perm, .link, .nm, .disc) { color: var(--text) !important; }
 .panes.twin .pane:not(.active) .row.sel .ki { color: var(--ki) !important; }
 .row.drop-into { background: var(--accent-soft); box-shadow: inset 0 0 0 1.5px var(--accent); }
 

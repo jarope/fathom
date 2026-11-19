@@ -38,7 +38,7 @@ export function previewStep(P, dir) {
     const e = P.entries[i];
     if (!e.is_dir && isPreviewable(e.name)) {
       P.selectSingle(i);
-      const row = P.els.listing.querySelector(`.row[data-i="${i}"]`); if (row) row.scrollIntoView({ block: "nearest" });
+      P.reveal(i);
       return true;
     }
   }

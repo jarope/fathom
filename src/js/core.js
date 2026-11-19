@@ -144,3 +144,10 @@ export function kindIcon(name, isDir) {
   s.classList.add("ki", "k-" + k);
   return s;
 }
+
+// Packages are folders on disk that Finder treats as single files (apps,
+// Photos libraries, documents like .pages). They open, not browse.
+const PKG_RE = /\.(app|bundle|plugin|kext|prefPane|saver|appex|photoslibrary|musiclibrary|tvlibrary|photolibrary|logicx|band|rtfd|pages|numbers|key|xcodeproj|xcworkspace|playground|scptd|fcpbundle|imovielibrary|lrlibrary|aplibrary)$/i;
+export const isPackage = (e) => !!e && e.is_dir && PKG_RE.test(e.name);
+/** A folder you browse into (not a package). */
+export const isFolder = (e) => !!e && e.is_dir && !PKG_RE.test(e.name);

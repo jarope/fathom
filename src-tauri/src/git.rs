@@ -176,6 +176,11 @@ pub struct GitInfo {
     all: Option<String>,
     /// Changed files anywhere in the repo.
     changes: usize,
+    /// Every change as [repo-relative path, state] (a trailing "/" = a whole
+    /// untracked folder), and ignored paths — so rows inside expanded
+    /// sub-folders can find their own state.
+    paths: Vec<[String; 2]>,
+    ignored: Vec<String>,
 }
 
 /// Where `dir` sits in a work tree: (root, prefix) — None if not in one.
@@ -215,6 +220,8 @@ fn info_for(dir: &str) -> Result<Option<GitInfo>, String> {
     Ok(Some(GitInfo {
         files: roll_up(&st, &prefix),
         all: whole(&st, &prefix),
+        paths: st.items.iter().map(|(p, _, s, _)| [p.clone(), s.to_string()]).collect(),
+        ignored: st.ignored.clone(),
         prefix,
         changes: st.items.len(),
         root,

@@ -29,6 +29,7 @@ app.folderShelf = store.get("fathom-shelf", true) !== false;
 app.hooks.changed = (P) => { if (app.tab && P === app.tab.panes[0]) refreshDock(); qlFollow(P); };
 app.hooks.navigated = () => { renderTabs(); markActive(); updateTitle(); syncWatch(); saveSession(); };
 app.hooks.save = saveSession;
+app.hooks.expanded = () => syncWatch();
 app.hooks.searchesChanged = () => renderSidebar();
 app.hooks.actionsChanged = () => rebuildKeymap();
 

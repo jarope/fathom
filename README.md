@@ -10,7 +10,7 @@ native ES modules in `src/js/`, no npm, no bundler). The look follows
 [`DESIGN.md`](DESIGN.md): neutral greys, one accent colour, macOS glass on the
 sidebar and popovers, the system font plus JetBrains Mono.
 
-## What it does today (v0.18.0)
+## What it does today (v0.19.0)
 
 - **Progress & cancel** — copies, moves, duplicates and archive jobs run in the
   background; anything that takes more than a moment gets a card (bottom-right)
@@ -170,6 +170,13 @@ sidebar and popovers, the system font plus JetBrains Mono.
   ok), ⏎ to run, Esc back to browsing.
 - **Open / Reveal / Copy path**, a **Hidden files** toggle (◌ in the header, remembered), and a
   **light / dark** switch (◐).
+- **Details view** — click a folder's ▸ (or press → / ←) to open it in place
+  as a tree; right-click the column header to add Kind, Created, Date Added,
+  Extension or Permissions; drag a column's left edge to resize. Each folder
+  remembers its sort. Only the rows on screen are drawn, so folders with tens
+  of thousands of files stay smooth. Apps and other packages open rather than
+  browse. (With the folder shelf on, top-level folders are tiles; turn it off
+  to expand them in the list.)
 - **Appearance** (Preferences → General) — Match the system / Light / Dark;
   accent colour follows your macOS accent, or pick Orange, Indigo, Teal or
   Graphite; glass opacity 50–100%. Respects **Reduce Transparency** and

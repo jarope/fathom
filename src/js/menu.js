@@ -1,6 +1,7 @@
 // One popup menu element, reused for right-click menus, breadcrumb
 // sub-folder drop-downs, the sidebar and tabs.
 
+import { isFolder } from "./core.js";
 import { app, invoke, el, icon, plural } from "./core.js";
 import { undoStack, redoStack, undo, redo, setClip, paste, duplicateSel, transferToOther, pickAndTransfer, openTerminal, compressSel, extractSel, batchRename, isArchive } from "./ops.js";
 import { openTab } from "./tabs.js";
@@ -120,8 +121,8 @@ export function openContextMenu(P, x, y) {
   const one = sel.length === 1 ? sel[0] : null;
   const dirs = sel.filter((e) => e.is_dir).map((e) => e.path);
   showMenu([
-    one && { label: one.is_dir ? "Open folder" : "Open", fn: () => P.activate(P.entries.indexOf(one)), key: "⏎" },
-    one && one.is_dir && { label: "Open in New Tab", fn: () => openTab(one.path), key: "⌘-dbl-click" },
+    one && { label: isFolder(one) ? "Open folder" : "Open", fn: () => P.activate(P.entries.indexOf(one)), key: "⏎" },
+    one && isFolder(one) && { label: "Open in New Tab", fn: () => openTab(one.path), key: "⌘-dbl-click" },
     { label: "Open With", sub: () => openWithEntries(P, sel.map((e) => e.path)) },
     { label: "Quick Look", fn: () => quickLook(P), key: keyHint("quickLook") },
     one && { label: "Rename…", fn: () => P.startRename(one.path), key: keyHint("rename") },
@@ -133,7 +134,7 @@ export function openContextMenu(P, x, y) {
     "sep",
     { label: "Cut", fn: () => setClip(P, true), key: keyHint("cut") },
     { label: "Copy", fn: () => setClip(P, false), key: keyHint("copy") },
-    one && one.is_dir && { label: "Paste into folder", fn: () => paste(P, one.path) },
+    one && isFolder(one) && { label: "Paste into folder", fn: () => paste(P, one.path) },
     "sep",
     { label: one ? `Compress “${one.name}”` : `Compress ${sel.length} items`, fn: () => compressSel(P) },
     sel.some(isArchive) && { label: sel.filter(isArchive).length > 1 ? "Extract archives here" : "Extract here", fn: () => extractSel(P) },

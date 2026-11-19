@@ -122,12 +122,18 @@ sidebar (`macOSPrivateApi` — rules out the Mac App Store), glass popovers,
 system font + bundled JetBrains Mono, capsule controls, 34pt rows, file-kind
 glyphs and tints, Reduce Transparency / Increase Contrast, glass opacity.
 
-### Phase 5 — Views & information (next)
-- **Display engine**: shared per-pane model (entries, sort, filter, selection)
-  + views that draw only what's on screen — 50k-entry folders stay smooth;
-  selection, rename, type-ahead, drag & drop, menus work in every view.
-- **Details view**: expandable folders (tree), choosable/resizable columns
-  (Kind, Created, Added, Extension, Permissions), per-folder view memory.
+### Phase 5 — Views & information (in progress)
+**v0.19 — Display engine + Details view** ✅
+- **Display engine**: only on-screen rows exist (virtual window over the
+  pane's entries) — 50k-entry folders stay smooth; selection, rename,
+  type-ahead, drag & drop, menus and git badges unchanged.
+- **Details view**: folders expand in place (disclosure / → ←, filter keeps
+  parents of matches, open sub-folders auto-refresh and get git badges);
+  choosable columns (Kind, Created, Date Added, Extension, Permissions) via
+  header right-click, resizable by dragging; per-folder sort memory.
+- App bundles and other packages act as files (open, don't browse).
+
+Still to do:
 - **Grid view** with Quick Look thumbnails, icon size, rubber-band selection.
 - **Columns view** (Miller columns) with a preview column.
 - **Real file icons** (NSWorkspace) instead of emoji, cached per type.

@@ -1,13 +1,13 @@
 // A file pane: breadcrumb path bar, live filter / recursive search, listing,
 // selection, rename, drag & drop and status line. Tabs own two of these.
 
-import { app, invoke, el, icon, kindIcon, fmtSize, fmtDate } from "./core.js";
+import { app, invoke, el, icon, store, fmtSize, isFolder } from "./core.js";
+import { createDetails, sortValue } from "./details.js";
 import { pushUndo, refreshAll, selectEverywhere, trashPaths } from "./ops.js";
 import { openContextMenu, showMenu } from "./menu.js";
 import { setActive, openTab } from "./tabs.js";
 import { registerDropZone, startDrag } from "./dnd.js";
-import { tagDots } from "./tags.js";
-import { loadGit, applyGit, gitChip } from "./git.js";
+import { loadGit, gitChip } from "./git.js";
 import { usesSpotlight, startSpotlight, cancelSpotlight, searchMenu, placeholder, modeLabel } from "./search.js";
 
 const TEMPLATE = `
@@ -27,6 +27,15 @@ const TEMPLATE = `
   </div>
   <div class="listing"></div>
   <div class="pstatus"></div>`;
+
+// Per-folder view memory (sort now; the view mode once there's more than one).
+const viewMemory = () => store.get("fathom-views", {});
+function rememberView(dir, v) {
+  const m = viewMemory();
+  delete m[dir]; m[dir] = { ...v };
+  const keys = Object.keys(m); if (keys.length > 500) keys.slice(0, keys.length - 500).forEach((k) => delete m[k]);
+  store.set("fathom-views", m);
+}
 
 const globRe = (f) => new RegExp("^" + f.replace(/[.+^${}()|\\]/g, "\\$&").replace(/\*/g, ".*").replace(/\?/g, ".") + "$", "i");
 
@@ -52,17 +61,21 @@ export function createPane(key) {
     history: [], hi: -1, msgTimer: null,
     sortKey: "name", sortDir: 1, // 1 asc, -1 desc; folders always first
     renaming: false, pendingRefresh: false, editing: false,
+    expanded: new Set(), // folders opened in place (tree)
+    kids: new Map(),     // expanded folder path -> its entries
   };
   const changed = () => app.hooks.changed(P);
-  const rowAt = (i) => els.listing.querySelector(`.row[data-i="${i}"]`);
-  const reveal = (i) => { const r = rowAt(i); if (r) r.scrollIntoView({ block: "nearest", inline: "nearest" }); };
+  const view = createDetails(P);
+  const rowAt = (i) => view.rowAt(i);
+  const reveal = (i) => view.reveal(i);
+  P.reveal = reveal;
 
   // ---------------------------------------------------------------- status
   P.renderStatus = (extra) => {
     els.status.innerHTML = "";
     const n = P.entries.length, total = P.base.length;
     els.status.append(el("span", "count", n.toLocaleString()), el("span", null, ` item${n === 1 ? "" : "s"}`));
-    if (n !== total) els.status.append(el("span", null, ` of ${total.toLocaleString()} (filtered)`));
+    if (P.filtered) els.status.append(el("span", null, ` (filtered from ${total.toLocaleString()})`));
     if (P.selected.size) els.status.append(el("span", null, " · "), el("span", "sel", `${P.selected.size} selected`));
     els.status.append(el("span", "grow"));
     const gc = gitChip(P); if (gc) els.status.append(gc);
@@ -91,6 +104,14 @@ export function createPane(key) {
     catch (e) { P.flash("⚠ " + e, "warn"); return false; }
     const moved = listing.dir !== P.cwd;
     const keep = keepSel && !moved;
+    if (moved) {
+      P.expanded.clear(); P.kids.clear();
+      const v = viewMemory()[listing.dir];
+      if (v) { P.sortKey = v.sortKey; P.sortDir = v.sortDir; }
+      // Never sorted + shelf on: the tiles have no column header to sort by,
+      // so start from Name rather than whatever the last folder used.
+      else if (app.folderShelf) { P.sortKey = "name"; P.sortDir = 1; }
+    } else if (P.expanded.size) await loadKids([...P.expanded]); // refresh the open sub-folders too
     const filter = keepFilter && P.mode === "browse" ? els.search.value : "";
     const prevSel = keep ? new Set(P.selected) : new Set();
     const prevCursor = keep && P.entries[P.cursor] ? P.entries[P.cursor].path : null;
@@ -110,6 +131,48 @@ export function createPane(key) {
     loadGit(P);
     invoke("free_space", { path: listing.dir }).then((s) => { P.space = s; P.renderStatus(); }).catch(() => {});
     return true;
+  };
+  // Children of expanded folders (folders that can't be read close again).
+  async function loadKids(paths) {
+    await Promise.all(paths.map(async (p) => {
+      try { P.kids.set(p, (await invoke("list_dir", { path: p, showHidden: P.showHidden })).entries); }
+      catch { P.expanded.delete(p); P.kids.delete(p); }
+    }));
+  }
+  /** Open or close folder row i in place. open: true/false, or toggle. */
+  P.setExpanded = async (i, open) => {
+    const e = P.entries[i];
+    if (!isFolder(e) || P.mode !== "browse" || view.isTile(i)) return;
+    if (open === undefined) open = !P.expanded.has(e.path);
+    if (open === P.expanded.has(e.path)) return;
+    if (open) { P.expanded.add(e.path); await loadKids([e.path]); if (!P.expanded.has(e.path)) { P.flash(`⚠ Can't open “${e.name}”`, "warn"); return; } }
+    else {
+      P.expanded.delete(e.path);
+      // Selection inside a closed folder moves to the folder itself.
+      const inside = [...P.selected].filter((p) => p.startsWith(e.path + "/"));
+      if (inside.length) { inside.forEach((p) => P.selected.delete(p)); P.selected.add(e.path); }
+    }
+    const cur = P.entries[P.cursor] ? P.entries[P.cursor].path : e.path;
+    const sel = new Set(P.selected);
+    P.rebuild();
+    P.selected = sel;
+    const ci = P.entries.findIndex((x) => x.path === cur);
+    P.cursor = P.anchor = ci >= 0 ? ci : P.entries.findIndex((x) => x.path === e.path);
+    P.renderList(); P.reflect(); reveal(P.cursor);
+    if (app.hooks.expanded) app.hooks.expanded(P); // watch the open sub-folders too
+  };
+  /** ← / →: open / close folders in the list; move through tiles in the shelf. */
+  P.arrowSide = (dir, extend) => {
+    const i = P.cursor, e = P.entries[i];
+    if (e && !view.isTile(i) && P.mode === "browse") {
+      if (dir > 0 && isFolder(e)) { if (!P.expanded.has(e.path)) P.setExpanded(i, true); else if (P.entries[i + 1] && P.entries[i + 1].depth > (e.depth || 0)) { P.selectSingle(i + 1); reveal(i + 1); } return; }
+      if (dir < 0) {
+        if (isFolder(e) && P.expanded.has(e.path)) { P.setExpanded(i, false); return; }
+        if (e.depth > 0) { const pi = P.entries.findIndex((x) => x.path === e.parent); if (pi >= 0) { P.selectSingle(pi); reveal(pi); } return; }
+      }
+      return;
+    }
+    if (app.folderShelf && P.mode === "browse") P.moveCursor(dir, extend);
   };
   P.reload = () => (P.cwd ? P.navigate(P.cwd, { push: false, keepFilter: true, keepSel: true }) : Promise.resolve(false));
   /** Auto-refresh entry point: never disturbs an inline rename or search results. */
@@ -195,17 +258,38 @@ export function createPane(key) {
   });
 
   // ----------------------------------------------- live filter / recursive search
-  P.applyFilter = () => {
+  // The live filter as a test (null = show everything).
+  const filterTest = () => {
     // Query helpers (kind:pdf…) only apply when ⏎ runs a search.
     const f = P.spotResults ? "" : els.search.value.replace(/\b(kind|type|modified|date|size|tag):("[^"]*"|\S+)/gi, "").trim();
-    let keep = P.base;
-    if (f) {
-      if (/[*?]/.test(f)) { const re = globRe(f); keep = P.base.filter((e) => re.test(e.name)); }
-      else { const lf = f.toLowerCase(); keep = P.base.filter((e) => e.name.toLowerCase().includes(lf)); }
-    }
-    P.entries = keep.slice();
-    P.applySort();
-    els.searchwrap.classList.toggle("filtering", !!f && P.mode === "browse");
+    if (!f) return null;
+    if (/[*?]/.test(f)) { const re = globRe(f); return (e) => re.test(e.name); }
+    const lf = f.toLowerCase(); return (e) => e.name.toLowerCase().includes(lf);
+  };
+  /** Recompute P.entries from P.base: filter, sort, and (browsing) splice in
+   * the contents of expanded folders, each level sorted, with e.depth set. */
+  P.rebuild = () => {
+    const test = filterTest();
+    if (P.mode !== "browse") { P.entries = test ? P.base.filter(test) : P.base.slice(); P.applySort(); return !!test; }
+    const shelf = app.folderShelf;
+    const walk = (list, depth, out) => {
+      const sorted = list.slice().sort(cmp);
+      for (const e of sorted) {
+        e.depth = depth;
+        const open = isFolder(e) && P.expanded.has(e.path) && P.kids.has(e.path) && !(shelf && depth === 0);
+        if (open) {
+          const sub = []; walk(P.kids.get(e.path), depth + 1, sub);
+          if (!test || test(e) || sub.length) out.push(e, ...sub);
+        } else if (!test || test(e)) out.push(e);
+      }
+      return out;
+    };
+    P.entries = walk(P.base, 0, []);
+    return !!test;
+  };
+  P.applyFilter = () => {
+    const f = (P.filtered = P.rebuild());
+    els.searchwrap.classList.toggle("filtering", f && P.mode === "browse");
     const vis = new Set(P.entries.map((e) => e.path));
     P.selected = new Set([...P.selected].filter((p) => vis.has(p)));
     P.anchor = -1; P.cursor = -1;
@@ -225,7 +309,7 @@ export function createPane(key) {
     let res;
     try { res = await invoke("search", { req: { root: P.cwd, query, case_insensitive: true, include_dirs: true, include_hidden: P.showHidden } }); }
     catch (e) { P.flash("⚠ " + e, "warn"); return; }
-    P.base = res.hits; P.entries = res.hits.slice(); P.applySort(); P.mode = "search";
+    P.base = res.hits; P.entries = res.hits.slice(); P.applySort(); P.mode = "search"; P.filtered = false;
     P.selected.clear(); P.anchor = -1; P.cursor = -1;
     els.searchwrap.classList.remove("filtering");
     P.renderList();
@@ -234,7 +318,7 @@ export function createPane(key) {
   };
   /** Show an arbitrary list of entries (tag / Spotlight results) like search results. */
   P.showResults = (entries, msg, busy = false) => {
-    P.base = entries; P.entries = entries.slice(); P.applySort(); P.mode = "search";
+    P.base = entries; P.entries = entries.slice(); P.applySort(); P.mode = "search"; P.filtered = false;
     P.spotResults = busy;
     P.selected.clear(); P.anchor = -1; P.cursor = -1;
     els.searchwrap.classList.remove("filtering");
@@ -374,111 +458,48 @@ export function createPane(key) {
     const i = P.entries.findIndex((e) => e.name.toLowerCase().startsWith(taBuf));
     if (i >= 0) { P.selectSingle(i); reveal(i); }
   };
-  P.activate = (i) => { const e = P.entries[i]; if (e.is_dir) P.navigate(e.path); else invoke("open_path", { path: e.path }); };
+  P.activate = (i) => { const e = P.entries[i]; if (isFolder(e)) P.navigate(e.path); else invoke("open_path", { path: e.path }); };
   P.enterOrOpen = () => {
     const sel = P.selectedEntries();
     if (sel.length === 1) P.activate(P.entries.indexOf(sel[0]));
-    else sel.filter((x) => !x.is_dir).forEach((x) => invoke("open_path", { path: x.path }));
+    else sel.filter((x) => !isFolder(x)).forEach((x) => invoke("open_path", { path: x.path }));
   };
 
   P.trashSelected = () => trashPaths(P, P.selectedPaths());
 
 
   // ------------------------------------------------------------------- sort
+  // Folders first; then the sort column; ties by name.
+  function cmp(a, b) {
+    const fa = isFolder(a), fb = isFolder(b);
+    if (fa !== fb) return fa ? -1 : 1;
+    const va = sortValue(a, P.sortKey), vb = sortValue(b, P.sortKey);
+    let r = typeof va === "number" ? va - vb : va.localeCompare(vb);
+    if (r === 0) r = a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+    return r * P.sortDir;
+  }
+  /** Sort in place (search results; browsing goes through P.rebuild). */
   P.applySort = () => {
-    const k = P.sortKey, d = P.sortDir;
-    P.entries.sort((a, b) => {
-      if (a.is_dir !== b.is_dir) return a.is_dir ? -1 : 1;
-      let r;
-      if (k === "size") r = a.size - b.size;
-      else if (k === "modified") r = (a.modified || 0) - (b.modified || 0);
-      else if (k === "folder") r = a.parent.toLowerCase().localeCompare(b.parent.toLowerCase());
-      else r = a.name.toLowerCase().localeCompare(b.name.toLowerCase());
-      if (r === 0) r = a.name.toLowerCase().localeCompare(b.name.toLowerCase());
-      return r * d;
-    });
+    if (P.mode === "browse" && P.expanded.size) { P.rebuild(); return; }
+    P.entries.sort(cmp);
   };
   P.sortBy = (k) => {
     if (P.sortKey === k) P.sortDir = -P.sortDir;
-    else { P.sortKey = k; P.sortDir = k === "name" || k === "folder" ? 1 : -1; } // size/date default newest/largest first
+    else { P.sortKey = k; P.sortDir = ["name", "folder", "kind", "ext"].includes(k) ? 1 : -1; } // numbers/dates: largest/newest first
     const selPaths = P.selectedPaths();
-    P.applySort(); P.cursor = -1; P.anchor = -1;
+    P.rebuild(); P.cursor = -1; P.anchor = -1;
     P.renderList(); P.selectPaths(selPaths); changed(); app.hooks.save();
+    if (P.mode === "browse" && P.cwd) rememberView(P.cwd, { sortKey: P.sortKey, sortDir: P.sortDir });
   };
 
   // ----------------------------------------------------------------- render
-  P.renderList = () => {
-    els.listing.classList.toggle("searching", P.mode === "search");
-    els.listing.innerHTML = "";
-    if (!P.entries.length) {
-      const e = el("div", "empty-state");
-      const none = P.mode === "search" || P.base.length;
-      e.append(el("span", "big", none ? "∅" : "📂"));
-      e.append(el("span", "msg", none ? "Nothing matched here." : "This folder is empty."));
-      els.listing.append(e);
-      return;
-    }
-    const head = el("div", "head");
-    const mkHead = (label, k, cls) => {
-      const c = el("span", "hcell" + (cls ? " " + cls : "") + (P.sortKey === k ? " active" : ""));
-      c.append(el("span", null, label));
-      if (P.sortKey === k) c.append(el("span", "arrow", P.sortDir === 1 ? "▲" : "▼"));
-      c.addEventListener("click", () => P.sortBy(k));
-      return c;
-    };
-    if (P.mode === "search") head.append(mkHead("Name", "name"), mkHead("Folder", "folder"), mkHead("Size", "size", "c-size"), mkHead("Modified", "modified", "c-date"));
-    else head.append(mkHead("Name", "name"), mkHead("Size", "size", "c-size"), mkHead("Modified", "modified", "c-date"));
-
-    const clip = app.clip;
-    // Folder shelf: sub-folders collapse into one horizontally scrolling row of
-    // tiles above the file list. Tiles are ".row"s too (same data-i), so
-    // selection, open, rename, drag/drop and menus all work unchanged.
-    const shelf = app.folderShelf && P.mode === "browse";
-    const nDirs = shelf ? P.entries.filter((e) => e.is_dir).length : 0; // folders sort first
-    if (nDirs) {
-      const s = el("div", "shelf");
-      for (let i = 0; i < nDirs; i++) {
-        const h = P.entries[i];
-        const t = el("div", "row tile"); t.dataset.i = i; t.setAttribute("draggable", "true"); t.title = h.name;
-        if (P.selected.has(h.path)) t.classList.add("sel");
-        if (clip && clip.cut && clip.paths.includes(h.path)) t.classList.add("cut");
-        const nm = el("span", "nm");
-        // Prefer wrapping long names after _ - . rather than mid-word.
-        h.name.split(/(?<=[_\-.])/).forEach((part, j) => { if (j) nm.append(document.createElement("wbr")); nm.append(part); });
-        t.append(icon("folderFill"), nm);
-        if (h.is_symlink) t.append(el("span", "link", "↳"));
-        const td = tagDots(h.tags); if (td) t.append(td);
-        s.append(t);
-      }
-      els.listing.append(s);
-    }
-    if (nDirs < P.entries.length) els.listing.append(head); // column header only when there are list rows
-
-    const frag = document.createDocumentFragment();
-    P.entries.forEach((h, i) => {
-      if (i < nDirs) return;
-      const row = el("div", "row"); row.dataset.i = i; row.setAttribute("draggable", "true");
-      if (P.selected.has(h.path)) row.classList.add("sel");
-      if (clip && clip.cut && clip.paths.includes(h.path)) row.classList.add("cut");
-      const name = el("div", "c-name" + (h.is_dir ? " dir" : ""));
-      name.append(kindIcon(h.name, h.is_dir));
-      name.append(el("span", "nm", h.name));
-      if (h.is_symlink) name.append(el("span", "link", "↳"));
-      const td = tagDots(h.tags); if (td) name.append(td);
-      name.title = h.name;
-      row.append(name);
-      if (P.mode === "search") { const f = el("div", "c-folder", h.parent); f.title = h.parent; row.append(f); }
-      row.append(el("div", "c-size", fmtSize(h.size, h.is_dir)));
-      row.append(el("div", "c-date", fmtDate(h.modified)));
-      frag.append(row);
-    });
-    els.listing.append(frag);
-    applyGit(P);
-  };
+  P.renderList = () => view.render();
 
   // --------------------------------------------------------- pointer input
   root.addEventListener("mousedown", () => setActive(P), true);
   els.listing.addEventListener("click", (ev) => {
+    const disc = ev.target.closest(".disc.can");
+    if (disc) { ev.stopPropagation(); P.setExpanded(+disc.closest(".row").dataset.i); return; }
     const row = ev.target.closest(".row");
     if (!row) { if (!ev.target.closest(".head") && P.selected.size) P.clearSel(); return; } // empty space clears
     const i = +row.dataset.i;
@@ -487,9 +508,10 @@ export function createPane(key) {
     else P.selectSingle(i);
   });
   els.listing.addEventListener("dblclick", (ev) => {
+    if (ev.target.closest(".disc")) return;
     const row = ev.target.closest(".row"); if (!row) return;
     const e = P.entries[+row.dataset.i];
-    if (e.is_dir && ev.metaKey) openTab(e.path); // ⌘-double-click → new tab (Finder)
+    if (isFolder(e) && ev.metaKey) openTab(e.path); // ⌘-double-click → new tab (Finder)
     else P.activate(+row.dataset.i);
   });
   // Middle-click a folder → new tab (Dolphin).
@@ -497,7 +519,7 @@ export function createPane(key) {
     if (ev.button !== 1) return;
     const row = ev.target.closest(".row"); if (!row) return;
     const e = P.entries[+row.dataset.i];
-    if (e.is_dir) { ev.preventDefault(); openTab(e.path); }
+    if (isFolder(e)) { ev.preventDefault(); openTab(e.path); }
   });
 
   // ------------------------------------------------------------ drag & drop
@@ -517,7 +539,7 @@ export function createPane(key) {
       if (!P.cwd && !n.closest(".row")) return null;
       const row = n.closest(".row");
       const e = row && P.entries[+row.dataset.i];
-      if (e && e.is_dir && !data.paths.includes(e.path)) return { el: row, dest: e.path };
+      if (isFolder(e) && !data.paths.includes(e.path)) return { el: row, dest: e.path };
       return P.cwd && P.mode === "browse" ? { el: els.listing, cls: "drop-target", dest: P.cwd } : null;
     },
   });

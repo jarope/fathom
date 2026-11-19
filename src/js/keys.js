@@ -160,7 +160,7 @@ export function initKeys() {
     if (e.key === "ArrowDown" && !e.metaKey) return k(() => P.moveCursor(1, e.shiftKey));
     if (e.key === "ArrowUp" && !e.metaKey) return k(() => P.moveCursor(-1, e.shiftKey));
     // ← → step through the folder shelf (and on into the files).
-    if (app.folderShelf && P.mode === "browse" && !e.metaKey && (e.key === "ArrowRight" || e.key === "ArrowLeft")) return k(() => P.moveCursor(e.key === "ArrowRight" ? 1 : -1, e.shiftKey));
+    if (P.mode === "browse" && !e.metaKey && (e.key === "ArrowRight" || e.key === "ArrowLeft")) return k(() => P.arrowSide(e.key === "ArrowRight" ? 1 : -1, e.shiftKey));
     if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key.length === 1 && e.key !== " ") P.typeAhead(e.key);
   });
 }

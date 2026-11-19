@@ -29,7 +29,21 @@ export async function loadGit(P) {
 
 export const refreshGitAll = () => visiblePanes().forEach(loadGit);
 
-const stateOf = (P, e) => (P.git ? P.git.all || P.git.files[e.name] || null : null);
+const RANK = { new: 1, staged: 2, modified: 3, conflict: 4 };
+/** A row's state: top-level rows use the rolled-up map; rows inside expanded
+ * folders look through the repo's full change list (worst state wins). */
+function stateOf(P, e) {
+  const g = P.git; if (!g) return null;
+  if (g.all) return g.all;
+  if (!(e.depth > 0) || !g.paths) return g.files[e.name] || null;
+  if (!e.path.startsWith(g.root + "/")) return null;
+  const rel = e.path.slice(g.root.length + 1);
+  const covers = (p) => p === rel || p === rel + "/" || p.startsWith(rel + "/") || (p.endsWith("/") && rel.startsWith(p));
+  let best = null;
+  for (const [p, s] of g.paths) if (covers(p) && (RANK[s] || 0) > (RANK[best] || 0)) best = s;
+  if (best) return best;
+  return g.ignored.some((p) => p === rel || p === rel + "/" || (p.endsWith("/") && rel.startsWith(p))) ? "ignored" : null;
+}
 
 /** Colour + badge each visible row (cheap; also run after every re-render). */
 export function applyGit(P) {
