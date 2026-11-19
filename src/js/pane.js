@@ -528,6 +528,13 @@ export function createPane(key) {
     else if (P.selected.size) P.clearSel(); // empty space → the folder menu
     openContextMenu(P, ev.clientX, ev.clientY);
   });
+  // The status bar always gives the folder menu, even when rows fill the listing.
+  els.status.addEventListener("contextmenu", (ev) => {
+    ev.preventDefault();
+    setActive(P);
+    if (P.selected.size) P.clearSel();
+    openContextMenu(P, ev.clientX, ev.clientY);
+  });
 
   return P;
 }

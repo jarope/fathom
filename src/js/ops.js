@@ -7,6 +7,7 @@ import { app, invoke, dialog, baseName, plural } from "./core.js";
 import { visiblePanes } from "./tabs.js";
 import { closePreview } from "./preview.js";
 import { runJob } from "./jobs.js";
+import { prefs } from "./settings.js";
 import { resolveConflicts, batchRenameDialog } from "./dialog.js";
 
 const flashActive = (msg, cls) => (app.active || app.tab.panes[0]).flash(msg, cls);
@@ -224,4 +225,4 @@ export async function pickAndTransfer(P, copy) {
   if (typeof dest === "string") performTransfer(sel, dest, copy);
 }
 
-export const openTerminal = (P, path) => invoke("open_terminal", { path }).catch((e) => P.flash("⚠ " + e, "warn"));
+export const openTerminal = (P, path) => invoke("open_terminal", { path, app: prefs.terminal }).catch((e) => P.flash("⚠ " + e, "warn"));

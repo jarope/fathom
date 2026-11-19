@@ -20,6 +20,7 @@ export const app = {
   dockPreview: false,
   previewOpen: false,
   modalOpen: false,
+  dateFormat: "iso",
   // Wired up by main.js so modules can notify without importing each other in circles.
   hooks: {
     changed: () => {},   // a pane's selection/contents changed
@@ -44,10 +45,21 @@ export const fmtSize = (b, isDir) => {
   return (n >= 10 ? n.toFixed(0) : n.toFixed(1)) + " " + u[i];
 };
 
-export const fmtDate = (secs) => {
+/** Dates in the user's chosen style (Preferences → Date format). */
+export const fmtDate = (secs, style = app.dateFormat) => {
   if (!secs) return "—";
   const d = new Date(secs * 1000), p = (x) => String(x).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  const hm = `${p(d.getHours())}:${p(d.getMinutes())}`;
+  if (style === "locale") return d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+  if (style === "relative") {
+    const day = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+    const ago = Math.round((day(new Date()) - day(d)) / 86400000);
+    if (ago === 0) return `Today ${hm}`;
+    if (ago === 1) return `Yesterday ${hm}`;
+    if (ago > 1 && ago < 7) return `${d.toLocaleDateString(undefined, { weekday: "long" })} ${hm}`;
+    return d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+  }
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${hm}`;
 };
 
 export const baseName = (p) => (p === "/" ? "/" : p.replace(/\/+$/, "").split("/").pop());

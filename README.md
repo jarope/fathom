@@ -9,7 +9,7 @@ Same stack as **Pattern Studio** (Tauri 2 — Rust backend, vanilla HTML/CSS and
 native ES modules in `src/js/`, no npm, no bundler), themed with the light/dark design system from the
 **Fascia** VST.
 
-## What it does today (v0.16.0)
+## What it does today (v0.17.0)
 
 - **Progress & cancel** — copies, moves, duplicates and archive jobs run in the
   background; anything that takes more than a moment gets a card (bottom-right)
@@ -87,6 +87,26 @@ native ES modules in `src/js/`, no npm, no bundler), themed with the light/dark 
   full). Uses your own `git`, so config, hooks and credentials all apply.
   Refreshes when files change and when you switch back to Fathom.
 
+- **Actions** (like Dolphin's service menus) — right-click → **Actions ▸** runs
+  your own shell commands on the selection, or on the folder from the
+  empty-space menu. `%f` first item, `%F` all items, `%d` this folder, `%n`
+  name. Limit them to files, folders or types (`png, heic`); run in the
+  background (progress card with ✕, output shown if asked or on failure) or in
+  your terminal app. An action can go in the **Git ▸** menu instead (shown
+  only inside a repo). Folder actions are also listed under "This folder" in
+  the item menu, and right-clicking the status bar always gives the folder
+  menu. Six examples ship (VS Code, Convert to JPEG, SHA-256, Folder size,
+  Make executable, and Git log in the Git menu). Stored in
+  `~/.config/fathom/actions.json` — edit it by hand or in Preferences.
+- **Preferences** (⌘, or the sliders button) — start-up (reopen last tabs or
+  a set folder), date style (ISO / system / relative "Yesterday 18:22"),
+  terminal app (Terminal, iTerm, Ghostty, Warp), hidden files and shelf.
+  Saved in `~/.config/fathom/settings.json`.
+- **Shortcuts** — Preferences → Shortcuts lists every command; click **+** and
+  press keys to add one, click a key to remove it, ↺ to reset. Taking a key
+  from another command says so; macOS's own keys (⌘Q, ⌘H…) are refused.
+  Actions can have shortcuts too. Menus show your current keys.
+
 - **Finder tags** — tag dots on rows and folder tiles, the same tags Finder
   uses (set in either app, seen in both). Right-click → colour row or
   **Tags…**; **⌃⌘1–7** toggle your favourite tags, **⌃⌘0** clears. The sidebar
@@ -152,8 +172,11 @@ native ES modules in `src/js/`, no npm, no bundler), themed with the light/dark 
 
 ### Keyboard
 
+Defaults below — change any of them in Preferences → Shortcuts.
+
 | Key | Action |
 | --- | --- |
+| ⌘, | Preferences |
 | ⌘P | Toggle the docked preview panel |
 | ⏎ | Open selection (enter folder / open file) |
 | ⌫ or Delete | Move selection to Bin |

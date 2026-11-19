@@ -8,7 +8,7 @@ import { app, el, fmtSize, fmtDate, baseName, plural } from "./core.js";
  * `onSubmit(value)` may return an error string to keep the dialog open.
  * Resolves with the chosen value, or null on Esc / Cancel.
  */
-export function modal({ title, body, buttons, wide = false, onSubmit = null, focus = null }) {
+export function modal({ title, body, buttons, wide = false, onSubmit = null, focus = null, enterSubmits = true }) {
   return new Promise((resolve) => {
     const wrap = el("div", "modal-wrap");
     const box = el("div", "modal" + (wide ? " wide" : ""));
@@ -42,7 +42,7 @@ export function modal({ title, body, buttons, wide = false, onSubmit = null, foc
     });
     const onKey = (e) => {
       if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(null); }
-      else if (e.key === "Enter" && !(e.target && e.target.tagName === "TEXTAREA")) {
+      else if (e.key === "Enter" && !(e.target && e.target.tagName === "TEXTAREA") && (enterSubmits || !/^(INPUT|SELECT)$/.test(e.target.tagName))) {
         const p = buttons.find((b) => b.primary);
         if (p && !p.node.disabled) { e.preventDefault(); e.stopPropagation(); choose(p); }
       }

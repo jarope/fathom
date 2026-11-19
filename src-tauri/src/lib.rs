@@ -12,6 +12,7 @@ use globset::GlobBuilder;
 use serde::{Deserialize, Serialize};
 use walkdir::{DirEntry, WalkDir};
 
+mod actions;
 mod archive;
 mod bin_ops;
 mod dnd;
@@ -529,24 +530,6 @@ fn free_space(path: String) -> Result<Space, String> {
     }
 }
 
-/// Open Terminal.app at `path` (Dolphin's "Open Terminal Here").
-#[tauri::command]
-fn open_terminal(path: String) -> Result<(), String> {
-    #[cfg(target_os = "macos")]
-    {
-        std::process::Command::new("open")
-            .args(["-a", "Terminal", &path])
-            .spawn()
-            .map_err(|e| format!("could not open Terminal: {e}"))?;
-        Ok(())
-    }
-    #[cfg(not(target_os = "macos"))]
-    {
-        let _ = path;
-        Err("Open Terminal is only available on macOS.".into())
-    }
-}
-
 // --- Image thumbnails / previews -------------------------------------------
 
 /// A downscaled preview of an image, plus the original pixel dimensions.
@@ -873,6 +856,7 @@ pub fn run() {
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .manage(std::sync::Arc::new(jobs::Jobs::default()))
         .manage(std::sync::Arc::new(spotlight::Spotlight::default()))
+        .manage(std::sync::Arc::new(actions::Actions::default()))
         .manage(WatchState {
             watcher: std::sync::Mutex::new(None),
             dirs: Default::default(),
@@ -917,7 +901,11 @@ pub fn run() {
             create_item,
             rename_path,
             free_space,
-            open_terminal,
+            actions::open_terminal,
+            actions::config_read,
+            actions::config_write,
+            actions::run_action,
+            actions::cancel_action,
             thumbnail,
             ql_thumbnail,
             svg_data_uri,

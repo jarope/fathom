@@ -15,6 +15,10 @@ import { initSystem, qlFollow } from "./system.js";
 import { loadTags } from "./tags.js";
 import { initSearch } from "./search.js";
 import { initGit } from "./git.js";
+import { loadSettings, prefs } from "./settings.js";
+import { loadActions, initActions } from "./actions.js";
+import { rebuildKeymap } from "./keys.js";
+import { openPrefs } from "./prefs.js";
 
 app.showHidden = !!store.get("fathom-hidden", 0);
 app.sidebar = store.get("fathom-sidebar", true) !== false;
@@ -25,6 +29,7 @@ app.hooks.changed = (P) => { if (app.tab && P === app.tab.panes[0]) refreshDock(
 app.hooks.navigated = () => { renderTabs(); markActive(); syncWatch(); saveSession(); };
 app.hooks.save = saveSession;
 app.hooks.searchesChanged = () => renderSidebar();
+app.hooks.actionsChanged = () => rebuildKeymap();
 
 initHeader();
 initMenu();
@@ -39,6 +44,9 @@ initKeys();
     return;
   }
   try { app.home = await invoke("home_dir"); } catch { app.home = "/"; }
+  await loadSettings();
+  rebuildKeymap(); // with any custom shortcuts
+  document.getElementById("prefsBtn").addEventListener("click", () => openPrefs());
   loadPlaces();
   await initWatch();
   await initJobs();
@@ -46,7 +54,11 @@ initKeys();
   await initSystem();
   await initSearch();
   initGit();
+  await initActions();
+  loadActions();
   loadTags().then(() => app.sidebar && renderSidebar());
-  if (!(await restoreSession())) await openTab(app.home);
+  const start = prefs.startup === "folder" ? prefs.startFolder || app.home : null;
+  if (start) { await openTab(start); if (!app.active.cwd) await app.active.navigate(app.home); }
+  else if (!(await restoreSession())) await openTab(app.home);
   syncWatch();
 })();

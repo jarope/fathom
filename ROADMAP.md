@@ -33,7 +33,7 @@ Status key: ✅ done · 🟡 partial · ⬜ not started
 | **Conflict dialog** | Overwrite / skip / rename / apply-to-all | ✅ keep both / replace (→ Bin) / skip / merge, apply to all |
 | **Properties dialog** | Size (recursive), permissions, dates, open-with | ⬜ |
 | **Open With…** | App chooser | ⬜ |
-| **Service menus / actions** | Extensible right-click actions | ⬜ (later: user scripts → menu) |
+| **Service menus / actions** | Extensible right-click actions | ✅ actions.json + Preferences editor, background or terminal |
 | **Archives** | Compress / extract via Ark | ✅ compress (zip) / extract (zip, tar, 7z, rar…) |
 | **Trash view** | Browse + restore | ⬜ (needs "Put Back") |
 | **Tags / ratings** | Baloo | ✅ Finder tags: dots, menu, ⌃⌘1–7, sidebar, drop-to-tag |
@@ -42,7 +42,7 @@ Status key: ✅ done · 🟡 partial · ⬜ not started
 | **Git status overlays** | Plugin | ✅ badges, folder roll-up, branch ↑↓ chip, Commit… / Push |
 | **Per-folder view settings** | Remembered | ⬜ |
 | **Session restore** | Tabs/paths reopened | ✅ tabs, folders, layout, sort, window size |
-| **Customisable shortcuts** | Any action (26.04) | ⬜ |
+| **Customisable shortcuts** | Any action (26.04) | ✅ shortcut editor with clash warnings |
 | **Folder shelf** (Fathom original) | — | ✅ sub-folders as one scrolling row of tiles above the files |
 | **Native file icons / thumbnails** | | 🟡 emoji + Quick Look thumbs (real icons in Open With) |
 | **Drag to/from other apps** | | ✅ native drag sessions both ways |
@@ -105,7 +105,7 @@ Shipped in four steps:
   commit) and *Push* to the tracking remote — progress card, errors shown in
   full; anything fancier stays in your git tools.
 
-**v0.17 — User actions, Preferences, Shortcuts**
+**v0.17 — User actions, Preferences, Shortcuts** ✅
 - **User actions** (Dolphin service menus): right-click entries defined in
   `~/.config/fathom/actions.json` **and** editable in Preferences (same file).
   `%f` file, `%F` all selected, `%d` current folder; filter by type / folders /

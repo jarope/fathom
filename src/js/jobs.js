@@ -97,9 +97,14 @@ function render(j) {
 }
 
 /** A card with an indeterminate bar for work without progress (git push…). Returns close(). */
-export function busyCard(label, detail = "") {
+export function busyCard(label, detail = "", onCancel = null) {
   const c = el("div", "job");
   const top = el("div", "job-top"); top.append(el("span", "job-label", label));
+  if (onCancel) {
+    const x = el("button", "job-x", "✕"); x.type = "button"; x.title = "Cancel";
+    x.addEventListener("click", () => { x.disabled = true; c.querySelector(".job-meta").textContent = "Cancelling…"; onCancel(); });
+    top.append(x);
+  }
   const bar = el("div", "job-bar indet"); bar.append(el("i"));
   c.append(top, bar, el("div", "job-meta", detail));
   box.append(c); box.classList.add("show");

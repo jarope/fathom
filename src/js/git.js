@@ -7,6 +7,7 @@ import { showMenu } from "./menu.js";
 import { modal } from "./dialog.js";
 import { busyCard } from "./jobs.js";
 import { visiblePanes } from "./tabs.js";
+import { menuActions } from "./actions.js";
 
 const BADGE = { modified: "M", staged: "S", new: "U", conflict: "!", ignored: "" };
 const WORD = { modified: "Modified", staged: "Staged", new: "Untracked (new)", conflict: "Conflict", ignored: "Ignored by git" };
@@ -75,6 +76,7 @@ export function gitMenu(P) {
     { label: g.changes ? `Commit… (${g.changes} changed)` : "Commit…", fn: () => commitDialog(P), disabled: !g.changes },
     { label: g.ahead ? `Push ${plural(g.ahead, "commit")}` : g.upstream ? "Push" : "Push (sets upstream)", fn: () => push(P) },
     "sep",
+    ...(() => { const u = menuActions(P, P.mode === "browse" ? P.selectedEntries() : [], "git"); return u.length ? [...u, "sep"] : []; })(),
     { label: "Refresh git status", fn: () => loadGit(P) },
   ];
 }

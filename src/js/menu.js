@@ -9,6 +9,9 @@ import { toggleHidden } from "./view.js";
 import { menuTagRow, editTagsDialog, clearTags } from "./tags.js";
 import { openWithEntries, share, quickLook } from "./system.js";
 import { gitMenu } from "./git.js";
+import { keyHint } from "./keys.js";
+import { actionEntries } from "./actions.js";
+import { openPrefs } from "./prefs.js";
 
 let ctx, sub, subTimer = null;
 
@@ -93,22 +96,23 @@ export function openContextMenu(P, x, y) {
   if (!sel.length) {
     if (!P.cwd) return;
     showMenu([
-      { label: "New Folder", fn: () => P.newItem(true), key: "⇧⌘N" },
-      { label: "New Text File", fn: () => P.newItem(false), key: "⌥⌘N" },
+      { label: "New Folder", fn: () => P.newItem(true), key: keyHint("newFolder") },
+      { label: "New Text File", fn: () => P.newItem(false), key: keyHint("newFile") },
       "sep",
-      { label: clip ? `Paste ${plural(clip.paths.length, "item")}` : "Paste", fn: () => paste(P), key: "⌘V" },
-      { label: "Move Here (from clipboard)", fn: () => paste(P, null, { move: true }), key: "⌥⌘V" },
+      { label: clip ? `Paste ${plural(clip.paths.length, "item")}` : "Paste", fn: () => paste(P), key: keyHint("paste") },
+      { label: "Move Here (from clipboard)", fn: () => paste(P, null, { move: true }), key: keyHint("moveHere") },
       "sep",
-      { label: "Open in New Tab", fn: () => openTab(P.cwd), key: "⌘T" },
-      { label: "Open Terminal Here", fn: () => openTerminal(P, P.cwd), key: "⌥⌘T" },
+      { label: "Open in New Tab", fn: () => openTab(P.cwd), key: keyHint("newTab") },
+      { label: "Open Terminal Here", fn: () => openTerminal(P, P.cwd), key: keyHint("terminal") },
       { label: "Add to Places", fn: () => addBookmarks([P.cwd]) },
       { label: "Copy folder path", fn: () => { navigator.clipboard.writeText(P.cwd); P.flash("Copied path"); } },
-      { label: app.showHidden ? "Hide hidden files" : "Show hidden files", fn: toggleHidden, key: "⇧⌘." },
+      { label: app.showHidden ? "Hide hidden files" : "Show hidden files", fn: toggleHidden, key: keyHint("hidden") },
       "sep",
       P.git && { label: "Git", sub: () => gitMenu(P) },
+      { label: "Actions", sub: () => actionEntries(P, [], () => openPrefs("actions")) },
       "sep",
-      undoStack.length && { label: `Undo ${undoStack[undoStack.length - 1].label}`, fn: undo, key: "⌘Z" },
-      redoStack.length && { label: `Redo ${redoStack[redoStack.length - 1].label}`, fn: redo, key: "⇧⌘Z" },
+      undoStack.length && { label: `Undo ${undoStack[undoStack.length - 1].label}`, fn: undo, key: keyHint("undo") },
+      redoStack.length && { label: `Redo ${redoStack[redoStack.length - 1].label}`, fn: redo, key: keyHint("redo") },
     ], x, y);
     return;
   }
@@ -119,16 +123,16 @@ export function openContextMenu(P, x, y) {
     one && { label: one.is_dir ? "Open folder" : "Open", fn: () => P.activate(P.entries.indexOf(one)), key: "⏎" },
     one && one.is_dir && { label: "Open in New Tab", fn: () => openTab(one.path), key: "⌘-dbl-click" },
     { label: "Open With", sub: () => openWithEntries(P, sel.map((e) => e.path)) },
-    { label: "Quick Look", fn: () => quickLook(P), key: "Space" },
-    one && { label: "Rename…", fn: () => P.startRename(one.path), key: "F2" },
-    !one && { label: `Rename ${sel.length} items…`, fn: () => batchRename(P), key: "F2" },
-    { label: "Duplicate", fn: () => duplicateSel(P), key: "⌘D" },
+    { label: "Quick Look", fn: () => quickLook(P), key: keyHint("quickLook") },
+    one && { label: "Rename…", fn: () => P.startRename(one.path), key: keyHint("rename") },
+    !one && { label: `Rename ${sel.length} items…`, fn: () => batchRename(P), key: keyHint("rename") },
+    { label: "Duplicate", fn: () => duplicateSel(P), key: keyHint("duplicate") },
     "sep",
-    P.mode === "browse" && { label: "New Folder", fn: () => P.newItem(true), key: "⇧⌘N" },
-    P.mode === "browse" && { label: "New Text File", fn: () => P.newItem(false), key: "⌥⌘N" },
+    P.mode === "browse" && { label: "New Folder", fn: () => P.newItem(true), key: keyHint("newFolder") },
+    P.mode === "browse" && { label: "New Text File", fn: () => P.newItem(false), key: keyHint("newFile") },
     "sep",
-    { label: "Cut", fn: () => setClip(P, true), key: "⌘X" },
-    { label: "Copy", fn: () => setClip(P, false), key: "⌘C" },
+    { label: "Cut", fn: () => setClip(P, true), key: keyHint("cut") },
+    { label: "Copy", fn: () => setClip(P, false), key: keyHint("copy") },
     one && one.is_dir && { label: "Paste into folder", fn: () => paste(P, one.path) },
     "sep",
     { label: one ? `Compress “${one.name}”` : `Compress ${sel.length} items`, fn: () => compressSel(P) },
@@ -138,6 +142,7 @@ export function openContextMenu(P, x, y) {
     { label: "Tags…", fn: () => editTagsDialog(P) },
     sel.some((e) => e.tags && e.tags.length) && { label: "Remove all tags", fn: () => clearTags(P), key: "⌃⌘0" },
     "sep",
+    { label: "Actions", sub: () => actionEntries(P, sel, () => openPrefs("actions")) },
     P.git && P.mode === "browse" && { label: "Git", sub: () => gitMenu(P) },
     { label: "Share…", fn: () => share(P, sel.map((e) => e.path), x, y) },
     { label: "Reveal in Finder", fn: () => invoke("reveal_in_finder", { path: sel[0].path }) },
@@ -145,11 +150,11 @@ export function openContextMenu(P, x, y) {
     dirs.length && { label: "Add to Places", fn: () => addBookmarks(dirs) },
     { label: sel.length > 1 ? "Copy paths" : "Copy path", fn: () => { navigator.clipboard.writeText(sel.map((e) => e.path).join("\n")); P.flash(sel.length > 1 ? "Copied paths" : "Copied path"); } },
     "sep",
-    twin && { label: "Copy to other pane", fn: () => transferToOther(P, true), key: "F5" },
-    twin && { label: "Move to other pane", fn: () => transferToOther(P, false), key: "F6" },
+    twin && { label: "Copy to other pane", fn: () => transferToOther(P, true), key: keyHint("copyOther") },
+    twin && { label: "Move to other pane", fn: () => transferToOther(P, false), key: keyHint("moveOther") },
     { label: "Copy to…", fn: () => pickAndTransfer(P, true) },
     { label: "Move to…", fn: () => pickAndTransfer(P, false) },
     "sep",
-    { label: `Move ${sel.length > 1 ? sel.length + " items " : ""}to Bin`, fn: P.trashSelected, danger: true, key: "⌫" },
+    { label: `Move ${sel.length > 1 ? sel.length + " items " : ""}to Bin`, fn: P.trashSelected, danger: true, key: keyHint("trash") },
   ], x, y);
 }

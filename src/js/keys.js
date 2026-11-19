@@ -1,4 +1,9 @@
-// Global keyboard: routes to the active pane. Text fields keep their own keys.
+// Keyboard. Every rebindable shortcut is a named command with default keys;
+// Preferences → Shortcuts can change them (saved in settings.json). A few
+// keys stay fixed: arrows, ⏎, Esc, type-ahead, ⌘1–9 (tabs), ⌃⌘0–9 (tags).
+//
+// A key combo is written "Ctrl+Alt+Shift+Cmd+<KeyboardEvent.code>", e.g.
+// "Shift+Cmd+KeyN" — layout-independent, and ⌥ doesn't change it.
 
 import { app } from "./core.js";
 import { undo, redo, setClip, paste, duplicateSel, transferToOther, openTerminal, batchRename } from "./ops.js";
@@ -8,18 +13,123 @@ import { hideCtx } from "./menu.js";
 import { toggleHidden, toggleSidebar, toggleShelf, setZoom, zoomStep } from "./view.js";
 import { quickLook, closeQuickLook } from "./system.js";
 import { toggleNth, clearTags } from "./tags.js";
+import { commitDialog, push } from "./git.js";
+import { prefs } from "./settings.js";
+import { openPrefs } from "./prefs.js";
+import { actions, runOnSelection } from "./actions.js";
+
+const rename = (P) => { const s = P.selectedEntries(); if (s.length === 1) P.startRename(s[0].path); else if (s.length > 1) batchRename(P); };
+
+/**
+ * id, label, group, default keys, run(P). `global` commands also work while
+ * typing in a text field. run() returning false lets the key through.
+ */
+export const COMMANDS = [
+  // Files
+  { id: "newFolder", group: "Files", label: "New Folder", keys: ["Shift+Cmd+KeyN", "F10"], run: (P) => P.newItem(true) },
+  { id: "newFile", group: "Files", label: "New Text File", keys: ["Alt+Cmd+KeyN"], run: (P) => P.newItem(false) },
+  { id: "rename", group: "Files", label: "Rename", keys: ["F2"], run: rename },
+  { id: "duplicate", group: "Files", label: "Duplicate", keys: ["Cmd+KeyD"], run: duplicateSel },
+  { id: "trash", group: "Files", label: "Move to Bin", keys: ["Backspace", "Delete", "Cmd+Backspace"], run: (P) => P.selected.size && P.trashSelected() },
+  { id: "copy", group: "Files", label: "Copy", keys: ["Cmd+KeyC"], run: (P) => setClip(P, false) },
+  { id: "cut", group: "Files", label: "Cut", keys: ["Cmd+KeyX"], run: (P) => setClip(P, true) },
+  { id: "paste", group: "Files", label: "Paste", keys: ["Cmd+KeyV"], run: (P) => paste(P) },
+  { id: "moveHere", group: "Files", label: "Move Here (from clipboard)", keys: ["Alt+Cmd+KeyV"], run: (P) => paste(P, null, { move: true }) },
+  { id: "copyOther", group: "Files", label: "Copy to other pane", keys: ["F5"], run: (P) => transferToOther(P, true) },
+  { id: "moveOther", group: "Files", label: "Move to other pane", keys: ["F6"], run: (P) => transferToOther(P, false) },
+  { id: "undo", group: "Files", label: "Undo", keys: ["Cmd+KeyZ"], run: undo },
+  { id: "redo", group: "Files", label: "Redo", keys: ["Shift+Cmd+KeyZ"], run: redo },
+  { id: "quickLook", group: "Files", label: "Quick Look", keys: ["Space"], run: quickLook },
+  { id: "open", group: "Files", label: "Open", keys: ["Cmd+ArrowDown"], run: (P) => P.enterOrOpen() },
+  { id: "selectAll", group: "Files", label: "Select All", keys: ["Cmd+KeyA"], run: (P) => P.selectAll() },
+  // Go
+  { id: "back", group: "Go", label: "Back", keys: ["Cmd+BracketLeft"], run: (P) => P.goBack() },
+  { id: "forward", group: "Go", label: "Forward", keys: ["Cmd+BracketRight"], run: (P) => P.goFwd() },
+  { id: "up", group: "Go", label: "Enclosing Folder", keys: ["Cmd+ArrowUp"], run: (P) => P.goUp() },
+  { id: "home", group: "Go", label: "Home", keys: ["Shift+Cmd+KeyH"], run: (P) => P.goHome() },
+  { id: "editPath", group: "Go", label: "Type a Path", keys: ["Cmd+KeyL"], run: (P) => P.editPath() },
+  { id: "find", group: "Go", label: "Search", keys: ["Cmd+KeyF"], run: (P) => { P.els.search.focus(); P.els.search.select(); } },
+  { id: "reload", group: "Go", label: "Reload", keys: ["Cmd+KeyR"], run: (P) => P.reload() },
+  { id: "terminal", group: "Go", label: "Open Terminal Here", keys: ["Alt+Cmd+KeyT"], run: (P) => P.cwd && openTerminal(P, P.cwd) },
+  // Tabs & view
+  { id: "newTab", group: "Tabs & View", label: "New Tab", keys: ["Cmd+KeyT"], run: (P) => openTab(P.cwd) },
+  { id: "closeTab", group: "Tabs & View", label: "Close Tab", keys: ["Cmd+KeyW"], run: () => (app.tabs.length > 1 ? closeTab() : false) }, // last tab: ⌘W closes the window
+  { id: "nextTab", group: "Tabs & View", label: "Next Tab", keys: ["Ctrl+Tab", "Shift+Cmd+BracketRight"], run: () => cycleTab(1) },
+  { id: "prevTab", group: "Tabs & View", label: "Previous Tab", keys: ["Ctrl+Shift+Tab", "Shift+Cmd+BracketLeft"], run: () => cycleTab(-1) },
+  { id: "twin", group: "Tabs & View", label: "Single / Twin Pane", keys: ["Cmd+Backslash"], run: () => setView(app.tab.view === "single" ? "twin" : "single") },
+  { id: "sidebar", group: "Tabs & View", label: "Sidebar", keys: ["F9", "Ctrl+Cmd+KeyS"], run: toggleSidebar },
+  { id: "hidden", group: "Tabs & View", label: "Show Hidden Files", keys: ["Shift+Cmd+Period"], run: toggleHidden },
+  { id: "shelf", group: "Tabs & View", label: "Folder Shelf", keys: ["Shift+Cmd+KeyF"], run: toggleShelf },
+  { id: "dock", group: "Tabs & View", label: "Preview Panel", keys: ["Cmd+KeyP"], run: toggleDock },
+  { id: "zoomIn", group: "Tabs & View", label: "Zoom In", keys: ["Cmd+Equal", "Cmd+NumpadAdd"], global: true, run: () => zoomStep(1) },
+  { id: "zoomOut", group: "Tabs & View", label: "Zoom Out", keys: ["Cmd+Minus", "Cmd+NumpadSubtract"], global: true, run: () => zoomStep(-1) },
+  { id: "zoomReset", group: "Tabs & View", label: "Actual Size", keys: ["Cmd+Digit0", "Cmd+Numpad0"], global: true, run: () => setZoom(1) },
+  // Git & app
+  { id: "gitCommit", group: "Git", label: "Commit…", keys: [], run: (P) => P.git && commitDialog(P) },
+  { id: "gitPush", group: "Git", label: "Push", keys: [], run: (P) => P.git && push(P) },
+  { id: "prefs", group: "Fathom", label: "Preferences…", keys: ["Cmd+Comma"], global: true, run: () => openPrefs() },
+];
+
+/** Combos Fathom won't take (macOS owns them). */
+export const RESERVED = new Set(["Cmd+KeyQ", "Cmd+KeyH", "Cmd+KeyM", "Alt+Cmd+KeyH", "Cmd+Tab", "Cmd+Space", "Ctrl+Space"]);
+const FIXED = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Shift+ArrowUp", "Shift+ArrowDown", "Shift+ArrowLeft", "Shift+ArrowRight", "Enter", "Escape"];
+export const isFixed = (c) => FIXED.includes(c) || /^Cmd\+Digit[1-9]$/.test(c) || /^Ctrl\+Cmd\+Digit[0-9]$/.test(c);
+
+// User actions are commands too (no keys unless you give them some).
+// Git-menu actions sit with the Git commands; the rest get their own group.
+export const allCommands = () => {
+  const cmd = (a) => ({ id: "action:" + a.name, group: a.menu === "git" ? "Git" : "Actions", label: a.name, keys: [], run: (P) => runOnSelection(P, a) });
+  const git = actions.filter((a) => a.menu === "git").map(cmd);
+  const lastGit = COMMANDS.map((c) => c.group).lastIndexOf("Git") + 1;
+  return [...COMMANDS.slice(0, lastGit), ...git, ...COMMANDS.slice(lastGit), ...actions.filter((a) => a.menu !== "git").map(cmd)];
+};
+
+export const keysFor = (cmd) => prefs.shortcuts[cmd.id] || cmd.keys;
+let keymap = new Map();
+export function rebuildKeymap() {
+  keymap = new Map();
+  allCommands().forEach((c) => keysFor(c).forEach((k) => { if (!keymap.has(k)) keymap.set(k, c); }));
+}
+/** Which command a combo runs now (for clash warnings). */
+export const commandFor = (combo) => keymap.get(combo) || null;
+
+const MOD_CODES = /^(Shift|Control|Alt|Meta|OS|CapsLock|Fn)(Left|Right)?$/;
+/** The combo for a keydown, or null for a lone modifier. */
+export function comboOf(e) {
+  if (!e.code || MOD_CODES.test(e.code)) return null;
+  return [e.ctrlKey && "Ctrl", e.altKey && "Alt", e.shiftKey && "Shift", e.metaKey && "Cmd", e.code].filter(Boolean).join("+");
+}
+
+const NAMES = {
+  Equal: "=", Minus: "−", BracketLeft: "[", BracketRight: "]", Backslash: "\\", Period: ".", Comma: ",", Slash: "/",
+  Semicolon: ";", Quote: "'", Backquote: "`", ArrowUp: "↑", ArrowDown: "↓", ArrowLeft: "←", ArrowRight: "→",
+  Backspace: "⌫", Delete: "⌦", Enter: "⏎", Escape: "Esc", Tab: "⇥", Space: "Space", NumpadAdd: "+ (keypad)",
+  NumpadSubtract: "− (keypad)", Home: "↖", End: "↘", PageUp: "⇞", PageDown: "⇟",
+};
+/** "Shift+Cmd+KeyN" → "⇧⌘N". */
+export function keyLabel(combo) {
+  if (!combo) return "";
+  const parts = combo.split("+"), code = parts.pop();
+  const sym = { Ctrl: "⌃", Alt: "⌥", Shift: "⇧", Cmd: "⌘" };
+  const key = NAMES[code] || code.replace(/^Key|^Digit/, "").replace(/^Numpad(\d)$/, "$1 (keypad)");
+  return parts.map((m) => sym[m]).join("") + key;
+}
+/** The first key of a command, for menus ("" when it has none). */
+export const keyHint = (id) => { const c = COMMANDS.find((x) => x.id === id); return c ? keyLabel(keysFor(c)[0]) : ""; };
+
+const typing = () => /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
 
 export function initKeys() {
-  // Zoom works everywhere (even while typing), like any Mac app.
+  rebuildKeymap();
+  // Global commands (zoom, Preferences) work everywhere, even while typing.
   window.addEventListener("keydown", (e) => {
-    if (!e.metaKey || e.altKey || e.ctrlKey) return;
-    const c = e.code;
-    if (c === "Equal" || c === "NumpadAdd") { e.preventDefault(); e.stopImmediatePropagation(); zoomStep(1); }
-    else if (c === "Minus" || c === "NumpadSubtract") { e.preventDefault(); e.stopImmediatePropagation(); zoomStep(-1); }
-    else if (c === "Digit0" || c === "Numpad0") { e.preventDefault(); e.stopImmediatePropagation(); setZoom(1); }
+    const cmd = keymap.get(comboOf(e));
+    if (!cmd || !cmd.global || (app.modalOpen && cmd.id === "prefs")) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    cmd.run(app.active);
   });
   window.addEventListener("keydown", (e) => {
-    if (app.modalOpen || /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) return;
+    if (app.modalOpen || typing()) return;
     const P = app.active; if (!P) return;
 
     if (app.previewOpen) {
@@ -31,65 +141,26 @@ export function initKeys() {
       if (e.key === "Backspace" || e.key === "Delete") { e.preventDefault(); if (P.selected.size) P.trashSelected(); return; }
       e.preventDefault(); return;
     }
-    if (e.key === " ") { e.preventDefault(); quickLook(P); return; }
     if (e.key === "Escape" && app.qlOpen) { e.preventDefault(); closeQuickLook(); return; }
 
-    const mod = e.metaKey || e.ctrlKey;
-    const code = e.code; // layout-independent (⌥ changes e.key on macOS)
+    const combo = comboOf(e), code = e.code;
     const k = (fn) => { e.preventDefault(); fn(); };
 
-    // Tags: ⌃⌘1–7 toggle the favourite tags, ⌃⌘0 clears.
+    const cmd = combo && keymap.get(combo);
+    if (cmd && !cmd.global) {
+      if (cmd.run(P) !== false) e.preventDefault();
+      return;
+    }
+
+    // Fixed keys
     if (e.metaKey && e.ctrlKey && /^Digit[0-9]$/.test(code)) return k(() => (code === "Digit0" ? clearTags(P) : toggleNth(P, +code.slice(5))));
-
-    // Tabs
-    if (mod && !e.shiftKey && code === "KeyT") return k(() => openTab(P.cwd));
-    if (mod && !e.shiftKey && code === "KeyW") { if (app.tabs.length > 1) k(() => closeTab()); return; } // last tab: let ⌘W close the window
-    if (e.ctrlKey && e.key === "Tab") return k(() => cycleTab(e.shiftKey ? -1 : 1));
-    if (e.metaKey && e.shiftKey && code === "BracketRight") return k(() => cycleTab(1));
-    if (e.metaKey && e.shiftKey && code === "BracketLeft") return k(() => cycleTab(-1));
-    if (e.metaKey && !e.shiftKey && !e.altKey && /^Digit[1-9]$/.test(code)) return k(() => gotoTab(+code.slice(5)));
-
-    // Panels & view
-    if (e.key === "F9" || (e.metaKey && e.ctrlKey && code === "KeyS")) return k(toggleSidebar);
-    if (mod && e.shiftKey && code === "Period") return k(toggleHidden);
-    if (mod && e.shiftKey && code === "KeyF") return k(toggleShelf);
-    if (mod && e.key === "\\") return k(() => setView(app.tab.view === "single" ? "twin" : "single"));
-    if (mod && !e.shiftKey && code === "KeyP") return k(toggleDock);
-
-    // Create / rename / edit
-    if (mod && e.shiftKey && code === "KeyN") return k(() => P.newItem(true));
-    if (mod && e.altKey && code === "KeyN") return k(() => P.newItem(false));
-    if (e.key === "F10") return k(() => P.newItem(true)); // Dolphin's binding
-    if (e.key === "F2") return k(() => { const s = P.selectedEntries(); if (s.length === 1) P.startRename(s[0].path); else if (s.length > 1) batchRename(P); });
-    if (mod && e.altKey && code === "KeyT") return k(() => P.cwd && openTerminal(P, P.cwd));
-    if (mod && !e.shiftKey && code === "KeyZ") return k(undo);
-    if (mod && e.shiftKey && code === "KeyZ") return k(redo);
-    if (mod && code === "KeyC") return k(() => setClip(P, false));
-    if (mod && code === "KeyX") return k(() => setClip(P, true));
-    if (mod && e.altKey && code === "KeyV") return k(() => paste(P, null, { move: true })); // Finder's "Move Item Here"
-    if (mod && code === "KeyV") return k(() => paste(P));
-    if (mod && code === "KeyD") return k(() => duplicateSel(P));
-    if (mod && code === "KeyF") return k(() => { P.els.search.focus(); P.els.search.select(); });
-    if (mod && code === "KeyL") return k(() => P.editPath());
-    if (mod && code === "KeyR") return k(() => P.reload());
-    if (mod && code === "KeyA") return k(() => P.selectAll());
-
-    // Navigation
-    if (mod && e.shiftKey && code === "KeyH") return k(P.goHome);
-    if (mod && e.key === "ArrowUp") return k(P.goUp);
-    if (mod && e.key === "ArrowDown") return k(() => P.enterOrOpen());
-    if (mod && !e.shiftKey && code === "BracketLeft") return k(P.goBack);
-    if (mod && !e.shiftKey && code === "BracketRight") return k(P.goFwd);
-
+    if (e.metaKey && !e.shiftKey && !e.altKey && !e.ctrlKey && /^Digit[1-9]$/.test(code)) return k(() => gotoTab(+code.slice(5)));
     if (e.key === "Escape") { hideCtx(); if (P.selected.size || P.mode !== "search") P.clearSel(); else P.reload(); return; }
-    if (e.key === "F5") return k(() => transferToOther(P, true));
-    if (e.key === "F6") return k(() => transferToOther(P, false));
-    if (e.key === "Backspace" || e.key === "Delete") return k(() => P.selected.size && P.trashSelected());
-    if (e.key === "Enter") return k(() => P.enterOrOpen());
-    if (e.key === "ArrowDown") return k(() => P.moveCursor(1, e.shiftKey));
-    if (e.key === "ArrowUp") return k(() => P.moveCursor(-1, e.shiftKey));
+    if (e.key === "Enter" && !e.metaKey) return k(() => P.enterOrOpen());
+    if (e.key === "ArrowDown" && !e.metaKey) return k(() => P.moveCursor(1, e.shiftKey));
+    if (e.key === "ArrowUp" && !e.metaKey) return k(() => P.moveCursor(-1, e.shiftKey));
     // ← → step through the folder shelf (and on into the files).
-    if (app.folderShelf && P.mode === "browse" && (e.key === "ArrowRight" || e.key === "ArrowLeft")) return k(() => P.moveCursor(e.key === "ArrowRight" ? 1 : -1, e.shiftKey));
-    if (!mod && !e.altKey && e.key.length === 1 && e.key !== " ") P.typeAhead(e.key);
+    if (app.folderShelf && P.mode === "browse" && !e.metaKey && (e.key === "ArrowRight" || e.key === "ArrowLeft")) return k(() => P.moveCursor(e.key === "ArrowRight" ? 1 : -1, e.shiftKey));
+    if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key.length === 1 && e.key !== " ") P.typeAhead(e.key);
   });
 }
