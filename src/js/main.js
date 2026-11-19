@@ -14,6 +14,7 @@ import { initDnd } from "./dnd.js";
 import { initSystem, qlFollow } from "./system.js";
 import { loadTags } from "./tags.js";
 import { initSearch } from "./search.js";
+import { initGit } from "./git.js";
 
 app.showHidden = !!store.get("fathom-hidden", 0);
 app.sidebar = store.get("fathom-sidebar", true) !== false;
@@ -44,6 +45,7 @@ initKeys();
   await initDnd();
   await initSystem();
   await initSearch();
+  initGit();
   loadTags().then(() => app.sidebar && renderSidebar());
   if (!(await restoreSession())) await openTab(app.home);
   syncWatch();

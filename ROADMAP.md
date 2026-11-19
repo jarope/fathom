@@ -39,7 +39,7 @@ Status key: ✅ done · 🟡 partial · ⬜ not started
 | **Tags / ratings** | Baloo | ✅ Finder tags: dots, menu, ⌃⌘1–7, sidebar, drop-to-tag |
 | **Content search** | Baloo | ✅ Spotlight: contents / names, here or whole Mac, streamed; saved searches |
 | **Remote locations** | sftp, smb, etc. via KIO | ⬜ mounted volumes only for now |
-| **Git status overlays** | Plugin | ⬜ |
+| **Git status overlays** | Plugin | ✅ badges, folder roll-up, branch ↑↓ chip, Commit… / Push |
 | **Per-folder view settings** | Remembered | ⬜ |
 | **Session restore** | Tabs/paths reopened | ✅ tabs, folders, layout, sort, window size |
 | **Customisable shortcuts** | Any action (26.04) | ⬜ |
@@ -97,7 +97,7 @@ Shipped in four steps:
 - Query helpers: `kind:pdf`, `modified:<7d`, `size:>100MB`, `tag:Red`.
 - **Saved searches** pinned in the sidebar (Smart Folders).
 
-**v0.16 — Git**
+**v0.16 — Git** ✅
 - Rows coloured/badged: modified, new, staged, conflicted; ignored dimmed;
   folders roll up their contents' status; branch + ahead/behind in the status bar.
 - Refreshes on file changes (FSEvents watcher already in place).

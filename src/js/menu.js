@@ -8,6 +8,7 @@ import { addBookmarks } from "./sidebar.js";
 import { toggleHidden } from "./view.js";
 import { menuTagRow, editTagsDialog, clearTags } from "./tags.js";
 import { openWithEntries, share, quickLook } from "./system.js";
+import { gitMenu } from "./git.js";
 
 let ctx, sub, subTimer = null;
 
@@ -104,6 +105,8 @@ export function openContextMenu(P, x, y) {
       { label: "Copy folder path", fn: () => { navigator.clipboard.writeText(P.cwd); P.flash("Copied path"); } },
       { label: app.showHidden ? "Hide hidden files" : "Show hidden files", fn: toggleHidden, key: "⇧⌘." },
       "sep",
+      P.git && { label: "Git", sub: () => gitMenu(P) },
+      "sep",
       undoStack.length && { label: `Undo ${undoStack[undoStack.length - 1].label}`, fn: undo, key: "⌘Z" },
       redoStack.length && { label: `Redo ${redoStack[redoStack.length - 1].label}`, fn: redo, key: "⇧⌘Z" },
     ], x, y);
@@ -135,6 +138,7 @@ export function openContextMenu(P, x, y) {
     { label: "Tags…", fn: () => editTagsDialog(P) },
     sel.some((e) => e.tags && e.tags.length) && { label: "Remove all tags", fn: () => clearTags(P), key: "⌃⌘0" },
     "sep",
+    P.git && P.mode === "browse" && { label: "Git", sub: () => gitMenu(P) },
     { label: "Share…", fn: () => share(P, sel.map((e) => e.path), x, y) },
     { label: "Reveal in Finder", fn: () => invoke("reveal_in_finder", { path: sel[0].path }) },
     one && one.is_dir && { label: "Open Terminal Here", fn: () => openTerminal(P, one.path) },

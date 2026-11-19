@@ -9,7 +9,7 @@ Same stack as **Pattern Studio** (Tauri 2 — Rust backend, vanilla HTML/CSS and
 native ES modules in `src/js/`, no npm, no bundler), themed with the light/dark design system from the
 **Fascia** VST.
 
-## What it does today (v0.15.0)
+## What it does today (v0.16.0)
 
 - **Progress & cancel** — copies, moves, duplicates and archive jobs run in the
   background; anything that takes more than a moment gets a card (bottom-right)
@@ -77,6 +77,15 @@ native ES modules in `src/js/`, no npm, no bundler), themed with the light/dark 
   `kind:pdf` `kind:image` `kind:psd` · `modified:<7d` `modified:>2025-01-31`
   `modified:today` · `size:>100MB` · `tag:Red` · `"quoted phrases"`.
   **Save this search…** pins it to the sidebar under *Searches*.
+
+- **Git** — inside a repository, rows are coloured and badged: **M** modified,
+  **S** staged, **U** untracked, **!** conflict; ignored files are dimmed and
+  folders show the worst change inside them. The status bar shows the branch,
+  **↑ ahead / ↓ behind** and how many files changed — click it (or right-click
+  → **Git ▸**) for **Commit…** (tick files, write a message, ⌘⏎; *Commit &
+  Push* too) and **Push** (sets the upstream on first push; errors shown in
+  full). Uses your own `git`, so config, hooks and credentials all apply.
+  Refreshes when files change and when you switch back to Fathom.
 
 - **Finder tags** — tag dots on rows and folder tiles, the same tags Finder
   uses (set in either app, seen in both). Right-click → colour row or

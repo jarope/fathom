@@ -95,3 +95,13 @@ function render(j) {
   meta.textContent = parts.join(" · ");
   cur.textContent = p.current || "";
 }
+
+/** A card with an indeterminate bar for work without progress (git push…). Returns close(). */
+export function busyCard(label, detail = "") {
+  const c = el("div", "job");
+  const top = el("div", "job-top"); top.append(el("span", "job-label", label));
+  const bar = el("div", "job-bar indet"); bar.append(el("i"));
+  c.append(top, bar, el("div", "job-meta", detail));
+  box.append(c); box.classList.add("show");
+  return () => { c.remove(); box.classList.toggle("show", box.childElementCount > 0); };
+}

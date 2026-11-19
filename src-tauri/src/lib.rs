@@ -15,6 +15,7 @@ use walkdir::{DirEntry, WalkDir};
 mod archive;
 mod bin_ops;
 mod dnd;
+mod git;
 mod query;
 mod spotlight;
 mod system;
@@ -893,6 +894,10 @@ pub fn run() {
             entries_for,
             spotlight::spotlight_search,
             spotlight::spotlight_cancel,
+            git::git_status,
+            git::git_changes,
+            git::git_commit,
+            git::git_push,
             system::open_with_apps,
             system::open_with,
             system::file_icon,

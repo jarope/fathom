@@ -8,6 +8,7 @@ import { openContextMenu, showMenu } from "./menu.js";
 import { setActive, openTab } from "./tabs.js";
 import { registerDropZone, startDrag } from "./dnd.js";
 import { tagDots } from "./tags.js";
+import { loadGit, applyGit, gitChip } from "./git.js";
 import { usesSpotlight, startSpotlight, cancelSpotlight, searchMenu, placeholder, modeLabel } from "./search.js";
 
 const TEMPLATE = `
@@ -62,13 +63,17 @@ export function createPane(key) {
     if (n !== total) els.status.append(el("span", null, ` of ${total.toLocaleString()} (filtered)`));
     if (P.selected.size) els.status.append(el("span", null, " · "), el("span", "sel", `${P.selected.size} selected`));
     els.status.append(el("span", "grow"));
+    const gc = gitChip(P); if (gc) els.status.append(gc);
+    if (extra && extra !== P.flashMsg) P.flashMsg = null; // a newer message replaces it
+    extra = extra || P.flashMsg; // a recent message survives redraws
     if (extra) els.status.append(extra);
     else if (P.space) els.status.append(el("span", "mono", `${fmtSize(P.space.free, false)} free of ${fmtSize(P.space.total, false)}`));
   };
   P.flash = (text, cls = "msg") => {
-    P.renderStatus(el("span", cls, text));
+    P.flashMsg = el("span", cls, text);
+    P.renderStatus();
     if (P.msgTimer) clearTimeout(P.msgTimer);
-    P.msgTimer = setTimeout(() => P.renderStatus(), 4500);
+    P.msgTimer = setTimeout(() => { P.flashMsg = null; P.renderStatus(); }, 4500);
   };
 
   // ------------------------------------------------------------ navigation
@@ -99,7 +104,8 @@ export function createPane(key) {
     P.renderList(); els.listing.scrollTop = scroll;
     P.renderCrumbs(); P.renderStatus(); P.updateNav();
     changed();
-    if (moved) { P.space = null; app.hooks.navigated(P); }
+    if (moved) { P.space = null; P.git = null; app.hooks.navigated(P); }
+    loadGit(P);
     invoke("free_space", { path: listing.dir }).then((s) => { P.space = s; P.renderStatus(); }).catch(() => {});
     return true;
   };
@@ -465,6 +471,7 @@ export function createPane(key) {
       frag.append(row);
     });
     els.listing.append(frag);
+    applyGit(P);
   };
 
   // --------------------------------------------------------- pointer input
