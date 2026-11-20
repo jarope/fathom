@@ -16,6 +16,7 @@
 import { app, invoke, listen, el, kindIcon } from "./core.js";
 import { getZoom } from "./view.js";
 import { performTransfer } from "./ops.js";
+import { fileIcon } from "./icons.js";
 
 const zones = [];
 let cue = null;     // { el, cls } currently highlighted
@@ -81,7 +82,7 @@ export function startDrag(P, entries, down) {
   const data = { paths: entries.map((e) => e.path), dirs: entries.filter((e) => e.is_dir).map((e) => e.path), source: P };
   app.dragData = data;
   const ghost = el("div", "drag-ghost");
-  ghost.append(kindIcon(entries[0].name, entries[0].is_dir), el("span", "dg-name", entries.length === 1 ? entries[0].name : `${entries.length} items`));
+  ghost.append(fileIcon(entries[0]), el("span", "dg-name", entries.length === 1 ? entries[0].name : `${entries.length} items`));
   if (entries.length > 1) ghost.append(el("span", "dg-count", String(entries.length)));
   document.body.append(ghost);
   document.body.classList.add("dragging");

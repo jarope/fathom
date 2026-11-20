@@ -180,6 +180,7 @@ body.col-resizing, body.col-resizing * { cursor: col-resize !important; }
 
 /* File-kind icons: each kind has its own glyph and tint */
 .ki { color: var(--ki); }
+img.ki.fi { object-fit: contain; display: block; }
 .k-folder { --ki: var(--k-folder); } .k-doc { --ki: var(--k-doc); } .k-image { --ki: var(--k-image); } .k-video { --ki: var(--k-video); }
 .k-audio { --ki: var(--k-audio); } .k-code { --ki: var(--k-code); } .k-archive { --ki: var(--k-archive); } .k-app { --ki: var(--k-app); }
 

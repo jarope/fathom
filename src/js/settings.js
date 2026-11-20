@@ -14,6 +14,7 @@ export const DEFAULTS = {
   glass: 80,            // glass opacity, 50–100 (100 = solid)
   columns: { show: ["size", "modified"], widths: {} }, // details view columns (Name is always on)
   gridSize: 80,         // grid view icon size in points, 48–256
+  fileIcons: true,      // real Finder icons in Details / Columns rows
   shortcuts: {},        // command id -> ["Cmd+KeyT", …] (only the ones you changed)
 };
 

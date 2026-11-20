@@ -10,7 +10,7 @@ native ES modules in `src/js/`, no npm, no bundler). The look follows
 [`DESIGN.md`](DESIGN.md): neutral greys, one accent colour, macOS glass on the
 sidebar and popovers, the system font plus JetBrains Mono.
 
-## What it does today (v0.22.0)
+## What it does today (v0.23.0)
 
 - **Progress & cancel** — copies, moves, duplicates and archive jobs run in the
   background; anything that takes more than a moment gets a card (bottom-right)
@@ -200,6 +200,10 @@ sidebar and popovers, the system font plus JetBrains Mono.
   was downloaded from), tags to toggle or add, the app it opens with, and
   permissions as read / write / run boxes for owner, group and everyone.
   Several items: total size, kinds and shared tags.
+- **Finder icons** — Details and Columns rows show each file's real macOS
+  icon (the app's own icon, Downloads / Applications folders, custom folder
+  icons), fetched in batches and cached by type. Preferences → General → Show
+  → *Finder icons in lists* switches back to simple kind symbols.
 - **Rubber-band selection** — drag from empty space to select a box of files
   (⌘ / ⇧ adds to the selection), in Grid and Details.
 - **Appearance** (Preferences → General) — Match the system / Light / Dark;

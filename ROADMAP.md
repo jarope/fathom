@@ -44,7 +44,7 @@ Status key: ✅ done · 🟡 partial · ⬜ not started
 | **Session restore** | Tabs/paths reopened | ✅ tabs, folders, layout, sort, window size |
 | **Customisable shortcuts** | Any action (26.04) | ✅ shortcut editor with clash warnings |
 | **Folder shelf** (Fathom original) | — | ✅ sub-folders as one scrolling row of tiles above the files |
-| **Native file icons / thumbnails** | | 🟡 emoji + Quick Look thumbs (real icons in Open With) |
+| **Native file icons / thumbnails** | | ✅ Finder icons in lists, Quick Look thumbnails in grid |
 | **Drag to/from other apps** | | ✅ native drag sessions both ways |
 
 ## Phases
@@ -167,8 +167,13 @@ glyphs and tints, Reduce Transparency / Increase Contrast, glass opacity.
   default app, permissions (owner / group / everyone checkboxes → chmod).
   Several items: total size, kinds, shared tags.
 
+**v0.23 — Finder icons in lists** ✅
+- Details and Columns rows (and the drag ghost) show real NSWorkspace icons:
+  files cached by type, folders / apps / packages / links by path (special
+  and custom folder icons), one batched call per paint, identical images
+  shared. The kind glyph shows until the icon lands. Preferences toggle.
+
 Still to do:
-- **Real file icons** (NSWorkspace) instead of emoji, cached per type.
 - **Information panel** (Dolphin F11) replacing the preview dock: preview,
   metadata (dimensions, duration, EXIF), folder size on demand.
 

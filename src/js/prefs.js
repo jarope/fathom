@@ -89,7 +89,8 @@ function general() {
 
   box.append(field("Show",
     check("Hidden files", app.showHidden, (on) => on !== app.showHidden && toggleHidden()),
-    check("Folder shelf (sub-folders as tiles above the files)", app.folderShelf, (on) => on !== app.folderShelf && toggleShelf())));
+    check("Folder shelf (sub-folders as tiles above the files)", app.folderShelf, (on) => on !== app.folderShelf && toggleShelf()),
+    check("Finder icons in lists (off = simple kind symbols)", prefs.fileIcons, (on) => { prefs.fileIcons = on; saveSettings(); app.tabs.forEach((t) => t.panes.forEach((p) => p.cwd && p.renderList())); })));
 
   box.append(note("Saved in ~/.config/fathom/settings.json — hand edits are fine; restart Fathom to pick them up."));
   return box;

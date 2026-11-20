@@ -15,6 +15,7 @@
 
 import { app, invoke, el, icon, kindIcon, fmtSize, fmtDate, isFolder } from "./core.js";
 import { tagDots } from "./tags.js";
+import { fileIcon } from "./icons.js";
 import { applyGit } from "./git.js";
 import { kindLabel } from "./details.js";
 import { thumbInto } from "./grid.js";
@@ -56,7 +57,7 @@ function vcolumn(count, make, cls = "") {
 
 /** Name cell shared by every column. */
 function nameParts(r, e) {
-  r.append(kindIcon(e.name, e.is_dir), el("span", "nm", e.name));
+  r.append(fileIcon(e), el("span", "nm", e.name));
   if (e.is_symlink) r.append(el("span", "link", "↳"));
   const td = tagDots(e.tags); if (td) r.append(td);
   if (isFolder(e)) r.append(el("span", "mchev", "›"));

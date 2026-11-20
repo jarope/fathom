@@ -8,6 +8,7 @@
 
 import { app, el, icon, kindIcon, kindOf, fmtSize, fmtDate, isFolder } from "./core.js";
 import { tagDots } from "./tags.js";
+import { fileIcon } from "./icons.js";
 import { applyGit } from "./git.js";
 import { showMenu } from "./menu.js";
 import { prefs, saveSettings } from "./settings.js";
@@ -173,7 +174,7 @@ export function createDetails(P) {
       if (isFolder(h)) { d.classList.add("can"); if (P.expanded.has(h.path)) d.classList.add("open"); d.title = P.expanded.has(h.path) ? "Collapse (←)" : "Expand (→)"; d.append(icon("forward")); }
       name.append(d);
     }
-    name.append(kindIcon(h.name, h.is_dir), el("span", "nm", h.name));
+    name.append(fileIcon(h), el("span", "nm", h.name));
     if (h.is_symlink) name.append(el("span", "link", "↳"));
     const td = tagDots(h.tags); if (td) name.append(td);
     name.title = h.name;
