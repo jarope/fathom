@@ -16,6 +16,7 @@ mod actions;
 mod appearance;
 mod archive;
 mod bin_ops;
+mod bin_view;
 mod dnd;
 mod git;
 mod query;
@@ -744,6 +745,8 @@ struct Places {
     standard: Vec<Place>,
     icloud: Option<String>,
     volumes: Vec<Volume>,
+    /// The home Bin (~/.Trash).
+    bin: String,
 }
 
 fn canon(p: &Path) -> String {
@@ -794,7 +797,7 @@ fn places() -> Result<Places, String> {
         }
     }
     volumes.sort_by(|a, b| b.is_root.cmp(&a.is_root).then_with(|| a.name.to_lowercase().cmp(&b.name.to_lowercase())));
-    Ok(Places { home: canon(&home), standard, icloud, volumes })
+    Ok(Places { home: canon(&home), standard, icloud, volumes, bin: canon(&home.join(".Trash")) })
 }
 
 /// Eject / unmount a volume (`diskutil eject`). Blocking — disks can take a moment.
@@ -923,6 +926,9 @@ pub fn run() {
             home_dir,
             search,
             bin_ops::move_to_trash,
+            bin_view::bin_origins,
+            bin_view::bin_delete,
+            bin_view::bin_empty,
             dnd::start_drag,
             dnd::drop_action,
             dnd::classify_paths,

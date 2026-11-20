@@ -10,6 +10,7 @@
 
 import { isFolder } from "./core.js";
 import { kindLabel } from "./details.js";
+import { binLabel } from "./bin.js";
 
 let seq = 0;
 
@@ -24,7 +25,7 @@ export function a11yPane(P) {
   let queued = 0;
   const sync = () => {
     queued = 0;
-    L.setAttribute("aria-label", P.mode === "search" ? "Search results" : `Files in ${P.cwd === "/" ? "Macintosh HD" : (P.cwd || "").split("/").pop()}`);
+    L.setAttribute("aria-label", P.mode === "search" ? "Search results" : `Files in ${P.cwd === "/" ? "Macintosh HD" : binLabel(P.cwd) || (P.cwd || "").split("/").pop()}`);
     let active = null;
     L.querySelectorAll(".row[data-i]").forEach((r) => {
       const i = +r.dataset.i, e = P.entries[i];

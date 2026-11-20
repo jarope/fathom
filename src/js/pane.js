@@ -12,6 +12,7 @@ import { setActive, openTab } from "./tabs.js";
 import { a11yPane } from "./a11y.js";
 import { registerDropZone, startDrag } from "./dnd.js";
 import { loadGit, gitChip } from "./git.js";
+import { isBinDir, binLabel, loadOrigins, syncBinBar, deleteNow } from "./bin.js";
 import { usesSpotlight, startSpotlight, cancelSpotlight, searchMenu, placeholder, modeLabel, addRecent, attachRecent } from "./search.js";
 
 const TEMPLATE = `
@@ -153,6 +154,7 @@ export function createPane(key) {
     changed();
     if (moved) { P.space = null; P.git = null; app.hooks.navigated(P); }
     loadGit(P);
+    syncBinBar(P); loadOrigins(P);
     invoke("free_space", { path: listing.dir }).then((s) => { P.space = s; P.renderStatus(); }).catch(() => {});
     return true;
   };
@@ -242,6 +244,7 @@ export function createPane(key) {
     const parts = P.cwd.split("/").filter(Boolean);
     const paths = ["/", ...parts.map((_, i) => "/" + parts.slice(0, i + 1).join("/"))];
     const labels = ["/", ...parts];
+    paths.forEach((p, i) => { const b = binLabel(p); if (b) labels[i] = b; });
     const sep = (dir) => { const s = el("span", "csep", "›"); s.dataset.dir = dir; return s; };
     paths.forEach((p, i) => {
       if (i > 0) c.append(sep(paths[i - 1]));
@@ -467,6 +470,7 @@ export function createPane(key) {
     ariaSync();
     if (V().selChanged) V().selChanged();
     P.renderStatus(); changed();
+    if (P.binOrigins) syncBinBar(P);
   };
   P.selectSingle = (i) => { P.selected = new Set([P.entries[i].path]); P.anchor = i; P.cursor = i; P.reflect(); };
   P.toggleOne = (i) => { const p = P.entries[i].path; P.selected.has(p) ? P.selected.delete(p) : P.selected.add(p); P.anchor = i; P.cursor = i; P.reflect(); };
@@ -509,7 +513,7 @@ export function createPane(key) {
     else sel.filter((x) => !isFolder(x)).forEach((x) => invoke("open_path", { path: x.path }));
   };
 
-  P.trashSelected = () => trashPaths(P, P.selectedPaths());
+  P.trashSelected = () => (isBinDir(P.cwd) && P.mode === "browse" ? deleteNow(P, P.selectedPaths()) : trashPaths(P, P.selectedPaths()));
 
 
   // ------------------------------------------------------------------- sort

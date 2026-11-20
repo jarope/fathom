@@ -35,12 +35,12 @@ Status key: ✅ done · 🟡 partial · ⬜ not started
 | **Open With…** | App chooser | ✅ Open With ▸ (default app first) |
 | **Service menus / actions** | Extensible right-click actions | ✅ actions.json + Preferences editor, background or terminal |
 | **Archives** | Compress / extract via Ark | ✅ compress (zip) / extract (zip, tar, 7z, rar…) |
-| **Trash view** | Browse + restore | 🟡 Put Back via undo · ⬜ Bin in the sidebar to browse / restore |
+| **Trash view** | Browse + restore | ✅ Bin in the sidebar: browse, Put Back (Fathom's and Finder's records), Delete Immediately, Empty Bin |
 | **Tags / ratings** | Baloo | ✅ Finder tags: dots, menu, ⌃⌘1–7, sidebar, drop-to-tag |
 | **Content search** | Baloo | ✅ Spotlight: contents / names, here or whole Mac, streamed; saved searches |
 | **Remote locations** | sftp, smb, etc. via KIO | ⬜ mounted volumes only for now |
 | **Git status overlays** | Plugin | ✅ badges, folder roll-up, branch ↑↓ chip, Commit… / Push |
-| **Per-folder view settings** | Remembered | ⬜ view mode per folder |
+| **Per-folder view settings** | Remembered | ✅ view mode + sort per folder (since v0.19) |
 | **Session restore** | Tabs/paths reopened | ✅ tabs, folders, layout, sort, window size |
 | **Customisable shortcuts** | Any action (26.04) | ✅ shortcut editor with clash warnings |
 | **Folder shelf** (Fathom original) | — | ✅ sub-folders as one scrolling row of tiles above the files |

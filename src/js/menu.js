@@ -15,6 +15,7 @@ import { keyHint } from "./keys.js";
 import { actionEntries } from "./actions.js";
 import { openPrefs } from "./prefs.js";
 import { getInfo } from "./info.js";
+import { isBinDir, binItemMenu, emptyBin } from "./bin.js";
 
 let ctx, sub, subTimer = null;
 
@@ -150,8 +151,20 @@ export function openContextMenu(P, x, y) {
   const twin = app.tab.view === "twin";
   const clip = app.clip;
 
+  const inBin = P.mode === "browse" && isBinDir(P.cwd);
+  if (inBin && sel.length) { showMenu(binItemMenu(P, sel, { keyHint, quickLook, getInfo, destEntries, openWith: openWithEntries }), x, y); return; }
   if (!sel.length) {
     if (!P.cwd) return;
+    if (inBin) {
+      showMenu([
+        { label: "Empty Bin…", fn: () => emptyBin(P), danger: true, disabled: !P.entries.length },
+        "sep",
+        { label: "View", sub: () => viewEntries(P) },
+        { label: "Sort By", sub: () => sortEntries(P) },
+        undoStack.length && { label: `Undo ${undoStack[undoStack.length - 1].label}`, fn: undo, key: keyHint("undo") },
+      ], x, y);
+      return;
+    }
     showMenu([
       { label: "New Folder", fn: () => P.newItem(true), key: keyHint("newFolder") },
       { label: "New Text File", fn: () => P.newItem(false), key: keyHint("newFile") },

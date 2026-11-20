@@ -6,13 +6,14 @@ import { showMenu } from "./menu.js";
 import { setView } from "./tabs.js";
 import { renderSidebar } from "./sidebar.js";
 import { toggleTheme } from "./appearance.js";
+import { binLabel } from "./bin.js";
 
 /** Toolbar title: the active pane's folder name, like Finder. */
 export function updateTitle() {
   const n = document.getElementById("locName");
   const P = app.active;
   if (!n || !P || !P.cwd) return;
-  n.textContent = P.cwd === "/" ? "Macintosh HD" : P.cwd.split("/").pop();
+  n.textContent = P.cwd === "/" ? "Macintosh HD" : binLabel(P.cwd) || P.cwd.split("/").pop();
   n.title = P.cwd;
 }
 

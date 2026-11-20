@@ -208,6 +208,12 @@ img.ki.fi { object-fit: contain; display: block; }
 .empty-state .msg { font: var(--t-body); color: var(--text2); }
 
 /* Status bar */
+/* The Bin: a strip above the files with Put Back / Empty Bin */
+.binbar { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-bottom: 1px solid var(--separator); background: var(--sel-quiet); font: var(--t-callout); color: var(--text2); }
+.binbar > svg { width: 16px; height: 16px; flex: none; color: var(--text2); }
+.binbar .binmsg { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mbtn.danger { color: var(--danger); }
+.mbtn.danger.primary { background: var(--danger); color: var(--on-accent); border-color: transparent; }
 .pstatus { display: flex; align-items: center; gap: 6px; padding: 6px 14px; min-height: 26px; font: var(--t-foot); font-variant-numeric: tabular-nums; color: var(--text3); border-top: 1px solid var(--separator); }
 .pstatus .count { color: var(--text2); font-weight: 600; }
 .pstatus .sel { color: var(--text); font-weight: 600; }

@@ -92,6 +92,9 @@ pub fn trash_paths(paths: &[String]) -> Binned {
             Err(e) => out.errors.push(format!("{p}: {e}")),
         }
     }
+    if !out.pairs.is_empty() {
+        crate::bin_view::remember(&out.pairs); // so Put Back works from the Bin later
+    }
     out
 }
 

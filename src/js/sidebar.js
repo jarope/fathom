@@ -11,6 +11,8 @@ import { registerDropZone } from "./dnd.js";
 import { favourites, showTagged, tagPaths } from "./tags.js";
 import { saved, runSaved, removeSaved } from "./search.js";
 import { asButton } from "./a11y.js";
+import { emptyBin } from "./bin.js";
+import { trashPaths } from "./ops.js";
 
 let places = null;
 let bookmarks = store.get("fathom-places", []); // [{ name, path }]
@@ -18,6 +20,7 @@ let sb;
 
 export async function loadPlaces() {
   try { places = await invoke("places"); } catch { places = null; }
+  if (places) app.bin = places.bin;
   renderSidebar();
 }
 
@@ -57,7 +60,7 @@ export function renderSidebar() {
   const sec = (t) => sb.append(el("div", "side-sec", t));
   const item = (name, path, kind, extra = {}) => {
     const n = el("div", "place" + (extra.fav ? " fav" : ""));
-    n.dataset.path = path; n.dataset.kind = extra.bookmark ? "bookmark" : extra.volume ? "volume" : "std";
+    n.dataset.path = path; n.dataset.kind = extra.bookmark ? "bookmark" : extra.volume ? "volume" : extra.bin ? "bin" : "std";
     n.title = path;
     n.append(icon(kind), el("span", "pname", name));
     asButton(n, name);
@@ -73,10 +76,9 @@ export function renderSidebar() {
   bookmarks.forEach((b) => item(b.name, b.path, "folder", { bookmark: true, fav: true }));
   if (!bookmarks.length) sb.append(el("div", "side-hint", "Drag folders here to pin them"));
   if (places.icloud) { sec("iCloud"); item("iCloud Drive", places.icloud, "cloud"); }
-  if (places.volumes.length) {
-    sec("Locations");
-    places.volumes.forEach((v) => item(v.name, v.path, "drive", { volume: v }));
-  }
+  sec("Locations");
+  places.volumes.forEach((v) => item(v.name, v.path, "drive", { volume: v }));
+  if (places.bin) item("Bin", places.bin, "bin", { bin: true });
   if (saved.length) {
     sec("Searches");
     saved.forEach((s, i) => {
@@ -148,6 +150,15 @@ export function initSidebar() {
     }
     const path = n.dataset.path, kind = n.dataset.kind, name = n.querySelector(".pname").textContent;
     const P = app.active;
+    if (kind === "bin") {
+      showMenu([
+        { label: "Open", fn: () => P && P.navigate(path) },
+        { label: "Open in New Tab", fn: () => openTab(path), key: "⌘-click" },
+        "sep",
+        { label: "Empty Bin…", fn: () => emptyBin(P), danger: true },
+      ], ev.clientX, ev.clientY);
+      return;
+    }
     const i = bookmarks.findIndex((b) => b.path === path);
     showMenu([
       { label: "Open", fn: () => P && P.navigate(path) },
@@ -172,6 +183,7 @@ export function initSidebar() {
       const pl = n.closest(".place");
       if (pl && pl.dataset.search) return null;
       if (pl && pl.dataset.tag) return { el: pl, act: (d) => app.active && tagPaths(app.active, d.paths, pl.dataset.tag) };
+      if (pl && pl.dataset.kind === "bin") return { el: pl, act: (d) => app.active && trashPaths(app.active, d.paths.filter((p) => !p.startsWith(app.bin + "/"))) };
       if (pl) return { el: pl, dest: pl.dataset.path };
       if (data.dirs === null || data.dirs.length) return { el: sb, cls: "drop-target", act: (d) => d.dirs && d.dirs.length && addBookmarks(d.dirs) };
       return null;

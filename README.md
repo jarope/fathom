@@ -44,7 +44,7 @@ you need it.
 **Updates** arrive inside the app (once-a-day check; Preferences → General →
 Updates). They're signed, and Fathom checks the signature before installing.
 
-## What it does today (v0.27.3)
+## What it does today (v0.28.0)
 
 - **Progress & cancel** — copies, moves, duplicates and archive jobs run in the
   background; anything that takes more than a moment gets a card (bottom-right)
@@ -211,6 +211,11 @@ Updates). They're signed, and Fathom checks the signature before installing.
   arrow keys to move (⇧ to extend), Esc to clear.
 - **Move to Bin** — highlight and press **⌫** or **Delete** (or right-click).
   Uses the **real macOS Trash — recoverable**, never a hard delete.
+- **The Bin** (sidebar → Locations): browse it; **Put Back** sends items to
+  where they came from (Finder's deletions too); **Delete Immediately**
+  (⌫ inside the Bin) and **Empty Bin…** ask first. Drop files on the sidebar
+  Bin to bin them. macOS only lets apps into the Bin with **Full Disk
+  Access**; Fathom explains and opens the right Settings page.
 - **Search within a pane's folder** — type in its search box (wildcards `*` `?`
   ok), ⏎ to run, Esc back to browsing. **Recent searches**: click into the
   empty box (or press ↓) for your last 10, with the mode each ran in; ↑ ↓ ⏎

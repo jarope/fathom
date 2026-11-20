@@ -8,6 +8,7 @@ import { refreshPanel } from "./panel.js";
 import { registerDropZone } from "./dnd.js";
 import { showMenu } from "./menu.js";
 import { asButton } from "./a11y.js";
+import { binLabel } from "./bin.js";
 
 let seq = 0;
 const panesEl = () => document.getElementById("panes");
@@ -103,7 +104,7 @@ function applyView() {
 // ---- tab bar ----
 const tabTitle = (t) => {
   const p = t.active || t.panes[0];
-  return p.cwd ? (p.cwd === app.home ? "Home" : baseName(p.cwd)) : "…";
+  return p.cwd ? (p.cwd === app.home ? "Home" : binLabel(p.cwd) || baseName(p.cwd)) : "…";
 };
 
 export function renderTabs() {

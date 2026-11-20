@@ -5,6 +5,12 @@ release script uses the section for the version it's building as the release
 notes (and the text shown in the in-app update card), so keep each section
 short and written for people who use Fathom.
 
+## 0.28.0 — 2026-11-20
+
+- **The Bin** in the sidebar: browse it, **Put Back** items to where they
+  came from (including things you binned in Finder), **Delete Immediately**
+  and **Empty Bin**. Drop files on it to bin them. Needs Full Disk Access.
+
 ## 0.27.3 — 2026-11-20
 
 - After an update, Fathom says so: a small card on the first launch with a
