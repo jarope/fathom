@@ -228,9 +228,10 @@ Phase 5 complete.
 - **Release script** ✅ `scripts/release.sh` — universal (Apple Silicon +
   Intel) .app / .dmg, signed update bundle, `latest.json`, sha256; checks the
   three version numbers and the CHANGELOG agree; `--publish` tags and creates
-  the GitHub release with `gh`. Ad-hoc signed until there's a Developer ID
-  (then set `APPLE_SIGNING_IDENTITY` / `APPLE_ID` / `APPLE_PASSWORD` /
-  `APPLE_TEAM_ID` and it signs + notarises).
+  the GitHub release with `gh`. Ad-hoc signed by design: no Apple Developer
+  account / notarisation (the audience is developers; the README explains
+  the one-time Open Anyway). The script would still sign + notarise if
+  `APPLE_SIGNING_IDENTITY` etc. were ever set.
 - **Auto-update** ✅ tauri-plugin-updater + GitHub Releases: daily quiet
   check, update card (Install & Relaunch / Skip This Version), Preferences
   toggle + Check Now; off in dev builds. Key: `~/.tauri/fathom-updater.key`,
@@ -247,11 +248,13 @@ Phase 5 complete.
   opened with ⏎ / Space. Still to do: full keyboard focus order through the
   toolbar, and a real VoiceOver walk-through.
 - Minimum macOS 11 (Big Sur).
-- **Still to do before v1.0**: create the public GitHub repo and the tap
-  repo; merge to `main`; first `--publish` and the cask checksum;
-  screenshots + a landing page (GitHub Pages); Developer ID signing +
-  notarisation when there's an Apple Developer account. (Author email
-  removed from `Cargo.toml`.)
+- **Released** ✅ github.com/jarope/fathom, first releases 0.27.2 / 0.27.3;
+  in-app update verified end to end (0.27.2 → 0.27.3).
+- **Homebrew** ✅ tap `jarope/homebrew-fathom` (Homebrew 7 install steps;
+  `brew trust` once); `release.sh --publish` updates it.
+- **Demo folder** ✅ `scripts/demo.sh` → ~/Fathom Demo (made-up files).
+- **Still to do before v1.0**: screenshots + a landing page (GitHub Pages).
+  No Developer ID / notarisation — decided against.
 
 ## Polish backlog (after feature-complete, before daily-driver)
 Deferred on purpose — features first, then a polish pass.

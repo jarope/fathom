@@ -22,6 +22,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 ROOT=$(pwd)
 REPO="jarope/fathom"
+TAP="jarope/homebrew-fathom"
 
 PUBLISH=0; TARGET="universal-apple-darwin"
 for a in "$@"; do
@@ -105,5 +106,16 @@ if [[ $PUBLISH == 1 ]]; then
     "$OUT/Fathom_${VERSION}_${ARCH}.dmg" "$OUT/Fathom_${VERSION}_${ARCH}.app.tar.gz" \
     "$OUT/Fathom_${VERSION}_${ARCH}.app.tar.gz.sig" "$OUT/latest.json"
   echo "Done: https://github.com/$REPO/releases/tag/v$VERSION"
-  echo "Update the Homebrew cask: version \"$VERSION\", sha256 \"$SHA\"."
+
+  # Homebrew: packaging/homebrew/fathom.rb with this version + checksum, written
+  # straight to the tap repo (no clone needed).
+  echo "Updating Homebrew tap ${TAP}…"
+  CASK=$(sed -e "s/^  version \".*\"/  version \"$VERSION\"/" -e "s/^  sha256 \".*\"/  sha256 \"$SHA\"/" packaging/homebrew/fathom.rb)
+  FILE_SHA=$(gh api "repos/$TAP/contents/Casks/fathom.rb" --jq .sha 2>/dev/null || true)
+  if gh api -X PUT "repos/$TAP/contents/Casks/fathom.rb" -f message="Fathom $VERSION" \
+       -f content="$(printf '%s\n' "$CASK" | base64)" ${FILE_SHA:+-f sha="$FILE_SHA"} >/dev/null; then
+    echo "Homebrew: brew upgrade --cask fathom now gets $VERSION."
+  else
+    echo "Couldn't update the tap; set version \"$VERSION\", sha256 \"$SHA\" in $TAP by hand." >&2
+  fi
 fi

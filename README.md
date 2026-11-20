@@ -17,17 +17,24 @@ Fathom runs on macOS 11 (Big Sur) or later, on Apple Silicon and Intel.
 **Homebrew**
 
 ```bash
-brew install jarope/fathom/fathom
+brew tap jarope/fathom
+brew trust jarope/fathom      # Homebrew 7+ asks you to trust third-party taps once
+brew install --cask fathom
 ```
 
 **Or download** the `.dmg` from
 [Releases](https://github.com/jarope/fathom/releases/latest) and drag
 Fathom to Applications.
 
-Fathom isn't notarised by Apple yet, so the first time you open a downloaded
-copy macOS will refuse. Either right-click Fathom → **Open** → **Open**, or
-go to System Settings → Privacy & Security and click **Open Anyway** (once).
-Homebrew does this for you.
+Fathom is free software and isn't notarised by Apple (that needs a paid
+Apple Developer account), so the first time you open a downloaded copy macOS
+will refuse. Once, either:
+
+- go to System Settings → Privacy & Security and click **Open Anyway**
+  (on macOS 14 and earlier, right-click Fathom → **Open** also works), or
+- in Terminal: `xattr -dr com.apple.quarantine /Applications/Fathom.app`
+
+Homebrew does this for you. Updates after that install without asking.
 
 **Full Disk Access** (optional): to browse folders macOS keeps private —
 Mail, Messages, Safari, Time Machine — turn Fathom on in System Settings →
@@ -324,6 +331,18 @@ tags, signing/notarisation…).
 
 Both wrap `cargo tauri` (needs the Tauri CLI).
 
+**Demo folder**: to try everything (or record a demo, or take screenshots)
+without showing your own files:
+
+```bash
+./scripts/demo.sh            # makes ~/Fathom Demo; --reset recreates it
+```
+
+It's all made up: pictures for Grid thumbnails, documents, a Git project with
+modified / staged / new files, Finder tags, archives, hidden files, a link,
+2,000 log files, and dates spread over two years. Start with
+*Read me first.md* inside it.
+
 **Releasing** (maintainers):
 
 ```bash
@@ -335,10 +354,10 @@ Before releasing: bump `VERSION` (and `Cargo.toml`, `tauri.conf.json`) and add
 the version's section to [`CHANGELOG.md`](CHANGELOG.md) — it becomes the
 release notes and the in-app update text. Update signing uses
 `~/.tauri/fathom-updater.key` (keep a backup; never commit it) with its
-password in the login Keychain (`fathom-updater-key`). Then set the new
-`version` and `sha256` in the Homebrew cask
-([`packaging/homebrew/fathom.rb`](packaging/homebrew/fathom.rb), published in
-the `jarope/homebrew-fathom` tap).
+password in the login Keychain (`fathom-updater-key`). `--publish` also
+writes the Homebrew cask
+([`packaging/homebrew/fathom.rb`](packaging/homebrew/fathom.rb), with the new
+version and checksum) to the `jarope/homebrew-fathom` tap.
 
 ## Layout
 
