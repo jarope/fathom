@@ -44,7 +44,7 @@ you need it.
 **Updates** arrive inside the app (once-a-day check; Preferences → General →
 Updates). They're signed, and Fathom checks the signature before installing.
 
-## What it does today (v0.31.0)
+## What it does today (v0.32.0)
 
 - **Progress & cancel** — copies, moves, duplicates and archive jobs run in the
   background; anything that takes more than a moment gets a card (bottom-right)
@@ -183,6 +183,11 @@ Updates). They're signed, and Fathom checks the signature before installing.
 - **Type-ahead** — type a name's first letters to jump to it.
 - **Folder menu** — right-click empty space for New Folder/File, Paste,
   **Open Terminal Here** (⌥⌘T), Copy folder path, show hidden (⇧⌘.).
+- **Terminal panel** (F4) — your login shell under the files (Dolphin's
+  Konsole panel). It follows the active pane: change folder and it `cd`s
+  there (only while it's waiting at its prompt); `cd` in the shell and the
+  pane follows. Drag its top edge to resize; ⌘K clears; it keeps running
+  while hidden.
 - **Free space** for the current volume in each pane's status bar.
 
 - **Sort** — click any column header (**Name / Folder / Size / Modified**) to
@@ -314,6 +319,7 @@ Defaults below — change any of them in Preferences → Shortcuts.
 | ⌘F / ⌘L | Focus filter / type a path |
 | ⇧⌘. | Show / hide hidden files |
 | ⌥⌘T | Open Terminal here |
+| F4 | Terminal panel |
 | a–z | Jump to name (type-ahead) |
 | ⌘\\ | Toggle single / twin pane |
 | ⌘↑ | Up a folder |
@@ -403,3 +409,5 @@ later version** — see [`LICENSE`](LICENSE). It comes with no warranty.
 
 JetBrains Mono is included under the SIL Open Font License
 ([`src/fonts/JetBrainsMono-OFL.txt`](src/fonts/JetBrainsMono-OFL.txt)).
+xterm.js (the terminal panel) is included under the MIT licence
+([`src/vendor/xterm/LICENSE`](src/vendor/xterm/LICENSE)).

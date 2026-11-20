@@ -18,7 +18,7 @@ Status key: ✅ done · 🟡 partial · ⬜ not started
 | **Filter bar** (Ctrl+I) | Live filter of current folder | ✅ search box filters live; ⏎ searches recursively |
 | **Type-ahead** | Jump to name as you type | ✅ |
 | **Free space** in status bar | ✅ | ✅ |
-| **Open Terminal here** / Terminal panel (F4) | Embedded panel | ✅ opens Terminal.app (⌥⌘T) · ⬜ embedded panel |
+| **Open Terminal here** / Terminal panel (F4) | Embedded panel | ✅ opens Terminal.app (⌥⌘T) · ✅ F4 panel (xterm.js + pty), follows the folder both ways |
 | **Background context menu** | New, paste, terminal, view options | ✅ |
 | **Tabs** (Ctrl+T) | Tabs per window, each optionally split | ✅ ⌘T, each tab single/twin, drop onto tabs |
 | **Places panel** | Home, Desktop, Downloads, devices, network, bookmarks, recent | ✅ favourites, pins, iCloud, volumes + eject, Recent (⇧⌘O), network shares, Bin |

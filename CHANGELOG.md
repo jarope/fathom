@@ -5,6 +5,12 @@ release script uses the section for the version it's building as the release
 notes (and the text shown in the in-app update card), so keep each section
 short and written for people who use Fathom.
 
+## 0.32.0 — 2026-11-20
+
+- **Terminal panel** (F4): your shell under the files. It follows the folder
+  you're in, and a `cd` in the shell takes the pane along. Resizable, keeps
+  running while hidden, ⌘K clears.
+
 ## 0.31.0 — 2026-11-20
 
 - **Folder tree** (F7): the sidebar switches between Places and a folder

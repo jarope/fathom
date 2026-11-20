@@ -79,7 +79,7 @@ pub fn templates_setup(dir: String) -> Result<String, String> {
     std::fs::create_dir_all(&d).map_err(|e| format!("Couldn't create {}: {e}", d.display()))?;
     for (name, body, exec) in STARTERS {
         // ".editorconfig" would be hidden in the menu; ship it visible.
-        let name = if name.starts_with('.') { &name[1..] } else { name };
+        let name = name.strip_prefix('.').unwrap_or(name);
         let p = d.join(name);
         if p.exists() {
             continue;

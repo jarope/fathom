@@ -74,6 +74,13 @@ button { font: inherit; color: inherit; }
 /* ---- Panes ---- */
 .body { flex: 1; min-height: 0; display: flex; }
 .body > .panes { flex: 1; min-width: 0; }
+/* Terminal panel (F4) under the panes */
+.termp { flex: none; position: relative; display: flex; flex-direction: column; min-height: 90px; border-top: 1px solid var(--separator); background: var(--content); }
+.termp[hidden] { display: none; }
+.term-grip { position: absolute; left: 0; right: 0; top: -3px; height: 6px; cursor: row-resize; z-index: 2; }
+.term-host { flex: 1; min-height: 0; padding: 6px 4px 4px 10px; }
+.term-host .xterm { height: 100%; }
+.term-host .xterm-viewport { background: transparent !important; }
 .panes { flex: 1; min-height: 0; display: flex; }
 .pane { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; position: relative; }
 .panes.twin .pane.b { border-left: 1px solid var(--separator); }

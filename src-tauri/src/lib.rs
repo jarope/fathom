@@ -19,6 +19,7 @@ mod bin_ops;
 mod bin_view;
 mod templates;
 mod network;
+mod terminal;
 mod dnd;
 mod git;
 mod query;
@@ -908,6 +909,7 @@ pub fn run() {
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(update::Pending::default())
+        .manage(terminal::Terms::default())
         .manage(std::sync::Arc::new(jobs::Jobs::default()))
         .manage(std::sync::Arc::new(spotlight::Spotlight::default()))
         .manage(std::sync::Arc::new(actions::Actions::default()))
@@ -939,6 +941,12 @@ pub fn run() {
             templates::create_from_template,
             templates::templates_setup,
             network::connect_server,
+            terminal::term_open,
+            terminal::term_write,
+            terminal::term_resize,
+            terminal::term_close,
+            terminal::term_cd,
+            terminal::term_cwd,
             dnd::start_drag,
             dnd::drop_action,
             dnd::classify_paths,
