@@ -11,7 +11,7 @@ import { openContextMenu, showMenu } from "./menu.js";
 import { setActive, openTab } from "./tabs.js";
 import { registerDropZone, startDrag } from "./dnd.js";
 import { loadGit, gitChip } from "./git.js";
-import { usesSpotlight, startSpotlight, cancelSpotlight, searchMenu, placeholder, modeLabel } from "./search.js";
+import { usesSpotlight, startSpotlight, cancelSpotlight, searchMenu, placeholder, modeLabel, addRecent, attachRecent } from "./search.js";
 
 const TEMPLATE = `
   <div class="ptoolbar">
@@ -333,6 +333,7 @@ export function createPane(key) {
     const query = els.search.value.trim();
     if (!query) { P.reload(); return; }
     if (!P.cwd) return;
+    addRecent(query);
     if (usesSpotlight()) { startSpotlight(P, query); return; }
     P.spotResults = false;
     els.searchwrap.classList.add("active");
@@ -394,6 +395,7 @@ export function createPane(key) {
     const r = els.smode.getBoundingClientRect();
     searchMenu(P, r.left, r.bottom + 6);
   });
+  attachRecent(P);
   els.search.addEventListener("keydown", (e) => {
     if (e.key === "Enter") P.runSearch();
     if (e.key === "Escape") { els.search.value = ""; P.reload(); els.search.blur(); }

@@ -202,6 +202,18 @@ Phase 5 complete.
   thumb wheel, or ⇧-scroll) moves the shelf and never the list.
 - All wheel handling lives in `wheel.js`.
 
+**v0.26 — Themes, recent searches**
+- **Colour themes**: one for light mode, one for dark; Solarized, Nord,
+  Dracula, Gruvbox, Catppuccin built in; import base16 (YAML / JSON), VS Code
+  colour themes or Fathom JSON (choose a file or paste). Missing colours are
+  worked out from background + text; the theme's accent is used unless you
+  pick one. Painted before settings load, so no flash at launch.
+- **Custom accent colour** (any colour, via the macOS colour picker).
+- **Recent searches**: the last 10 under the search box (with their mode);
+  ↑ ↓ ⏎, × to forget, Clear; matching ones while typing.
+- Fixed: rows could show in a thin gap between the pinned shelf and the
+  column header (they're now one pinned block).
+
 ### Phase 6 — Public release (v1.0)
 - **Name: keeping "Fathom"** ✅ — Finder → Fathom: it goes deeper into the
   system (Spotlight-powered search), and its features come from a creature of

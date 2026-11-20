@@ -953,6 +953,7 @@ pub fn run() {
             actions::open_terminal,
             actions::config_read,
             actions::config_write,
+            actions::read_text_file,
             actions::run_action,
             actions::cancel_action,
             thumbnail,

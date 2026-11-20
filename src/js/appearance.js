@@ -4,6 +4,7 @@
 
 import { app, invoke } from "./core.js";
 import { prefs, saveSettings } from "./settings.js";
+import { applyTheme, setAccentInline, themeById, themeStyle } from "./themes.js";
 
 export const ACCENTS = ["orange", "indigo", "teal", "graphite"]; // the in-app choices
 // macOS AppleAccentColor → our tuned palette (see theme.css). No value = Multicolour → Orange.
@@ -21,12 +22,18 @@ let lastWinTheme;
 export function applyAppearance() {
   const root = document.documentElement;
   const theme = resolvedTheme();
-  const accent = ACCENTS.includes(prefs.accent) ? prefs.accent : systemAccent();
+  const named = ACCENTS.includes(prefs.accent), custom = /^#[0-9a-f]{6}$/i.test(prefs.accent || "");
+  const accent = named ? prefs.accent : systemAccent();
   root.setAttribute("data-theme", theme);
   root.setAttribute("data-accent", accent);
+  // Colour theme for this mode, then the accent: a colour you picked wins,
+  // else the theme's own accent, else macOS's.
+  const themeAccent = applyTheme(root, theme === "dark" ? prefs.darkTheme : prefs.lightTheme, theme);
+  setAccentInline(root, custom ? prefs.accent : !named && themeAccent ? themeAccent : null);
   try { localStorage.setItem("fathom-look", theme + " " + accent); } catch {}
   const g = Math.min(100, Math.max(50, Number(prefs.glass) || 80));
   root.style.setProperty("--glass-a", String(g / 100));
+  try { localStorage.setItem("fathom-look-style", themeStyle(root)); } catch {}
   root.classList.toggle("rt", !!sys.reduce_transparency);
   root.classList.toggle("hc", !!sys.increase_contrast);
   // Keep the native window (sidebar vibrancy, traffic lights) in the same
@@ -85,4 +92,16 @@ export function followSystem() {
   const [t, a] = (look || "").split(" ");
   document.documentElement.setAttribute("data-theme", t === "light" || t === "dark" ? t : osDark ? "dark" : "light");
   if (a) document.documentElement.setAttribute("data-accent", a);
+  let st = null;
+  try { st = localStorage.getItem("fathom-look-style"); } catch {}
+  if (st) st.split(";").forEach((d) => { const i = d.indexOf(":"); if (i > 0) document.documentElement.style.setProperty(d.slice(0, i).trim(), d.slice(i + 1).trim()); }); // theme colours, custom accent
+}
+
+/** What the accent currently follows, for Preferences. */
+export function accentSource() {
+  if (/^#[0-9a-f]{6}$/i.test(prefs.accent || "")) return "custom";
+  if (ACCENTS.includes(prefs.accent)) return "named";
+  const th = themeById(resolvedTheme() === "dark" ? prefs.darkTheme : prefs.lightTheme);
+  const p = th && th[resolvedTheme()];
+  return p && p.accent ? "theme:" + th.name : "system";
 }

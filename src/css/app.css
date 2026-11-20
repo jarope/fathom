@@ -110,6 +110,21 @@ button { font: inherit; color: inherit; }
 .panes.twin .searchwrap { flex: 2 1 0; }
 .searchwrap.active, .searchwrap:focus-within { box-shadow: 0 0 0 1.5px var(--accent), 0 0 0 4px var(--accent-ring); }
 .searchwrap.filtering { box-shadow: 0 0 0 1.5px var(--accent); }
+.searchwrap { position: relative; }
+.srecent { position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 60; padding: 5px; border-radius: var(--r-card); background: var(--glass-fill); backdrop-filter: blur(24px) saturate(1.4); -webkit-backdrop-filter: blur(24px) saturate(1.4); box-shadow: var(--pop-shadow); }
+.srecent[hidden] { display: none; }
+.sr-head { font: var(--t-sub); letter-spacing: 0.02em; color: var(--text3); text-transform: uppercase; padding: 4px 9px 5px; }
+.sr-item { display: flex; align-items: center; gap: 8px; height: 28px; padding: 0 4px 0 9px; border-radius: var(--r-row); font: var(--t-body); color: var(--text); cursor: default; }
+.sr-item.hi { background: var(--accent); color: var(--on-accent); }
+.sr-q { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sr-mode { flex: none; font: var(--t-callout); color: var(--text3); }
+.sr-item.hi .sr-mode { color: inherit; opacity: 0.8; }
+.sr-x { flex: none; width: 22px; height: 22px; border: none; border-radius: 50%; background: transparent; color: var(--text3); font-size: 15px; line-height: 1; cursor: pointer; visibility: hidden; }
+.sr-item:hover .sr-x, .sr-item.hi .sr-x { visibility: visible; }
+.sr-item.hi .sr-x { color: inherit; }
+.sr-x:hover { background: var(--sel-quiet); color: var(--text); }
+.sr-clear { display: block; width: 100%; margin-top: 3px; padding: 6px 9px; border: none; border-top: 1px solid var(--separator); background: none; text-align: left; font: var(--t-callout); color: var(--text2); cursor: pointer; border-radius: 0 0 var(--r-row) var(--r-row); }
+.sr-clear:hover { color: var(--text); }
 .search { flex: 1; min-width: 0; border: none; background: transparent; outline: none; font: var(--t-body); color: var(--text); caret-color: var(--accent); -webkit-user-select: text; user-select: text; }
 .search::placeholder { color: var(--text3); }
 .smode { flex: none; display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 6px; border: none; border-radius: var(--r-cap); background: transparent; color: var(--text3); cursor: pointer; }
@@ -123,8 +138,10 @@ button { font: inherit; color: inherit; }
 .listing::after { content: ""; display: block; height: 44px; } /* always some empty space for the folder menu */
 .listing.drop-target { box-shadow: inset 0 0 0 2px var(--accent); }
 .head, .row { display: grid; gap: 12px; align-items: center; padding: 0 10px; grid-template-columns: var(--cols, minmax(150px, 1fr) 84px 140px); }
+/* Details: shelf + column header, pinned together at the top */
+.dtop { position: sticky; top: 0; z-index: 3; margin: 0 -6px; background: var(--content); }
 .head {
-  position: sticky; top: 0; z-index: 2; height: 30px; margin: 0 -6px; padding: 0 16px;
+  height: 30px; padding: 0 16px;
   background: var(--content); border-bottom: 1px solid var(--separator);
   font: var(--t-sub); letter-spacing: 0.02em; color: var(--text3);
 }
@@ -303,8 +320,7 @@ img.ki.fi { object-fit: contain; display: block; }
 .tab .tclose:hover, .tabadd:hover { color: var(--text); background: var(--sel-quiet); }
 
 /* ---- Folder shelf: sub-folders as one horizontal strip above the files ---- */
-.shelf { position: sticky; top: 0; z-index: 3; background: var(--content); display: flex; gap: 2px; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; padding: 10px 2px 8px; margin: 0 -6px; padding-left: 8px; border-bottom: 1px solid var(--separator); }
-.shelf ~ .head { top: var(--shelf-h, 0px); }
+.shelf { display: flex; gap: 2px; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; padding: 10px 2px 8px; padding-left: 8px; border-bottom: 1px solid var(--separator); }
 .row.tile { display: flex; flex-direction: column; align-items: center; gap: 5px; width: calc(var(--shelf-ic, 46px) + 52px); height: auto; flex: none; padding: 9px 5px 8px; border-radius: var(--r-card); position: relative; content-visibility: visible; }
 .row.tile > svg { width: var(--shelf-ic, 46px); height: var(--shelf-ic, 46px); color: var(--k-folder); pointer-events: none; }
 .row.tile .nm { font: var(--t-callout); text-align: center; color: var(--text); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; pointer-events: none; }
@@ -459,6 +475,19 @@ textarea.pf-cmd { height: auto; padding: 7px 9px; resize: vertical; font: var(--
 .pf-swatch { width: 22px; height: 22px; border-radius: 50%; border: none; cursor: pointer; background: var(--sw); box-shadow: inset 0 0 0 1px var(--separator); position: relative; }
 .pf-swatch.on { box-shadow: 0 0 0 2px var(--content), 0 0 0 4px var(--sw); }
 .pf-swatch.sys { background: var(--sw-system); }
+.pf-swatch.custom { overflow: hidden; }
+.pf-swatch.custom input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; border: none; padding: 0; }
+.pf-themes { display: flex; flex-direction: column; gap: 8px; padding-top: 2px; }
+.pf-trow { display: flex; align-items: center; gap: 10px; }
+.pf-tl { width: 40px; font: var(--t-callout); color: var(--text2); }
+.pf-tlist { display: flex; flex-direction: column; gap: 2px; }
+.pf-titem { display: flex; align-items: center; gap: 8px; font: var(--t-callout); color: var(--text); padding: 2px 0; }
+.pf-tmode { color: var(--text3); }
+.pf-tx { margin-left: auto; width: 20px; height: 20px; border: none; border-radius: 50%; background: none; color: var(--text3); font-size: 14px; cursor: pointer; }
+.pf-tx:hover { background: var(--sel-quiet); color: var(--text); }
+.pf-import { display: flex; flex-direction: column; gap: 10px; }
+.pf-ta { width: 100%; height: 220px; resize: vertical; font: var(--t-mono); font-size: 11px; color: var(--text); background: var(--content); border: none; border-radius: var(--r-row); box-shadow: 0 0 0 1px var(--edge); padding: 10px; box-sizing: border-box; }
+.pf-ta:focus { outline: none; box-shadow: 0 0 0 1.5px var(--accent), 0 0 0 4px var(--accent-ring); }
 .pf-note { font: var(--t-callout); color: var(--text3); }
 .pf-note.warn, .pf-err { color: var(--danger); font: var(--t-callout); }
 .pf-err:empty, .sc-msg:empty { display: none; }

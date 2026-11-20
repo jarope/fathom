@@ -100,7 +100,7 @@ function columnMenu(x, y) {
 // ---- The view ----
 export function createDetails(P) {
   const L = P.els.listing;
-  let vbody = null, nDirs = 0, rows = new Map(), cols = [], paintQueued = 0, shelfObs = null;
+  let vbody = null, nDirs = 0, rows = new Map(), cols = [], paintQueued = 0;
 
   // Name fills the spare room until you size it; then it's fixed and an empty
   // track at the end takes up the slack. Too wide for the pane → scroll sideways.
@@ -239,19 +239,17 @@ export function createDetails(P) {
     if (app.folderShelf && P.mode === "browse") {
       while (nDirs < P.entries.length && isFolder(P.entries[nDirs]) && !(P.entries[nDirs].depth > 0)) nDirs++;
     }
+    // The shelf and the column header stay put together at the top while the
+    // files scroll under them (one sticky block, so no gap can open between).
+    const top = el("div", "dtop");
     if (nDirs) {
-      // The shelf stays put at the top while the files scroll under it; the
-      // column header sits just below it (--shelf-h).
       const s = el("div", "shelf");
       for (let i = 0; i < nDirs; i++) s.append(tile(i));
-      L.append(s);
-      const fit = () => L.style.setProperty("--shelf-h", s.offsetHeight + "px");
-      fit();
-      if (shelfObs) shelfObs.disconnect();
-      shelfObs = new ResizeObserver(fit); shelfObs.observe(s);
-    } else L.style.setProperty("--shelf-h", "0px");
+      top.append(s);
+    }
+    if (nDirs < P.entries.length) top.append(head());
+    L.append(top);
     if (nDirs < P.entries.length) {
-      L.append(head());
       vbody = el("div", "vbody");
       vbody.style.height = (P.entries.length - nDirs) * ROW_H + "px";
       L.append(vbody);
@@ -265,7 +263,7 @@ export function createDetails(P) {
     if (i < 0 || i >= P.entries.length) return;
     if (i < nDirs) { const t = L.querySelector(`.tile[data-i="${i}"]`); if (t) t.scrollIntoView({ block: "nearest", inline: "nearest" }); return; }
     if (!vbody) return;
-    const headH = (L.querySelector(".head") || { offsetHeight: 0 }).offsetHeight + (L.querySelector(".shelf") || { offsetHeight: 0 }).offsetHeight;
+    const headH = (L.querySelector(".dtop") || { offsetHeight: 0 }).offsetHeight;
     const y = vbody.offsetTop + (i - nDirs) * ROW_H;
     if (y - headH < L.scrollTop) L.scrollTop = y - headH;
     else if (y + ROW_H > L.scrollTop + L.clientHeight) L.scrollTop = y + ROW_H - L.clientHeight;

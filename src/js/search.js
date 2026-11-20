@@ -49,6 +49,75 @@ export async function runSaved(P, s) {
   P.runSearch();
 }
 
+// ---- Recent searches (the last 10, under the search box) ----
+// Shown when the empty box gets focus or you press ↓ in it; while typing,
+// the ones that contain what you've typed. Click / ⏎ runs one again (with
+// the mode it ran in), × forgets it.
+const RECENT_MAX = 10;
+export let recent = store.get("fathom-recent-searches", []);
+const saveRecent = () => store.set("fathom-recent-searches", recent);
+const sameSearch = (a, b) => a.query === b.query && !!a.contents === !!b.contents && !!a.mac === !!b.mac;
+
+export function addRecent(query) {
+  const s = { query, contents: searchMode.contents, mac: searchMode.mac };
+  recent = [s, ...recent.filter((r) => !sameSearch(r, s))].slice(0, RECENT_MAX);
+  saveRecent();
+}
+export function forgetRecent(s) { recent = recent.filter((r) => !sameSearch(r, s)); saveRecent(); }
+
+export function attachRecent(P) {
+  const input = P.els.search, wrap = P.els.searchwrap;
+  const pop = el("div", "srecent"); pop.hidden = true;
+  wrap.append(pop);
+  let items = [], hi = -1;
+  const close = () => { pop.hidden = true; hi = -1; };
+  const run = (s) => {
+    close();
+    Object.assign(searchMode, { contents: !!s.contents, mac: !!s.mac }); saveMode(); syncPanes();
+    input.value = s.query;
+    P.runSearch();
+  };
+  const paintHi = () => pop.querySelectorAll(".sr-item").forEach((n, i) => n.classList.toggle("hi", i === hi));
+  const open = (force = false) => {
+    const q = input.value.trim().toLowerCase();
+    items = q ? recent.filter((r) => r.query.toLowerCase().includes(q) && r.query.toLowerCase() !== q) : recent.slice();
+    if (!items.length || (!force && q && P.mode === "search")) { close(); return; }
+    pop.replaceChildren(el("div", "sr-head", "Recent searches"));
+    items.forEach((s, i) => {
+      const r = el("div", "sr-item");
+      r.append(el("span", "sr-q", s.query));
+      const m = modeLabel(s); if (m) r.append(el("span", "sr-mode", m));
+      const x = el("button", "sr-x", "×"); x.type = "button"; x.title = "Forget this search"; x.setAttribute("aria-label", "Forget this search");
+      x.addEventListener("click", (e) => { e.stopPropagation(); forgetRecent(s); open(true); });
+      r.append(x);
+      r.addEventListener("click", () => run(s));
+      r.addEventListener("mouseenter", () => { hi = i; paintHi(); });
+      pop.append(r);
+    });
+    const clear = el("button", "sr-clear", "Clear recent searches"); clear.type = "button";
+    clear.addEventListener("click", (e) => { e.stopPropagation(); recent = []; saveRecent(); close(); });
+    pop.append(clear);
+    hi = -1; pop.hidden = false;
+  };
+  pop.addEventListener("mousedown", (e) => e.preventDefault()); // keep focus in the box
+  input.addEventListener("focus", () => { if (!input.value.trim()) open(); });
+  input.addEventListener("blur", close);
+  input.addEventListener("input", () => open());
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (pop.hidden) { open(true); if (pop.hidden) return; }
+      hi = Math.min(items.length - 1, hi + 1); paintHi(); e.stopImmediatePropagation();
+    } else if (e.key === "ArrowUp" && !pop.hidden) {
+      e.preventDefault(); hi = Math.max(-1, hi - 1); paintHi(); e.stopImmediatePropagation();
+    } else if (e.key === "Enter" && !pop.hidden && hi >= 0) {
+      e.preventDefault(); e.stopImmediatePropagation(); run(items[hi]);
+    } else if (e.key === "Escape" && !pop.hidden) {
+      e.preventDefault(); e.stopImmediatePropagation(); close();
+    } else if (e.key === "Enter") close();
+  }, true);
+}
+
 // ---- The 🔍 menu ----
 export function searchMenu(P, x, y) {
   const set = (k, v) => { searchMode[k] = v; saveMode(); syncPanes(); P.els.search.focus(); };

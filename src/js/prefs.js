@@ -7,7 +7,8 @@ import { prefs, saveSettings, settingsProblem } from "./settings.js";
 import { actions, actionsProblem, saveActions, loadActions, EXAMPLES } from "./actions.js";
 import { allCommands, keysFor, keyLabel, comboOf, rebuildKeymap, commandFor, RESERVED, isFixed } from "./keys.js";
 import { toggleHidden, toggleShelf } from "./view.js";
-import { ACCENTS, applyAppearance, followSystem, systemAccent } from "./appearance.js";
+import { ACCENTS, applyAppearance, followSystem, systemAccent, accentSource } from "./appearance.js";
+import { themesFor, allThemes, BUILTIN, parseTheme, addTheme, removeTheme } from "./themes.js";
 
 const TERMINALS = ["Terminal", "iTerm", "Ghostty", "Warp"];
 const redrawPanes = () => app.tabs.forEach((t) => t.panes.forEach((p) => p.cwd && p.mode === "browse" && p.renderList()));
@@ -60,9 +61,13 @@ function general() {
   const sw = el("div", "pf-swatches");
   const cap = (s) => s[0].toUpperCase() + s.slice(1);
   const accentNote = note("");
+  const isCustom = () => /^#[0-9a-f]{6}$/i.test(prefs.accent || "");
   const paintSw = () => {
-    sw.querySelectorAll(".pf-swatch").forEach((b) => b.classList.toggle("on", b.dataset.v === (ACCENTS.includes(prefs.accent) ? prefs.accent : "system")));
-    accentNote.textContent = ACCENTS.includes(prefs.accent) ? cap(prefs.accent) : `Following macOS: ${cap(systemAccent())}`;
+    const cur = isCustom() ? "custom" : ACCENTS.includes(prefs.accent) ? prefs.accent : "system";
+    sw.querySelectorAll(".pf-swatch").forEach((b) => b.classList.toggle("on", b.dataset.v === cur));
+    const src = accentSource();
+    accentNote.textContent = src === "custom" ? `Custom ${prefs.accent.toUpperCase()}` : src === "named" ? cap(prefs.accent)
+      : src.startsWith("theme:") ? `The theme's own (${src.slice(6)})` : `Following macOS: ${cap(systemAccent())}`;
   };
   [["system", "Match macOS (System Settings › Appearance)"], ...ACCENTS.map((a) => [a, cap(a)])].forEach(([v, t]) => {
     const b = el("button", "pf-swatch" + (v === "system" ? " sys" : "")); b.type = "button"; b.dataset.v = v; b.title = t; b.setAttribute("aria-label", t);
@@ -71,8 +76,45 @@ function general() {
     b.addEventListener("click", () => { prefs.accent = v; saveSettings(); applyAppearance(); paintSw(); });
     sw.append(b);
   });
+  // Custom: any colour (the macOS colour picker).
+  const cw = el("label", "pf-swatch custom"); cw.dataset.v = "custom"; cw.title = "Custom colour…";
+  const pick = el("input"); pick.type = "color"; pick.value = isCustom() ? prefs.accent : "#3f76de"; pick.setAttribute("aria-label", "Custom accent colour");
+  cw.style.setProperty("--sw", isCustom() ? prefs.accent : "conic-gradient(#ff453a, #ffd60a, #34c759, #0a84ff, #af52de, #ff453a)");
+  pick.addEventListener("input", () => { prefs.accent = pick.value; cw.style.setProperty("--sw", pick.value); applyAppearance(); paintSw(); });
+  pick.addEventListener("change", () => saveSettings());
+  cw.append(pick); sw.append(cw);
   sw.append(accentNote); paintSw();
   box.append(field("Accent colour", sw));
+
+  // Colour themes: one for light mode, one for dark (Fathom keeps following macOS).
+  const tbox = el("div", "pf-themes");
+  const drawThemes = () => {
+    tbox.replaceChildren();
+    const row = (label, mode, key) => {
+      const r = el("div", "pf-trow");
+      r.append(el("span", "pf-tl", label), select([["", "Fathom"], ...themesFor(mode)], prefs[key] || "", (v) => { prefs[key] = v; saveSettings(); applyAppearance(); paintSw(); }));
+      return r;
+    };
+    tbox.append(row("Light", "light", "lightTheme"), row("Dark", "dark", "darkTheme"));
+    const btns = el("div", "pf-inline");
+    const imp = el("button", "mbtn small", "Import Theme…"); imp.type = "button";
+    imp.addEventListener("click", async () => { if (await importThemeDialog()) { drawThemes(); applyAppearance(); paintSw(); } });
+    btns.append(imp); tbox.append(btns);
+    const mine = allThemes().filter((t) => !BUILTIN.includes(t));
+    if (mine.length) {
+      const list = el("div", "pf-tlist");
+      mine.forEach((t) => {
+        const it = el("div", "pf-titem");
+        it.append(el("span", null, t.name), el("span", "pf-tmode", [t.light && "light", t.dark && "dark"].filter(Boolean).join(" + ")));
+        const x = el("button", "pf-tx", "×"); x.type = "button"; x.title = `Remove “${t.name}”`;
+        x.addEventListener("click", () => { removeTheme(t.id); drawThemes(); applyAppearance(); paintSw(); });
+        it.append(x); list.append(it);
+      });
+      tbox.append(list);
+    }
+  };
+  drawThemes();
+  box.append(field("Colour theme", tbox, note("Solarized, Nord, Dracula, Gruvbox and Catppuccin are built in. Import a base16 scheme (YAML / JSON), a VS Code colour theme (.json from an extension's themes folder), or a Fathom theme file.")));
   const rng = el("input"); rng.type = "range"; rng.min = 50; rng.max = 100; rng.step = 5; rng.value = prefs.glass;
   const out = el("output", null, prefs.glass + "%");
   rng.addEventListener("input", () => { prefs.glass = +rng.value; out.textContent = rng.value + "%"; applyAppearance(); });
@@ -278,4 +320,44 @@ export async function openPrefs(tab = "general") {
   await modal({ title: "Preferences", body, wide: true, buttons: [{ label: "Done", value: true, primary: true }], enterSubmits: false });
   if (cur && cur.cleanup) cur.cleanup();
   open = false;
+}
+
+// ---------------------------------------------------------------- theme import
+/** Paste or choose a theme file; keeps it and switches to it. Resolves true if imported. */
+async function importThemeDialog() {
+  const body = el("div", "pf-import");
+  const ta = el("textarea", "pf-ta"); ta.spellcheck = false;
+  ta.placeholder = "Paste a theme here — base16 YAML / JSON, a VS Code colour theme, or Fathom JSON…";
+  const choose = el("button", "mbtn small", "Choose File…"); choose.type = "button";
+  const status = el("div", "pf-note");
+  let parsed = null, fileName = "";
+  const check = () => {
+    parsed = null;
+    if (!ta.value.trim()) { status.textContent = ""; if (modal.setEnabled) modal.setEnabled(false); return; }
+    try {
+      parsed = parseTheme(ta.value, fileName);
+      status.textContent = `Found “${parsed.name}” — ${[parsed.light && "light", parsed.dark && "dark"].filter(Boolean).join(" and ")}`;
+      status.classList.remove("warn");
+    } catch (e) { status.textContent = "⚠ " + e.message; status.classList.add("warn"); }
+    if (modal.setEnabled) modal.setEnabled(!!parsed);
+  };
+  ta.addEventListener("input", () => { fileName = ""; check(); });
+  choose.addEventListener("click", async () => {
+    if (!dialog) return;
+    const p = await dialog.open({ title: "Import Theme", multiple: false, directory: false, filters: [{ name: "Themes", extensions: ["json", "jsonc", "yaml", "yml"] }] });
+    if (typeof p !== "string") return;
+    try { ta.value = await invoke("read_text_file", { path: p }); fileName = p; check(); }
+    catch (e) { status.textContent = "⚠ " + e; status.classList.add("warn"); }
+  });
+  const top = el("div", "pf-inline"); top.append(choose);
+  body.append(top, ta, status);
+  setTimeout(() => { if (modal.setEnabled) modal.setEnabled(false); }, 0);
+  const ok = await modal({ title: "Import Theme", body, wide: true, enterSubmits: false, focus: ta,
+    buttons: [{ label: "Cancel", value: null }, { label: "Import", value: true, primary: true }] });
+  if (!ok || !parsed) return false;
+  const id = addTheme(parsed);
+  if (parsed.light) prefs.lightTheme = id;
+  if (parsed.dark) prefs.darkTheme = id;
+  saveSettings();
+  return true;
 }

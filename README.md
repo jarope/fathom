@@ -10,7 +10,7 @@ native ES modules in `src/js/`, no npm, no bundler). The look follows
 [`DESIGN.md`](DESIGN.md): neutral greys, one accent colour, macOS glass on the
 sidebar and popovers, the system font plus JetBrains Mono.
 
-## What it does today (v0.25.0)
+## What it does today (v0.26.0)
 
 - **Progress & cancel** — copies, moves, duplicates and archive jobs run in the
   background; anything that takes more than a moment gets a card (bottom-right)
@@ -178,7 +178,9 @@ sidebar and popovers, the system font plus JetBrains Mono.
 - **Move to Bin** — highlight and press **⌫** or **Delete** (or right-click).
   Uses the **real macOS Trash — recoverable**, never a hard delete.
 - **Search within a pane's folder** — type in its search box (wildcards `*` `?`
-  ok), ⏎ to run, Esc back to browsing.
+  ok), ⏎ to run, Esc back to browsing. **Recent searches**: click into the
+  empty box (or press ↓) for your last 10, with the mode each ran in; ↑ ↓ ⏎
+  to run one again, **×** to forget one. While typing, matching ones show.
 - **Open / Reveal / Copy path**, a **Hidden files** toggle (◌ in the header, remembered), and a
   **light / dark** switch (◐).
 - **Details view** — click a folder's ▸ (or press → / ←) to open it in place
@@ -222,8 +224,17 @@ sidebar and popovers, the system font plus JetBrains Mono.
 - **Rubber-band selection** — drag from empty space to select a box of files
   (⌘ / ⇧ adds to the selection), in Grid and Details.
 - **Appearance** (Preferences → General) — Match the system / Light / Dark;
-  accent colour follows your macOS accent, or pick Orange, Indigo, Teal or
-  Graphite; glass opacity 50–100%. Respects **Reduce Transparency** and
+  accent colour follows your macOS accent, or pick Orange, Indigo, Teal,
+  Graphite or **any colour** (the rainbow swatch opens the colour picker);
+  glass opacity 50–100%.
+- **Colour themes** (Preferences → General → Colour theme) — choose one for
+  light mode and one for dark; Fathom keeps following macOS's switch.
+  Solarized, Nord, Dracula, Gruvbox and Catppuccin are built in. **Import
+  Theme…** takes a **base16** scheme (YAML or JSON — there are hundreds), a
+  **VS Code colour theme** (the `.json` in an extension's `themes/` folder,
+  e.g. `~/.vscode/extensions/*/themes/`), or a Fathom theme
+  (`{"name": …, "dark": {"background": …, "text": …, "accent": …}}`) — choose
+  the file or paste it. A theme brings its own accent unless you've picked one. Respects **Reduce Transparency** and
   **Increase Contrast**. The sidebar is real macOS glass (window vibrancy), so
   Fathom ships outside the Mac App Store. Every file kind has its own icon
   and tint; the toolbar shows the current folder's name.

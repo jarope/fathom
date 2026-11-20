@@ -230,3 +230,13 @@ mod tests {
         assert!(config_path("settings.json").unwrap().ends_with(".config/fathom/settings.json"));
     }
 }
+
+/// Read a small text file the user picked (e.g. a theme to import). Capped at 1 MB.
+#[tauri::command]
+pub fn read_text_file(path: String) -> Result<String, String> {
+    let md = std::fs::metadata(&path).map_err(|e| format!("Can't read {path}: {e}"))?;
+    if md.len() > 1_000_000 {
+        return Err("That file is too big to be a theme (over 1 MB).".into());
+    }
+    std::fs::read_to_string(&path).map_err(|e| format!("Can't read {path}: {e}"))
+}
