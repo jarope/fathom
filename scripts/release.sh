@@ -98,7 +98,7 @@ echo "Built into $OUT:"; ls -1 "$OUT"
 echo "DMG sha256: $SHA   (for the Homebrew cask)"
 
 if [[ $PUBLISH == 1 ]]; then
-  echo "Publishing v$VERSION to github.com/$REPO…"
+  echo "Publishing v${VERSION} to github.com/${REPO}…"
   git tag -a "v$VERSION" -m "Fathom $VERSION" 2>/dev/null || echo "(tag v$VERSION already exists)"
   git push origin "v$VERSION"
   gh release create "v$VERSION" --repo "$REPO" --title "Fathom $VERSION" --notes-file "$OUT/notes.md" \
