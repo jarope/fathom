@@ -10,6 +10,7 @@ import { toggleHidden, toggleShelf } from "./view.js";
 import { ACCENTS, applyAppearance, followSystem, systemAccent, accentSource } from "./appearance.js";
 import { themesFor, allThemes, BUILTIN, parseTheme, addTheme, removeTheme } from "./themes.js";
 import { checkForUpdates } from "./updates.js";
+import { templatesField } from "./templates.js";
 
 const TERMINALS = ["Terminal", "iTerm", "Ghostty", "Warp"];
 const redrawPanes = () => app.tabs.forEach((t) => t.panes.forEach((p) => p.cwd && p.mode === "browse" && p.renderList()));
@@ -126,6 +127,8 @@ function general() {
   const sample = Math.floor(Date.now() / 1000) - 3600 * 26;
   const dateOpts = [["iso", "ISO"], ["locale", "System style"], ["relative", "Relative"]].map(([v, l]) => [v, `${l} — ${fmtDate(sample, v)}`]);
   box.append(field("Dates", select(dateOpts, prefs.dateFormat, (v) => { prefs.dateFormat = v; saveSettings(); redrawPanes(); })));
+
+  box.append(templatesField(field, note, () => saveSettings()));
 
   box.append(field("Terminal app", select(TERMINALS.map((t) => [t, t]), prefs.terminal, (v) => { prefs.terminal = v; saveSettings(); }),
     note("Used by Open Terminal Here and actions that run in a terminal.")));

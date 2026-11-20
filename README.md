@@ -44,7 +44,7 @@ you need it.
 **Updates** arrive inside the app (once-a-day check; Preferences → General →
 Updates). They're signed, and Fathom checks the signature before installing.
 
-## What it does today (v0.28.0)
+## What it does today (v0.29.0)
 
 - **Progress & cancel** — copies, moves, duplicates and archive jobs run in the
   background; anything that takes more than a moment gets a card (bottom-right)
@@ -101,6 +101,10 @@ Updates). They're signed, and Fathom checks the signature before installing.
 - **Create & rename** — **New Folder** (⇧⌘N, F10, ＋ next to Up, or right-click) and
   **New Text File** (⌥⌘N) drop straight into an inline rename; **F2** renames
   in place (the name is pre-selected without its extension). Never overwrites.
+- **New from Template** (right-click) — anything in `~/Templates` (or the
+  folder set in Preferences) is copied in and renamed in place. No folder
+  yet? The menu sets one up with starters (Markdown, shell and Python
+  scripts, HTML, JSON…).
 - **Clipboard** — **⌘X / ⌘C / ⌘V** cut, copy and paste between folders and
   panes (cut items dim until pasted); **⌘D** duplicates in place; right-click a
   folder → *Paste into folder*.

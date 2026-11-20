@@ -17,6 +17,7 @@ mod appearance;
 mod archive;
 mod bin_ops;
 mod bin_view;
+mod templates;
 mod dnd;
 mod git;
 mod query;
@@ -929,6 +930,9 @@ pub fn run() {
             bin_view::bin_origins,
             bin_view::bin_delete,
             bin_view::bin_empty,
+            templates::templates,
+            templates::create_from_template,
+            templates::templates_setup,
             dnd::start_drag,
             dnd::drop_action,
             dnd::classify_paths,

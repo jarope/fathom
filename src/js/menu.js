@@ -16,6 +16,7 @@ import { actionEntries } from "./actions.js";
 import { openPrefs } from "./prefs.js";
 import { getInfo } from "./info.js";
 import { isBinDir, binItemMenu, emptyBin } from "./bin.js";
+import { templateEntries } from "./templates.js";
 
 let ctx, sub, subTimer = null;
 
@@ -168,6 +169,7 @@ export function openContextMenu(P, x, y) {
     showMenu([
       { label: "New Folder", fn: () => P.newItem(true), key: keyHint("newFolder") },
       { label: "New Text File", fn: () => P.newItem(false), key: keyHint("newFile") },
+      { label: "New from Template", sub: () => templateEntries(P) },
       "sep",
       { label: clip ? `Paste ${plural(clip.paths.length, "item")}` : "Paste", fn: () => paste(P), key: keyHint("paste") },
       { label: "Move Here (from clipboard)", fn: () => paste(P, null, { move: true }), key: keyHint("moveHere") },
@@ -207,6 +209,7 @@ export function openContextMenu(P, x, y) {
     "sep",
     P.mode === "browse" && { label: "New Folder", fn: () => P.newItem(true), key: keyHint("newFolder") },
     P.mode === "browse" && { label: "New Text File", fn: () => P.newItem(false), key: keyHint("newFile") },
+    P.mode === "browse" && { label: "New from Template", sub: () => templateEntries(P) },
     "sep",
     { label: "Cut", fn: () => setClip(P, true), key: keyHint("cut") },
     { label: "Copy", fn: () => setClip(P, false), key: keyHint("copy") },

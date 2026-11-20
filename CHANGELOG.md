@@ -5,6 +5,12 @@ release script uses the section for the version it's building as the release
 notes (and the text shown in the in-app update card), so keep each section
 short and written for people who use Fathom.
 
+## 0.29.0 — 2026-11-20
+
+- **New from Template** (right-click): files and folders in `~/Templates`
+  become one-click new items. Fathom can set the folder up with starter
+  templates; Preferences → General can point it somewhere else.
+
 ## 0.28.0 — 2026-11-20
 
 - **The Bin** in the sidebar: browse it, **Put Back** items to where they

@@ -477,6 +477,7 @@ input[type="checkbox"], input[type="radio"], input[type="range"] { accent-color:
 .pf-label { font: var(--t-body); color: var(--text2); padding-top: 7px; text-align: right; }
 .pf-ctl { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .pf-inline { display: flex; gap: 6px; align-items: center; }
+.pf-path { font: var(--t-callout); font-family: var(--mono, ui-monospace, monospace); color: var(--text2); padding-right: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .pf-inline.off { display: none; }
 .pf-input, .pf-select { min-width: 0; flex: 1; height: 30px; padding: 0 9px; font: var(--t-body); }
 .pf-select { flex: none; max-width: 100%; }

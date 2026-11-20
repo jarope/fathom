@@ -10,7 +10,7 @@ Status key: ✅ done · 🟡 partial · ⬜ not started
 | Area | Dolphin | Fathom |
 | --- | --- | --- |
 | **Split view** (F3) | Two panes, independent | ✅ twin pane (⌘\\) |
-| **Create new** | Folder (F10), file from templates | ✅ folder (⇧⌘N / F10 / ＋), text file (⌥⌘N) · ⬜ templates |
+| **Create new** | Folder (F10), file from templates | ✅ folder (⇧⌘N / F10 / ＋), text file (⌥⌘N), New from Template (~/Templates) |
 | **Rename** | Inline (F2), batch rename | ✅ inline F2 · ✅ batch rename with preview |
 | **Clipboard** | Cut / copy / paste, paste into folder | ✅ ⌘X ⌘C ⌘V, paste into folder, Finder pasteboard both ways, ⌥⌘V move |
 | **Duplicate** | Ctrl+D | ✅ ⌘D |
