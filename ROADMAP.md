@@ -26,7 +26,7 @@ Status key: ✅ done · 🟡 partial · ⬜ not started
 | **View modes** | Icons, Compact, Details, Columns (back in 2026) | ✅ Details (expandable), Grid, Columns |
 | **Zoom** | Ctrl+wheel / slider | ✅ window zoom (⌘+ / ⌘−, scroll over Aa), grid and shelf icon size (pinch / ⌘-scroll, slider) |
 | **Expandable folders** in details view | Tree in list | ✅ |
-| **Folders panel** | Tree sidebar | ⬜ |
+| **Folders panel** | Tree sidebar | ✅ F7: sidebar Places ⇄ Folders tree, follows the current folder, takes drops |
 | **Information panel** | Preview + metadata of selection | ✅ F11 panel: Quick Look picture, metadata, folder size |
 | **Auto-refresh** | Watches folders (KDirWatch) | ✅ FSEvents via `notify` |
 | **Progress / cancel** for long ops | KIO job tracker | ✅ job cards: bar, speed, ETA, cancel |

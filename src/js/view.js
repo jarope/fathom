@@ -5,6 +5,7 @@ import { app, store } from "./core.js";
 import { showMenu } from "./menu.js";
 import { setView } from "./tabs.js";
 import { renderSidebar } from "./sidebar.js";
+import { invalidateTree } from "./foldertree.js";
 import { toggleTheme } from "./appearance.js";
 import { binLabel } from "./bin.js";
 
@@ -30,6 +31,7 @@ export function toggleHidden() {
   store.set("fathom-hidden", app.showHidden ? 1 : 0);
   document.getElementById("hiddenToggle").classList.toggle("on", app.showHidden);
   app.tabs.forEach((t) => t.panes.forEach((p) => p.setHidden(app.showHidden)));
+  invalidateTree(); if (app.sideMode === "folders") renderSidebar();
 }
 
 export function toggleShelf() {

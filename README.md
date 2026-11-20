@@ -44,7 +44,7 @@ you need it.
 **Updates** arrive inside the app (once-a-day check; Preferences → General →
 Updates). They're signed, and Fathom checks the signature before installing.
 
-## What it does today (v0.30.0)
+## What it does today (v0.31.0)
 
 - **Progress & cancel** — copies, moves, duplicates and archive jobs run in the
   background; anything that takes more than a moment gets a card (bottom-right)
@@ -88,6 +88,10 @@ Updates). They're signed, and Fathom checks the signature before installing.
   menu. Drop files onto a place to move them there (⌥ to copy).
   **Recent** (⇧⌘O) lists the last 15 folders you were in (⌘-click for a new
   tab). Network shares get a globe icon.
+- **Folder tree** (F7, or *Folders* at the top of the sidebar) — Dolphin's
+  Folders panel: a tree rooted at Home (or the volume / disk you're on),
+  opened down to the current folder. Click a name to go there, the › to open
+  it, ⌘-click for a new tab; ← → ↑ ↓ ⏎ work; drop files on any folder.
 - **Connect to Server** (⌘K, or the sidebar) — smb://, afp://, nfs:// or
   WebDAV (https://). macOS mounts it with its own login prompt and Keychain;
   Fathom opens it and remembers the last 10 servers.
@@ -315,6 +319,7 @@ Defaults below — change any of them in Preferences → Shortcuts.
 | ⌘↑ | Up a folder |
 | ⇧⌘R / ⌥⇧⌘R | Open Location — the selected item's folder, here / in the other pane |
 | ⇧⌘O | Recent folders |
+| F7 | Folder tree ⇄ Places in the sidebar |
 | ⌘K | Connect to Server… |
 | ⌘[ / ⌘] | Back / Forward |
 | ⌘T / ⌘W | New tab / close tab |

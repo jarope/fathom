@@ -5,6 +5,11 @@ release script uses the section for the version it's building as the release
 notes (and the text shown in the in-app update card), so keep each section
 short and written for people who use Fathom.
 
+## 0.31.0 — 2026-11-20
+
+- **Folder tree** (F7): the sidebar switches between Places and a folder
+  tree that follows where you are. Keyboard and drag & drop work in it.
+
 ## 0.30.0 — 2026-11-20
 
 - **Recent** in the sidebar (⇧⌘O): the last 15 folders you were in.

@@ -13,6 +13,7 @@ import { saved, runSaved, removeSaved } from "./search.js";
 import { asButton } from "./a11y.js";
 import { emptyBin } from "./bin.js";
 import { recentMenu, connectToServer } from "./network.js";
+import { renderTree, treeClick, treeKey, invalidateTree } from "./foldertree.js";
 import { trashPaths } from "./ops.js";
 
 let places = null;
@@ -53,10 +54,35 @@ export const placeTargets = () => [
   ...bookmarks.map((b) => ({ name: b.name, path: b.path })),
 ];
 
+/** Places ⇄ Folders (F7). */
+export function setSideMode(mode) {
+  app.sideMode = mode;
+  store.set("fathom-side-mode", mode);
+  if (!app.sidebar) { app.sidebar = true; store.set("fathom-sidebar", true); }
+  renderSidebar();
+}
+
+// Sits above the scrolling list (so it never scrolls away); redrawn in place.
+let swHost = null;
+function switcher() {
+  if (!swHost) { swHost = el("div", "sideswitch"); swHost.setAttribute("role", "tablist"); sb.before(swHost); }
+  const w = swHost; w.innerHTML = "";
+  [["places", "Places"], ["folders", "Folders"]].forEach(([m, l]) => {
+    const b = el("button", "sw" + (app.sideMode === m ? " on" : ""), l); b.type = "button";
+    b.setAttribute("role", "tab"); b.setAttribute("aria-selected", app.sideMode === m ? "true" : "false");
+    b.title = m === "folders" ? "Folder tree (F7)" : "Places (F7)";
+    b.addEventListener("click", () => setSideMode(m));
+    w.append(b);
+  });
+  return w;
+}
+
 export function renderSidebar() {
   sb.classList.toggle("hidden", !app.sidebar);
   document.getElementById("sidebarToggle").classList.toggle("on", app.sidebar);
   sb.innerHTML = "";
+  switcher().hidden = !app.sidebar;
+  if (app.sideMode === "folders") return renderTree(sb);
   if (!places) return;
   const sec = (t) => sb.append(el("div", "side-sec", t));
   const item = (name, path, kind, extra = {}) => {
@@ -113,6 +139,7 @@ export function renderSidebar() {
 /** Highlight the place matching the active pane's folder. */
 export function markActive() {
   if (!sb) return;
+  if (app.sideMode === "folders" && app.sidebar) { if (app.active) invalidateTree(app.active.cwd); renderSidebar(); return; }
   const cwd = app.active && app.active.cwd;
   sb.querySelectorAll(".place").forEach((n) => n.classList.toggle("on", n.dataset.path === cwd));
 }
@@ -133,7 +160,15 @@ export function initSidebar() {
   sb = document.getElementById("sidebar");
   const placeOf = (ev) => ev.target.closest(".place");
 
+  app.sideMode = store.get("fathom-side-mode", "places");
+  const rerender = async (focusPath) => {
+    await renderSidebar();
+    const m = focusPath && [...sb.querySelectorAll(".tnode")].find((x) => x.dataset.path === focusPath);
+    if (m) { sb.querySelectorAll(".tnode").forEach((x) => (x.tabIndex = -1)); m.tabIndex = 0; m.focus(); }
+  };
+  sb.addEventListener("keydown", (ev) => { if (app.sideMode === "folders") treeKey(ev, rerender); });
   sb.addEventListener("click", (ev) => {
+    if (app.sideMode === "folders" && treeClick(ev, rerender)) return;
     const n = placeOf(ev); if (!n) return;
     if (n.dataset.tag) { if (app.active) showTagged(app.active, n.dataset.tag); return; }
     if (n.dataset.search) { if (app.active) runSaved(app.active, saved[+n.dataset.search]); return; }

@@ -21,6 +21,7 @@ import { openPrefs } from "./prefs.js";
 import { getInfo } from "./info.js";
 import { actions, runOnSelection } from "./actions.js";
 import { connectToServer, recentMenu } from "./network.js";
+import { setSideMode } from "./sidebar.js";
 
 function zoomOrIcons(P, dir) {
   if (!P || P.viewMode !== "grid") { zoomStep(dir); return; }
@@ -74,6 +75,7 @@ export const COMMANDS = [
   { id: "prevTab", group: "Tabs & View", label: "Previous Tab", keys: ["Ctrl+Shift+Tab", "Shift+Cmd+BracketLeft"], run: () => cycleTab(-1) },
   { id: "twin", group: "Tabs & View", label: "Single / Twin Pane", keys: ["Cmd+Backslash"], run: () => setView(app.tab.view === "single" ? "twin" : "single") },
   { id: "sidebar", group: "Tabs & View", label: "Sidebar", keys: ["F9", "Ctrl+Cmd+KeyS"], run: (...a) => toggleSidebar(...a) },
+  { id: "folderTree", group: "Tabs & View", label: "Folder tree / Places", keys: ["F7"], run: () => setSideMode(app.sideMode === "folders" ? "places" : "folders") },
   { id: "hidden", group: "Tabs & View", label: "Show Hidden Files", keys: ["Shift+Cmd+Period"], run: (...a) => toggleHidden(...a) },
   { id: "viewGrid", group: "Tabs & View", label: "View as Grid", keys: ["Alt+Cmd+Digit1"], run: (P) => P.setViewMode("grid") },
   { id: "viewDetails", group: "Tabs & View", label: "View as Details", keys: ["Alt+Cmd+Digit2"], run: (P) => P.setViewMode("details") },
