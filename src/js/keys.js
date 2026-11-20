@@ -17,6 +17,7 @@ import { toggleNth, clearTags } from "./tags.js";
 import { commitDialog, push } from "./git.js";
 import { prefs } from "./settings.js";
 import { openPrefs } from "./prefs.js";
+import { getInfo } from "./info.js";
 import { actions, runOnSelection } from "./actions.js";
 
 function zoomOrIcons(P, dir) {
@@ -47,6 +48,7 @@ export const COMMANDS = [
   { id: "undo", group: "Files", label: "Undo", keys: ["Cmd+KeyZ"], run: undo },
   { id: "redo", group: "Files", label: "Redo", keys: ["Shift+Cmd+KeyZ"], run: redo },
   { id: "quickLook", group: "Files", label: "Quick Look", keys: ["Space"], run: quickLook },
+  { id: "getInfo", group: "Files", label: "Get Info", keys: ["Cmd+KeyI"], run: (P) => getInfo(P) },
   { id: "open", group: "Files", label: "Open", keys: ["Cmd+ArrowDown"], run: (P) => P.enterOrOpen() },
   { id: "selectAll", group: "Files", label: "Select All", keys: ["Cmd+KeyA"], run: (P) => P.selectAll() },
   // Go

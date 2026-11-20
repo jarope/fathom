@@ -14,6 +14,7 @@ import { gitMenu } from "./git.js";
 import { keyHint } from "./keys.js";
 import { actionEntries } from "./actions.js";
 import { openPrefs } from "./prefs.js";
+import { getInfo } from "./info.js";
 
 let ctx, sub, subTimer = null;
 
@@ -147,6 +148,7 @@ export function openContextMenu(P, x, y) {
       { label: "Open Terminal Here", fn: () => openTerminal(P, P.cwd), key: keyHint("terminal") },
       { label: "Add to Places", fn: () => addBookmarks([P.cwd]) },
       { label: "Copy folder path", fn: () => { navigator.clipboard.writeText(P.cwd); P.flash("Copied path"); } },
+      { label: "Get Info", fn: () => getInfo(P), key: keyHint("getInfo") },
       "sep",
       { label: "View", sub: () => viewEntries(P) },
       { label: "Sort By", sub: () => sortEntries(P) },
@@ -168,6 +170,7 @@ export function openContextMenu(P, x, y) {
     one && isFolder(one) && { label: "Open in New Tab", fn: () => openTab(one.path), key: "⌘-dbl-click" },
     { label: "Open With", sub: () => openWithEntries(P, sel.map((e) => e.path)) },
     { label: "Quick Look", fn: () => quickLook(P), key: keyHint("quickLook") },
+    { label: "Get Info", fn: () => getInfo(P), key: keyHint("getInfo") },
     one && { label: "Rename…", fn: () => P.startRename(one.path), key: keyHint("rename") },
     !one && { label: `Rename ${sel.length} items…`, fn: () => batchRename(P), key: keyHint("rename") },
     { label: "Duplicate", fn: () => duplicateSel(P), key: keyHint("duplicate") },

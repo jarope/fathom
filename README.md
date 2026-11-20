@@ -10,7 +10,7 @@ native ES modules in `src/js/`, no npm, no bundler). The look follows
 [`DESIGN.md`](DESIGN.md): neutral greys, one accent colour, macOS glass on the
 sidebar and popovers, the system font plus JetBrains Mono.
 
-## What it does today (v0.21.0)
+## What it does today (v0.22.0)
 
 - **Progress & cancel** — copies, moves, duplicates and archive jobs run in the
   background; anything that takes more than a moment gets a card (bottom-right)
@@ -193,6 +193,13 @@ sidebar and popovers, the system font plus JetBrains Mono.
   and a preview column (a folder's contents, or a file's picture, kind, size
   and dates). → opens the selected folder, ← goes back; click in any column
   to work there. Drop files on any folder or column. Searches show as Details.
+- **Get Info** (⌘I, or right-click → Get Info; with nothing selected it's the
+  folder itself) — kind, size (folders added up in the background, with a live
+  count), where, created / modified / last opened / added, Spotlight facts
+  (dimensions, duration, codecs, camera and exposure, pages, version, where it
+  was downloaded from), tags to toggle or add, the app it opens with, and
+  permissions as read / write / run boxes for owner, group and everyone.
+  Several items: total size, kinds and shared tags.
 - **Rubber-band selection** — drag from empty space to select a box of files
   (⌘ / ⇧ adds to the selection), in Grid and Details.
 - **Appearance** (Preferences → General) — Match the system / Light / Dark;
@@ -235,6 +242,7 @@ Defaults below — change any of them in Preferences → Shortcuts.
 | ⇧⌘F | Toggle the folder shelf |
 | ⌘+ / ⌘− / ⌘0 | Zoom in / out / actual size (in grid view ⌘+ / ⌘− size the icons; ⌥⌘+ / ⌥⌘− always zoom) |
 | Space | Quick Look |
+| ⌘I | Get Info |
 | ⌃⌘1…7 / ⌃⌘0 | Toggle favourite tag / clear tags |
 | ← / → | Open / close a folder (Details); step through the shelf and the grid |
 | ⌥⌘1 / ⌥⌘2 / ⌥⌘3 | Grid / Details / Columns view |

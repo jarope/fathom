@@ -27,7 +27,7 @@ export function tagDots(tags) {
 
 const has = (e, name) => (e.tags || []).some((t) => t.name.toLowerCase() === name.toLowerCase());
 
-async function setTags(P, paths, change, msg) {
+export async function setTags(P, paths, change, msg) {
   try { await invoke("set_tags", { paths, add: [], remove: [], clear: false, ...change }); }
   catch (e) { P.flash("⚠ " + e, "warn"); return; }
   await refreshAll();

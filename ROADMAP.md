@@ -23,7 +23,7 @@ Status key: ✅ done · 🟡 partial · ⬜ not started
 | **Tabs** (Ctrl+T) | Tabs per window, each optionally split | ✅ ⌘T, each tab single/twin, drop onto tabs |
 | **Places panel** | Home, Desktop, Downloads, devices, network, bookmarks, recent | ✅ favourites, pins, iCloud, volumes + eject · ⬜ recent, network |
 | **Breadcrumb location bar** | Clickable segments with sub-folder drop-downs; Ctrl+L to edit | ✅ segments, › drop-downs, ⌘L to type, drop targets |
-| **View modes** | Icons, Compact, Details, Columns (back in 2026) | 🟡 details only · ⬜ icons/grid, columns |
+| **View modes** | Icons, Compact, Details, Columns (back in 2026) | ✅ Details (expandable), Grid, Columns |
 | **Zoom** | Ctrl+wheel / slider | ⬜ |
 | **Expandable folders** in details view | Tree in list | ⬜ |
 | **Folders panel** | Tree sidebar | ⬜ |
@@ -31,7 +31,7 @@ Status key: ✅ done · 🟡 partial · ⬜ not started
 | **Auto-refresh** | Watches folders (KDirWatch) | ✅ FSEvents via `notify` |
 | **Progress / cancel** for long ops | KIO job tracker | ✅ job cards: bar, speed, ETA, cancel |
 | **Conflict dialog** | Overwrite / skip / rename / apply-to-all | ✅ keep both / replace (→ Bin) / skip / merge, apply to all |
-| **Properties dialog** | Size (recursive), permissions, dates, open-with | ⬜ |
+| **Properties dialog** | Size (recursive), permissions, dates, open-with | ✅ Get Info (⌘I) |
 | **Open With…** | App chooser | ⬜ |
 | **Service menus / actions** | Extensible right-click actions | ✅ actions.json + Preferences editor, background or terminal |
 | **Archives** | Compress / extract via Ark | ✅ compress (zip) / extract (zip, tar, 7z, rar…) |
@@ -159,11 +159,18 @@ glyphs and tints, Reduce Transparency / Increase Contrast, glass opacity.
   virtualized. Searches fall back to Details.
 - Fixed: renaming a file scrolled out of view did nothing.
 
+**v0.22 — Get Info** ✅
+- **Get Info** (⌘I, both right-click menus): kind, size (folders counted in
+  the background — cancelled when you close it — hard links once), where,
+  dates incl. last opened, Spotlight metadata (dimensions, duration, codecs,
+  camera/exposure, location, pages, version, where from), tags (toggle / add),
+  default app, permissions (owner / group / everyone checkboxes → chmod).
+  Several items: total size, kinds, shared tags.
+
 Still to do:
 - **Real file icons** (NSWorkspace) instead of emoji, cached per type.
 - **Information panel** (Dolphin F11) replacing the preview dock: preview,
   metadata (dimensions, duration, EXIF), folder size on demand.
-- **Get Info** (⌘I): recursive size, permissions, dates, Open With, tags.
 
 ### Phase 6 — Public release (v1.0)
 - **Name check**: "Fathom" is already used by Fathom Analytics and the Fathom
