@@ -88,7 +88,7 @@ Updates). They're signed, and Fathom checks the signature before installing.
   menu. Drop files onto a place to move them there (⌥ to copy).
   **Recent** (⇧⌘O) lists the last 15 folders you were in (⌘-click for a new
   tab). Network shares get a globe icon.
-- **Folder tree** (F7, or *Folders* at the top of the sidebar) — Dolphin's
+- **Folder tree** (⌥⌘S / F7, or *Folders* at the top of the sidebar) — Dolphin's
   Folders panel: a tree rooted at Home (or the volume / disk you're on),
   opened down to the current folder. Click a name to go there, the › to open
   it, ⌘-click for a new tab; ← → ↑ ↓ ⏎ work; drop files on any folder.
@@ -183,7 +183,7 @@ Updates). They're signed, and Fathom checks the signature before installing.
 - **Type-ahead** — type a name's first letters to jump to it.
 - **Folder menu** — right-click empty space for New Folder/File, Paste,
   **Open Terminal Here** (⌥⌘T), Copy folder path, show hidden (⇧⌘.).
-- **Terminal panel** (F4) — your login shell under the files (Dolphin's
+- **Terminal panel** (⌃\`, F4, or right-click empty space) — your login shell under the files (Dolphin's
   Konsole panel). It follows the active pane: change folder and it `cd`s
   there (only while it's waiting at its prompt); `cd` in the shell and the
   pane follows. Drag its top edge to resize; ⌘K clears; it keeps running
@@ -319,13 +319,13 @@ Defaults below — change any of them in Preferences → Shortcuts.
 | ⌘F / ⌘L | Focus filter / type a path |
 | ⇧⌘. | Show / hide hidden files |
 | ⌥⌘T | Open Terminal here |
-| F4 | Terminal panel |
+| ⌃` (or F4) | Terminal panel |
 | a–z | Jump to name (type-ahead) |
 | ⌘\\ | Toggle single / twin pane |
 | ⌘↑ | Up a folder |
 | ⇧⌘R / ⌥⇧⌘R | Open Location — the selected item's folder, here / in the other pane |
 | ⇧⌘O | Recent folders |
-| F7 | Folder tree ⇄ Places in the sidebar |
+| ⌥⌘S (or F7) | Folder tree ⇄ Places in the sidebar |
 | ⌘K | Connect to Server… |
 | ⌘[ / ⌘] | Back / Forward |
 | ⌘T / ⌘W | New tab / close tab |

@@ -37,6 +37,8 @@ async function start() {
   // ⌘K clears, as in Terminal.app; Fathom's own shortcuts don't fire while typing here.
   term.attachCustomKeyEventHandler((e) => {
     if (e.type === "keydown" && e.metaKey && e.code === "KeyK") { term.clear(); return false; }
+    // Hand the panel's own toggle (⌃` / F4) and ⌘-shortcuts back to Fathom.
+    if ((e.ctrlKey && e.code === "Backquote") || e.code === "F4") return false;
     return true;
   });
   term.onData((d) => {

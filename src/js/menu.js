@@ -17,6 +17,7 @@ import { openPrefs } from "./prefs.js";
 import { getInfo } from "./info.js";
 import { isBinDir, binItemMenu, emptyBin } from "./bin.js";
 import { templateEntries } from "./templates.js";
+import { toggleTerminal, terminalOpen } from "./terminal.js";
 
 let ctx, sub, subTimer = null;
 
@@ -176,6 +177,7 @@ export function openContextMenu(P, x, y) {
       "sep",
       { label: "Open in New Tab", fn: () => openTab(P.cwd), key: keyHint("newTab") },
       { label: "Open Terminal Here", fn: () => openTerminal(P, P.cwd), key: keyHint("terminal") },
+      { label: terminalOpen() ? "Hide Terminal Panel" : "Show Terminal Panel", fn: () => toggleTerminal(), key: keyHint("terminalPanel") },
       { label: "Add to Places", fn: () => addBookmarks([P.cwd]) },
       { label: "Copy folder path", fn: () => { navigator.clipboard.writeText(P.cwd); P.flash("Copied path"); } },
       { label: "Get Info", fn: () => getInfo(P), key: keyHint("getInfo") },
