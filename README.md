@@ -37,7 +37,7 @@ you need it.
 **Updates** arrive inside the app (once-a-day check; Preferences → General →
 Updates). They're signed, and Fathom checks the signature before installing.
 
-## What it does today (v0.27.0)
+## What it does today (v0.27.1)
 
 - **Progress & cancel** — copies, moves, duplicates and archive jobs run in the
   background; anything that takes more than a moment gets a card (bottom-right)

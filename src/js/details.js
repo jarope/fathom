@@ -9,6 +9,7 @@
 import { app, el, icon, kindIcon, kindOf, fmtSize, fmtDate, isFolder } from "./core.js";
 import { tagDots } from "./tags.js";
 import { fileIcon } from "./icons.js";
+import { thumbInto } from "./grid.js";
 import { applyGit } from "./git.js";
 import { showMenu } from "./menu.js";
 import { prefs, saveSettings } from "./settings.js";
@@ -167,7 +168,12 @@ export function createDetails(P) {
     const nm = el("span", "nm");
     // Prefer wrapping long names after _ - . rather than mid-word.
     h.name.split(/(?<=[_\-.])/).forEach((part, j) => { if (j) nm.append(document.createElement("wbr")); nm.append(part); });
-    t.append(icon("folderFill"), nm);
+    // The Finder icon (yellow folder, Downloads, app bundles, custom icons),
+    // fetched at the largest shelf size so zooming the shelf doesn't refetch.
+    const pic = el("span", "tpic");
+    pic.append(icon("folderFill"));
+    if (prefs.fileIcons) thumbInto(pic, h, SHELF_MAX);
+    t.append(pic, nm);
     if (h.is_symlink) t.append(el("span", "link", "↳"));
     const td = tagDots(h.tags); if (td) t.append(td);
     return t;
