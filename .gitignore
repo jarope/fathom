@@ -2,3 +2,7 @@
 /src-tauri/gen/schemas
 .DS_Store
 /dist
+
+# Icon pack sources (installed into src-tauri/icons)
+/fathom-export/
+/Fathom-icon-pack.zip
