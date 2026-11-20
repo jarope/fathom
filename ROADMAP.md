@@ -189,6 +189,19 @@ glyphs and tints, Reduce Transparency / Increase Contrast, glass opacity.
 
 Phase 5 complete.
 
+**v0.25 — Scroll-wheel controls**
+- Scroll over the zoom (Aa) button to zoom, like a Linux tray volume icon:
+  one mouse-wheel click = one step, trackpads step every ~30 px, and a
+  gesture keeps zooming even when the button moves out from under the
+  pointer; the list gets its scroll back as soon as the gesture pauses.
+- Scroll over the grid's icon-size slider, or pinch / ⌘-scroll over the
+  grid, to size just the icons (the window stays as it is).
+- **Folder shelf**: stays fixed at the top while the files scroll under it;
+  pinch / ⌘-scroll over it sizes just its tiles (32–96 pt, remembered);
+  sideways scrolling (trackpad, a mouse's side wheel such as the MX Master's
+  thumb wheel, or ⇧-scroll) moves the shelf and never the list.
+- All wheel handling lives in `wheel.js`.
+
 ### Phase 6 — Public release (v1.0)
 - **Name: keeping "Fathom"** ✅ — Finder → Fathom: it goes deeper into the
   system (Spotlight-powered search), and its features come from a creature of

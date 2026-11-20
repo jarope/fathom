@@ -303,13 +303,14 @@ img.ki.fi { object-fit: contain; display: block; }
 .tab .tclose:hover, .tabadd:hover { color: var(--text); background: var(--sel-quiet); }
 
 /* ---- Folder shelf: sub-folders as one horizontal strip above the files ---- */
-.shelf { display: flex; gap: 2px; overflow-x: auto; overflow-y: hidden; padding: 10px 2px 8px; margin: 0 -6px; padding-left: 8px; border-bottom: 1px solid var(--separator); }
-.row.tile { display: flex; flex-direction: column; align-items: center; gap: 5px; width: 98px; height: auto; flex: none; padding: 9px 5px 8px; border-radius: var(--r-card); position: relative; content-visibility: visible; }
-.row.tile > svg { width: 46px; height: 46px; color: var(--k-folder); pointer-events: none; }
+.shelf { position: sticky; top: 0; z-index: 3; background: var(--content); display: flex; gap: 2px; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; padding: 10px 2px 8px; margin: 0 -6px; padding-left: 8px; border-bottom: 1px solid var(--separator); }
+.shelf ~ .head { top: var(--shelf-h, 0px); }
+.row.tile { display: flex; flex-direction: column; align-items: center; gap: 5px; width: calc(var(--shelf-ic, 46px) + 52px); height: auto; flex: none; padding: 9px 5px 8px; border-radius: var(--r-card); position: relative; content-visibility: visible; }
+.row.tile > svg { width: var(--shelf-ic, 46px); height: var(--shelf-ic, 46px); color: var(--k-folder); pointer-events: none; }
 .row.tile .nm { font: var(--t-callout); text-align: center; color: var(--text); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; pointer-events: none; }
 .row.tile.sel > svg { color: var(--on-accent); }
 .panes.twin .pane:not(.active) .row.tile.sel > svg { color: var(--k-folder); }
-.row.tile .link { position: absolute; top: 34px; left: 30px; font-size: 11px; color: var(--text); background: var(--content); border-radius: 50%; width: 15px; height: 15px; display: flex; align-items: center; justify-content: center; }
+.row.tile .link { position: absolute; top: calc(var(--shelf-ic, 46px) - 12px); left: calc(50% - var(--shelf-ic, 46px) / 2 + 3px); font-size: 11px; color: var(--text); background: var(--content); border-radius: 50%; width: 15px; height: 15px; display: flex; align-items: center; justify-content: center; }
 .row.tile input.rename { width: 100%; font: var(--t-callout); text-align: center; }
 .shelf::-webkit-scrollbar { height: 9px; }
 .shelf::-webkit-scrollbar-thumb { background: var(--edge); border-radius: 5px; border: 2px solid transparent; background-clip: padding-box; }

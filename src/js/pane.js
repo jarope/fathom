@@ -95,7 +95,7 @@ export function createPane(key) {
   // Icon size for the grid (one setting for every pane, like Finder's slider).
   function sizeSlider() {
     const r = el("input", "gsize"); r.type = "range"; r.min = GRID_MIN; r.max = GRID_MAX; r.step = 8;
-    r.value = gridSize(); r.title = "Icon size"; r.setAttribute("aria-label", "Icon size");
+    r.value = gridSize(); r.title = "Icon size — drag, or scroll over it"; r.setAttribute("aria-label", "Icon size");
     r.addEventListener("input", () => setGridSize(+r.value, false));
     r.addEventListener("change", () => saveSettings());
     return r;

@@ -10,7 +10,7 @@ native ES modules in `src/js/`, no npm, no bundler). The look follows
 [`DESIGN.md`](DESIGN.md): neutral greys, one accent colour, macOS glass on the
 sidebar and popovers, the system font plus JetBrains Mono.
 
-## What it does today (v0.24.0)
+## What it does today (v0.25.0)
 
 - **Progress & cancel** — copies, moves, duplicates and archive jobs run in the
   background; anything that takes more than a moment gets a card (bottom-right)
@@ -31,15 +31,19 @@ sidebar and popovers, the system font plus JetBrains Mono.
   them (“Holiday 01.jpg”), or change case — with a live preview that flags
   duplicates before anything happens. Swaps (a↔b) are safe; ⌘Z undoes.
 
-- **Zoom** (⌘+ / ⌘− / ⌘0, or the **Aa** button) — scales text, icons and
-  rows together from 75% to 160%, so it stays comfortable whether you're on
+- **Zoom** (⌘+ / ⌘− / ⌘0, or the **Aa** button — or just **scroll over the
+  Aa button**, like a Linux volume icon: up = bigger, one wheel click = one
+  step) — scales text, icons and rows together from 75% to 160%, so it stays comfortable whether you're on
   the laptop screen or a big external monitor. Remembered between launches;
   the title bar keeps its height so the traffic lights stay lined up.
 
 - **Folder shelf** (on by default; ⇧⌘F or the shelf button to toggle) — a
   folder's sub-folders collapse into **one horizontally scrolling row of
   folder tiles** above the file list, so you never scroll past thirty folders
-  to reach the files. Tiles behave exactly like rows: click/⌘/⇧ select,
+  to reach the files. The shelf stays at the top while the files scroll
+  beneath it; scroll sideways over it (trackpad, a mouse's side wheel like the
+  MX Master's thumb wheel, or ⇧-scroll) to move along it, and pinch or
+  ⌘-scroll over it to make its folders bigger or smaller. Tiles behave exactly like rows: click/⌘/⇧ select,
   double-click to open, F2 rename, drag, drop-onto, right-click. ← → step
   through them. (Search results stay a plain list.)
 
@@ -213,6 +217,8 @@ sidebar and popovers, the system font plus JetBrains Mono.
   icon (the app's own icon, Downloads / Applications folders, custom folder
   icons), fetched in batches and cached by type. Preferences → General → Show
   → *Finder icons in lists* switches back to simple kind symbols.
+- **Grid icon size** — the slider in the status bar, ⌘+ / ⌘−, scrolling over
+  the slider, or pinch / ⌘-scroll over the grid: only the icons change size.
 - **Rubber-band selection** — drag from empty space to select a box of files
   (⌘ / ⇧ adds to the selection), in Grid and Details.
 - **Appearance** (Preferences → General) — Match the system / Light / Dark;

@@ -4,6 +4,8 @@ import { app, invoke, store } from "./core.js";
 import { initMenu } from "./menu.js";
 import { initPreview } from "./preview.js";
 import { initPanel, refreshPanel } from "./panel.js";
+import { initWheel } from "./wheel.js";
+import { applyShelfSize } from "./details.js";
 import { initKeys } from "./keys.js";
 import { initHeader, updateTitle, syncViewButtons } from "./view.js";
 import { initTabs, openTab, renderTabs } from "./tabs.js";
@@ -39,6 +41,7 @@ initHeader();
 initMenu();
 initPreview();
 initPanel();
+initWheel();
 initTabs();
 initSidebar();
 initKeys();
@@ -50,6 +53,7 @@ initKeys();
   }
   try { app.home = await invoke("home_dir"); } catch { app.home = "/"; }
   await loadSettings();
+  applyShelfSize();
   await initAppearance();
   rebuildKeymap(); // with any custom shortcuts
   document.getElementById("prefsBtn").addEventListener("click", () => openPrefs());

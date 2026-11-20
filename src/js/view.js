@@ -59,7 +59,7 @@ function applyZoom(z) {
   if (wv?.setZoom) wv.setZoom(z).catch(() => { document.documentElement.style.zoom = z; });
   else document.documentElement.style.zoom = z; // browser harness
   const b = document.getElementById("zoomBtn");
-  if (b) { b.title = `Zoom ${pct(z)} — ⌥⌘+ / ⌥⌘− / ⌘0 (⌘+ / ⌘− too, except in grid view where they size icons)`; b.classList.toggle("on", z !== 1); }
+  if (b) { b.title = `Zoom ${pct(z)} — scroll over this button, or ⌥⌘+ / ⌥⌘− / ⌘0 (⌘+ / ⌘− too, except in grid view where they size icons)`; b.classList.toggle("on", z !== 1); }
 }
 
 export function setZoom(z, announce = true) {
@@ -89,6 +89,7 @@ export function initHeader() {
 
   applyZoom(store.get("fathom-zoom", 1));
   $("zoomBtn").addEventListener("click", (e) => { e.stopPropagation(); zoomMenu($("zoomBtn")); });
+  // Scrolling over the button zooms too — see wheel.js.
 
   $("theme").addEventListener("click", toggleTheme);
 
