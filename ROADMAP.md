@@ -258,6 +258,10 @@ Phase 5 complete.
 
 ## Polish backlog (after feature-complete, before daily-driver)
 Deferred on purpose — features first, then a polish pass.
+- Terminal panel: Warp-style command blocks via shell integration (OSC 133):
+  group each command with its output, jump between commands, copy one
+  command's output, mark failed commands. (Warp itself can't be embedded;
+  ⌥⌘T opens Warp when it's the chosen terminal.)
 - DESIGN.md kind tints Document / Video / Code are ~2.9:1 on dark content
   (spec only promises ≥3:1 on light); consider lighter dark-mode variants.
 - Folder shelf: optional mouse-wheel → sideways scroll while hovering the shelf.
