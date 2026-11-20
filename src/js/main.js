@@ -2,7 +2,8 @@
 
 import { app, invoke, store } from "./core.js";
 import { initMenu } from "./menu.js";
-import { initPreview, refreshDock } from "./preview.js";
+import { initPreview } from "./preview.js";
+import { initPanel, refreshPanel } from "./panel.js";
 import { initKeys } from "./keys.js";
 import { initHeader, updateTitle, syncViewButtons } from "./view.js";
 import { initTabs, openTab, renderTabs } from "./tabs.js";
@@ -23,11 +24,11 @@ import { initAppearance } from "./appearance.js";
 
 app.showHidden = !!store.get("fathom-hidden", 0);
 app.sidebar = store.get("fathom-sidebar", true) !== false;
-app.dockPreview = !!store.get("fathom-dock", false);
+app.infoPanel = !!store.get("fathom-dock", false);
 app.folderShelf = store.get("fathom-shelf", true) !== false;
 
-app.hooks.changed = (P) => { if (app.tab && P === app.tab.panes[0]) refreshDock(); qlFollow(P); };
-app.hooks.navigated = () => { renderTabs(); markActive(); updateTitle(); syncViewButtons(); syncWatch(); saveSession(); };
+app.hooks.changed = (P) => { if (P === app.active) refreshPanel(); qlFollow(P); };
+app.hooks.navigated = () => { refreshPanel(); renderTabs(); markActive(); updateTitle(); syncViewButtons(); syncWatch(); saveSession(); };
 app.hooks.viewMode = () => syncViewButtons();
 app.hooks.save = saveSession;
 app.hooks.expanded = () => syncWatch();
@@ -37,6 +38,7 @@ app.hooks.actionsChanged = () => rebuildKeymap();
 initHeader();
 initMenu();
 initPreview();
+initPanel();
 initTabs();
 initSidebar();
 initKeys();

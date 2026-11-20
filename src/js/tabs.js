@@ -4,7 +4,7 @@
 
 import { app, el, icon, baseName } from "./core.js";
 import { createPane } from "./pane.js";
-import { placeDock } from "./preview.js";
+import { refreshPanel } from "./panel.js";
 import { registerDropZone } from "./dnd.js";
 import { showMenu } from "./menu.js";
 
@@ -96,7 +96,7 @@ function applyView() {
   panesEl().classList.toggle("single", mode === "single");
   document.getElementById("viewSingle").classList.toggle("on", mode === "single");
   document.getElementById("viewTwin").classList.toggle("on", mode === "twin");
-  placeDock(); // re-dock the preview (right in single, below-left in twin)
+  refreshPanel();
 }
 
 // ---- tab bar ----
@@ -155,4 +155,22 @@ export function initTabs() {
     },
     leave: () => { clearTimeout(spring); spring = null; springTab = null; },
   });
+}
+
+// ---- Open Location (⇧⌘R / ⌥⇧⌘R) ----
+const parentOf = (p) => p.replace(/\/[^/]+$/, "") || "/";
+/** True when an entry lives somewhere other than the folder P shows (search hits, tag views, expanded rows). */
+export const elsewhere = (P, e) => P.mode !== "browse" || parentOf(e.path) !== P.cwd;
+/** Go to the folder holding P's selected item and select it — here, or in the other pane (opening twin view). */
+export async function openLocation(P, otherPane = false) {
+  const e = P && P.selectedEntries()[0];
+  if (!e) return;
+  const dir = parentOf(e.path);
+  let T = P;
+  if (otherPane) {
+    T = other(P);
+    if (app.tab.view !== "twin") { if (!T.cwd) await T.navigate(dir); setView("twin"); }
+    setActive(T);
+  } else if (!elsewhere(P, e)) { P.selectPaths([e.path]); return; }
+  if (await T.navigate(dir)) T.selectPaths([e.path]);
 }

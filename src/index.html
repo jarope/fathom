@@ -45,7 +45,7 @@
             <button id="sidebarToggle" type="button" title="Places sidebar (⌃⌘S / F9)" aria-label="Places sidebar">
               <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.75" y="4" width="14.5" height="12" rx="2"/><path d="M7.5 4v12"/></svg>
             </button>
-            <button id="dockToggle" type="button" title="Preview panel (⌘P)" aria-label="Preview panel">
+            <button id="dockToggle" type="button" title="Information panel (F11 / ⌘P)" aria-label="Information panel">
               <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="2.75" y="4" width="14.5" height="12" rx="2"/><circle cx="7.5" cy="8.5" r="1.4"/><path d="M3 14l4.5-3.5 3 2.5 2.5-2 4 3"/></svg>
             </button>
             <button id="hiddenToggle" type="button" title="Show hidden files (⇧⌘.)" aria-label="Show hidden files">
@@ -70,18 +70,9 @@
 
       <div class="body">
         <div id="panes" class="panes single"></div>
+        <aside id="infoPanel" class="ipanel" hidden aria-label="Information"><div class="ip-grip" title="Drag to resize"></div><div class="ip-body"></div></aside>
       </div>
 
-      <div id="dock" class="dock">
-        <div class="dock-imgwrap">
-          <img class="dock-img" id="dockImg" alt="" />
-          <div class="dock-empty" id="dockEmpty">Select an image to preview</div>
-        </div>
-        <div class="dock-cap">
-          <span class="dock-name" id="dockName"></span>
-          <span class="dock-dim" id="dockDim"></span>
-        </div>
-      </div>
       </div>
     </div>
 

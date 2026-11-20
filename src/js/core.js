@@ -17,7 +17,7 @@ export const app = {
   showHidden: false,
   folderShelf: true, // sub-folders as a horizontal strip above the files
   sidebar: true,
-  dockPreview: false,
+  infoPanel: false,
   previewOpen: false,
   modalOpen: false,
   dateFormat: "iso",

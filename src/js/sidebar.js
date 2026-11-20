@@ -151,12 +151,13 @@ export function initSidebar() {
       P && app.tab.view === "twin" && { label: "Open in Other Pane", fn: () => other(P).navigate(path) },
       "sep",
       { label: "Open Terminal Here", fn: () => openTerminal(P, path) },
-      { label: "Reveal in Finder", fn: () => invoke("reveal_in_finder", { path }) },
       "sep",
       kind === "bookmark" && i > 0 && { label: "Move Up", fn: () => moveBookmark(path, -1) },
       kind === "bookmark" && i < bookmarks.length - 1 && { label: "Move Down", fn: () => moveBookmark(path, 1) },
       kind === "bookmark" && { label: "Remove from Places", fn: () => removeBookmark(path), danger: true },
       kind === "volume" && path !== "/" && { label: `Eject “${name}”`, fn: () => eject(path, name) },
+      "sep",
+      { label: "Reveal in Finder", fn: () => invoke("reveal_in_finder", { path }) },
     ], ev.clientX, ev.clientY);
   });
 

@@ -10,7 +10,7 @@ native ES modules in `src/js/`, no npm, no bundler). The look follows
 [`DESIGN.md`](DESIGN.md): neutral greys, one accent colour, macOS glass on the
 sidebar and popovers, the system font plus JetBrains Mono.
 
-## What it does today (v0.23.0)
+## What it does today (v0.24.0)
 
 - **Progress & cancel** — copies, moves, duplicates and archive jobs run in the
   background; anything that takes more than a moment gets a card (bottom-right)
@@ -145,9 +145,13 @@ sidebar and popovers, the system font plus JetBrains Mono.
   (crisp vector); raster images are downscaled thumbnails; **video** gets a
   poster frame via macOS **Quick Look** (`qlmanage`). Three ways to look, built
   for triaging screenshots and clips:
-  - **Docked panel** (🖼 in the header, or ⌘P) — a half-view preview that tracks
-    the left pane's selection: **right, 50% width** in single mode; **below the
-    left pane, 50% height** in twin mode. Toggle on/off; click it to go full.
+  - **Information panel** (F11 or ⌘P, or the picture button in the header) — a
+    panel on the right that follows the active pane: a Quick Look picture of
+    the selection (images, PDFs, video, documents; click it for Quick Look),
+    name, kind, size, dates, tags and Spotlight facts (dimensions, duration,
+    camera…). Folders get their size on demand (*Calculate*); several items
+    show how many, kinds and total size; nothing selected shows the folder.
+    Drag its left edge to resize. *Get Info…* opens the full window.
   - **Space** — real macOS **Quick Look** (see above); ↑ ↓ move through the
     list while it's open, Space/Esc closes.
 
@@ -193,6 +197,11 @@ sidebar and popovers, the system font plus JetBrains Mono.
   and a preview column (a folder's contents, or a file's picture, kind, size
   and dates). → opens the selected folder, ← goes back; click in any column
   to work there. Drop files on any folder or column. Searches show as Details.
+- **Open Location** (⇧⌘R, right-click) — for search results, tag views and
+  rows inside an expanded folder: goes to the item's folder with it selected
+  (Back returns to your results). Hold **⌥** in the menu (or ⌥⇧⌘R) to open it
+  in the other pane instead — twin view opens if needed, so your search stays
+  put. *Reveal in Finder* is still there, near the bottom of the menu.
 - **Get Info** (⌘I, or right-click → Get Info; with nothing selected it's the
   folder itself) — kind, size (folders added up in the background, with a live
   count), where, created / modified / last opened / added, Spotlight facts
@@ -220,7 +229,7 @@ Defaults below — change any of them in Preferences → Shortcuts.
 | Key | Action |
 | --- | --- |
 | ⌘, | Preferences |
-| ⌘P | Toggle the docked preview panel |
+| F11 / ⌘P | Information panel |
 | ⏎ | Open selection (enter folder / open file) |
 | ⌫ or Delete | Move selection to Bin |
 | F5 / F6 | Copy / Move selection to the other pane (twin view) |
@@ -239,6 +248,7 @@ Defaults below — change any of them in Preferences → Shortcuts.
 | a–z | Jump to name (type-ahead) |
 | ⌘\\ | Toggle single / twin pane |
 | ⌘↑ | Up a folder |
+| ⇧⌘R / ⌥⇧⌘R | Open Location — the selected item's folder, here / in the other pane |
 | ⌘[ / ⌘] | Back / Forward |
 | ⌘T / ⌘W | New tab / close tab |
 | ⌃Tab · ⌘⇧[ ] · ⌘1…9 | Switch tabs |

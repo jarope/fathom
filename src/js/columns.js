@@ -122,6 +122,7 @@ export function createColumns(P) {
     const v = vcolumn(P.entries.length, (i) => {
       const e = P.entries[i], clip = app.clip;
       const r = el("div", "row mrow");
+      if (!e) return r; // the list shrank before the next render
       r.dataset.i = i;
       if (P.selected.has(e.path)) r.classList.add("sel");
       if (clip && clip.cut && clip.paths.includes(e.path)) r.classList.add("cut");

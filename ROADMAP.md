@@ -27,7 +27,7 @@ Status key: ✅ done · 🟡 partial · ⬜ not started
 | **Zoom** | Ctrl+wheel / slider | ⬜ |
 | **Expandable folders** in details view | Tree in list | ⬜ |
 | **Folders panel** | Tree sidebar | ⬜ |
-| **Information panel** | Preview + metadata of selection | 🟡 docked image/video preview · ⬜ metadata, PDF, text |
+| **Information panel** | Preview + metadata of selection | ✅ F11 panel: Quick Look picture, metadata, folder size |
 | **Auto-refresh** | Watches folders (KDirWatch) | ✅ FSEvents via `notify` |
 | **Progress / cancel** for long ops | KIO job tracker | ✅ job cards: bar, speed, ETA, cancel |
 | **Conflict dialog** | Overwrite / skip / rename / apply-to-all | ✅ keep both / replace (→ Bin) / skip / merge, apply to all |
@@ -122,7 +122,7 @@ sidebar (`macOSPrivateApi` — rules out the Mac App Store), glass popovers,
 system font + bundled JetBrains Mono, capsule controls, 34pt rows, file-kind
 glyphs and tints, Reduce Transparency / Increase Contrast, glass opacity.
 
-### Phase 5 — Views & information (in progress)
+### Phase 5 — Views & information ✅ (v0.19.0–v0.24.0)
 **v0.19 — Display engine + Details view** ✅
 - **Display engine**: only on-screen rows exist (virtual window over the
   pane's entries) — 50k-entry folders stay smooth; selection, rename,
@@ -173,9 +173,21 @@ glyphs and tints, Reduce Transparency / Increase Contrast, glass opacity.
   and custom folder icons), one batched call per paint, identical images
   shared. The kind glyph shows until the icon lands. Preferences toggle.
 
-Still to do:
-- **Information panel** (Dolphin F11) replacing the preview dock: preview,
-  metadata (dimensions, duration, EXIF), folder size on demand.
+**v0.24 — Information panel** ✅
+- **Information panel** (F11 / ⌘P) replaces the preview dock: a resizable
+  panel on the right that follows the active pane — Quick Look picture (any
+  file type; click for Quick Look), kind, size, dates, tags, Spotlight facts,
+  folder size on demand; several items: count, kinds, total; nothing
+  selected: the folder. *Get Info…* button.
+- Fixed: pictures outside the grid (Columns preview, Get Info) could stay as
+  the kind symbol because the thumbnail was asked for before it was on screen.
+- **Open Location** (⇧⌘R) for items outside the folder on screen (search,
+  tags, expanded rows): go to the item's folder and select it; ⌥ in the menu
+  or ⌥⇧⌘R opens it in the other pane (switching to twin). Menus now swap
+  items while ⌥ is held, like macOS. Reveal in Finder moved to the bottom.
+- Fixed: a Columns row could be drawn for an item that had just gone.
+
+Phase 5 complete.
 
 ### Phase 6 — Public release (v1.0)
 - **Name check**: "Fathom" is already used by Fathom Analytics and the Fathom

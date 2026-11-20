@@ -5,10 +5,11 @@
 // A key combo is written "Ctrl+Alt+Shift+Cmd+<KeyboardEvent.code>", e.g.
 // "Shift+Cmd+KeyN" — layout-independent, and ⌥ doesn't change it.
 
-import { app } from "./core.js";
+import { app, invoke } from "./core.js";
 import { undo, redo, setClip, paste, duplicateSel, transferToOther, openTerminal, batchRename } from "./ops.js";
-import { openTab, closeTab, cycleTab, gotoTab, setView } from "./tabs.js";
-import { showPreviewFor, closePreview, previewStep, toggleDock } from "./preview.js";
+import { openTab, closeTab, cycleTab, gotoTab, setView, openLocation } from "./tabs.js";
+import { showPreviewFor, closePreview, previewStep } from "./preview.js";
+import { togglePanel } from "./panel.js";
 import { hideCtx } from "./menu.js";
 import { toggleHidden, toggleSidebar, toggleShelf, setZoom, zoomStep } from "./view.js";
 import { gridSize, setGridSize } from "./grid.js";
@@ -36,8 +37,8 @@ export const COMMANDS = [
   // Files
   { id: "newFolder", group: "Files", label: "New Folder", keys: ["Shift+Cmd+KeyN", "F10"], run: (P) => P.newItem(true) },
   { id: "newFile", group: "Files", label: "New Text File", keys: ["Alt+Cmd+KeyN"], run: (P) => P.newItem(false) },
-  { id: "rename", group: "Files", label: "Rename", keys: ["F2"], run: rename },
-  { id: "duplicate", group: "Files", label: "Duplicate", keys: ["Cmd+KeyD"], run: duplicateSel },
+  { id: "rename", group: "Files", label: "Rename", keys: ["F2"], run: (...a) => rename(...a) },
+  { id: "duplicate", group: "Files", label: "Duplicate", keys: ["Cmd+KeyD"], run: (...a) => duplicateSel(...a) },
   { id: "trash", group: "Files", label: "Move to Bin", keys: ["Backspace", "Delete", "Cmd+Backspace"], run: (P) => P.selected.size && P.trashSelected() },
   { id: "copy", group: "Files", label: "Copy", keys: ["Cmd+KeyC"], run: (P) => setClip(P, false) },
   { id: "cut", group: "Files", label: "Cut", keys: ["Cmd+KeyX"], run: (P) => setClip(P, true) },
@@ -45,9 +46,9 @@ export const COMMANDS = [
   { id: "moveHere", group: "Files", label: "Move Here (from clipboard)", keys: ["Alt+Cmd+KeyV"], run: (P) => paste(P, null, { move: true }) },
   { id: "copyOther", group: "Files", label: "Copy to other pane", keys: ["F5"], run: (P) => transferToOther(P, true) },
   { id: "moveOther", group: "Files", label: "Move to other pane", keys: ["F6"], run: (P) => transferToOther(P, false) },
-  { id: "undo", group: "Files", label: "Undo", keys: ["Cmd+KeyZ"], run: undo },
-  { id: "redo", group: "Files", label: "Redo", keys: ["Shift+Cmd+KeyZ"], run: redo },
-  { id: "quickLook", group: "Files", label: "Quick Look", keys: ["Space"], run: quickLook },
+  { id: "undo", group: "Files", label: "Undo", keys: ["Cmd+KeyZ"], run: (...a) => undo(...a) },
+  { id: "redo", group: "Files", label: "Redo", keys: ["Shift+Cmd+KeyZ"], run: (...a) => redo(...a) },
+  { id: "quickLook", group: "Files", label: "Quick Look", keys: ["Space"], run: (...a) => quickLook(...a) },
   { id: "getInfo", group: "Files", label: "Get Info", keys: ["Cmd+KeyI"], run: (P) => getInfo(P) },
   { id: "open", group: "Files", label: "Open", keys: ["Cmd+ArrowDown"], run: (P) => P.enterOrOpen() },
   { id: "selectAll", group: "Files", label: "Select All", keys: ["Cmd+KeyA"], run: (P) => P.selectAll() },
@@ -55,6 +56,9 @@ export const COMMANDS = [
   { id: "back", group: "Go", label: "Back", keys: ["Cmd+BracketLeft"], run: (P) => P.goBack() },
   { id: "forward", group: "Go", label: "Forward", keys: ["Cmd+BracketRight"], run: (P) => P.goFwd() },
   { id: "up", group: "Go", label: "Enclosing Folder", keys: ["Cmd+ArrowUp"], run: (P) => P.goUp() },
+  { id: "openLocation", group: "Go", label: "Open Location (the item's folder)", keys: ["Shift+Cmd+KeyR"], run: (P) => openLocation(P) },
+  { id: "openLocationOther", group: "Go", label: "Open Location in Other Pane", keys: ["Alt+Shift+Cmd+KeyR"], run: (P) => openLocation(P, true) },
+  { id: "revealFinder", group: "Go", label: "Reveal in Finder", keys: [], run: (P) => { const e = P.selectedEntries()[0]; invoke("reveal_in_finder", { path: e ? e.path : P.cwd }); } },
   { id: "home", group: "Go", label: "Home", keys: ["Shift+Cmd+KeyH"], run: (P) => P.goHome() },
   { id: "editPath", group: "Go", label: "Type a Path", keys: ["Cmd+KeyL"], run: (P) => P.editPath() },
   { id: "find", group: "Go", label: "Search", keys: ["Cmd+KeyF"], run: (P) => { P.els.search.focus(); P.els.search.select(); } },
@@ -66,13 +70,13 @@ export const COMMANDS = [
   { id: "nextTab", group: "Tabs & View", label: "Next Tab", keys: ["Ctrl+Tab", "Shift+Cmd+BracketRight"], run: () => cycleTab(1) },
   { id: "prevTab", group: "Tabs & View", label: "Previous Tab", keys: ["Ctrl+Shift+Tab", "Shift+Cmd+BracketLeft"], run: () => cycleTab(-1) },
   { id: "twin", group: "Tabs & View", label: "Single / Twin Pane", keys: ["Cmd+Backslash"], run: () => setView(app.tab.view === "single" ? "twin" : "single") },
-  { id: "sidebar", group: "Tabs & View", label: "Sidebar", keys: ["F9", "Ctrl+Cmd+KeyS"], run: toggleSidebar },
-  { id: "hidden", group: "Tabs & View", label: "Show Hidden Files", keys: ["Shift+Cmd+Period"], run: toggleHidden },
+  { id: "sidebar", group: "Tabs & View", label: "Sidebar", keys: ["F9", "Ctrl+Cmd+KeyS"], run: (...a) => toggleSidebar(...a) },
+  { id: "hidden", group: "Tabs & View", label: "Show Hidden Files", keys: ["Shift+Cmd+Period"], run: (...a) => toggleHidden(...a) },
   { id: "viewGrid", group: "Tabs & View", label: "View as Grid", keys: ["Alt+Cmd+Digit1"], run: (P) => P.setViewMode("grid") },
   { id: "viewDetails", group: "Tabs & View", label: "View as Details", keys: ["Alt+Cmd+Digit2"], run: (P) => P.setViewMode("details") },
   { id: "viewColumns", group: "Tabs & View", label: "View as Columns", keys: ["Alt+Cmd+Digit3"], run: (P) => P.setViewMode("columns") },
-  { id: "shelf", group: "Tabs & View", label: "Folder Shelf", keys: ["Shift+Cmd+KeyF"], run: toggleShelf },
-  { id: "dock", group: "Tabs & View", label: "Preview Panel", keys: ["Cmd+KeyP"], run: toggleDock },
+  { id: "shelf", group: "Tabs & View", label: "Folder Shelf", keys: ["Shift+Cmd+KeyF"], run: (...a) => toggleShelf(...a) },
+  { id: "dock", group: "Tabs & View", label: "Information Panel", keys: ["F11", "Cmd+KeyP"], run: (...a) => togglePanel(...a) },
   // Like Finder: in a grid pane ⌘+ / ⌘− change the icon size; elsewhere they zoom the window.
   { id: "zoomIn", group: "Tabs & View", label: "Zoom In (icon size in grid)", keys: ["Cmd+Equal", "Cmd+NumpadAdd"], global: true, run: (P) => zoomOrIcons(P, 1) },
   { id: "zoomOut", group: "Tabs & View", label: "Zoom Out (icon size in grid)", keys: ["Cmd+Minus", "Cmd+NumpadSubtract"], global: true, run: (P) => zoomOrIcons(P, -1) },

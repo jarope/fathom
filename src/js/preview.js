@@ -1,17 +1,15 @@
-// Quick-Look-style full preview (Space) and the docked half-view panel that
-// tracks the current tab's left pane.
+// Quick-Look-style full preview (Space) — used when native Quick Look isn't
+// available (the browser test harness).
 
-import { app, store } from "./core.js";
+import { app } from "./core.js";
 import { getPreview, isPreviewable, dimText } from "./previews.js";
 import { openContextMenu } from "./menu.js";
 
 let preview, pvImg, pvName, pvDim;
-let dock, dockImg, dockEmpty, dockName, dockDim;
 
 export function initPreview() {
   const $ = (id) => document.getElementById(id);
   preview = $("preview"); pvImg = $("pvImg"); pvName = $("pvName"); pvDim = $("pvDim");
-  dock = $("dock"); dockImg = $("dockImg"); dockEmpty = $("dockEmpty"); dockName = $("dockName"); dockDim = $("dockDim");
 
   // Left-click the backdrop closes; clicks on the image/caption don't.
   preview.addEventListener("click", (ev) => { if (ev.target === preview) closePreview(); });
@@ -22,8 +20,6 @@ export function initPreview() {
     const e = previewTarget(P); if (e) P.selectSingle(P.entries.indexOf(e));
     openContextMenu(P, ev.clientX, ev.clientY);
   });
-  $("dockToggle").addEventListener("click", toggleDock);
-  dockImg.addEventListener("click", () => showPreviewFor(app.tab.panes[0]));
 }
 
 export function previewTarget(P) {
@@ -60,33 +56,4 @@ export async function showPreviewFor(P) {
 export function closePreview() {
   if (!preview) return;
   preview.classList.remove("show"); app.previewOpen = false; pvImg.removeAttribute("src");
-}
-
-// ---- docked panel: right of the pane in single view, under the left pane in twin ----
-export function toggleDock() {
-  app.dockPreview = !app.dockPreview;
-  store.set("fathom-dock", app.dockPreview);
-  placeDock();
-}
-
-export function placeDock() {
-  if (!dock || !app.tab) return;
-  document.getElementById("dockToggle").classList.toggle("on", app.dockPreview);
-  if (!app.dockPreview) { dock.style.display = "none"; if (dock.parentNode) dock.remove(); return; }
-  dock.style.display = "flex";
-  const left = app.tab.panes[0];
-  if (app.tab.view === "single") { dock.className = "dock side"; document.getElementById("panes").append(dock); }
-  else { dock.className = "dock bottom"; left.root.insertBefore(dock, left.els.status); }
-  refreshDock();
-}
-
-export async function refreshDock() {
-  if (!app.dockPreview || !app.tab) return;
-  const e = previewTarget(app.tab.panes[0]);
-  if (!e) { dockImg.style.display = "none"; dockEmpty.style.display = "block"; dockName.textContent = ""; dockDim.textContent = ""; return; }
-  dockEmpty.style.display = "none"; dockName.textContent = e.name; dockDim.textContent = "…";
-  const t = await getPreview(e.path, e.name, 1200);
-  if (previewTarget(app.tab.panes[0]) !== e) return; // selection moved on while loading
-  if (t && t.data) { dockImg.src = t.data; dockImg.style.display = "block"; dockDim.textContent = dimText(t, e.size); }
-  else { dockImg.style.display = "none"; dockDim.textContent = "can't preview"; }
 }

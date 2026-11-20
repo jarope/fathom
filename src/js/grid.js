@@ -78,7 +78,8 @@ function loadPic(host, e, size) {
 }
 
 /** Picture for one entry outside the grid (Columns preview). */
-export function thumbInto(host, e, size) { loadPic(host, e, size); pump(); }
+// Deferred a tick: callers usually attach host to the page right after.
+export function thumbInto(host, e, size) { loadPic(host, e, size); setTimeout(pump, 0); }
 
 // ---- The view ----
 export function createGrid(P) {

@@ -6,7 +6,7 @@ import { app, invoke, el, icon, plural } from "./core.js";
 import { undoStack, redoStack, undo, redo, setClip, paste, duplicateSel, transferToOther, pickAndTransfer, recentDests, openTerminal, compressSel, extractSel, batchRename, isArchive } from "./ops.js";
 import { openTab } from "./tabs.js";
 import { addBookmarks, placeTargets } from "./sidebar.js";
-import { other } from "./tabs.js";
+import { other, openLocation, elsewhere } from "./tabs.js";
 import { toggleHidden } from "./view.js";
 import { menuTagRow, editTagsDialog, clearTags } from "./tags.js";
 import { openWithEntries, share, quickLook } from "./system.js";
@@ -18,9 +18,15 @@ import { getInfo } from "./info.js";
 
 let ctx, sub, subTimer = null;
 
+// Holding ⌥ swaps items that have an alternate (macOS menus do the same).
+let altDown = false;
+const syncAlt = () => { ctx && ctx.classList.toggle("alt", altDown); sub && sub.classList.toggle("alt", altDown); };
+
 export function initMenu() {
   ctx = document.getElementById("ctx");
   sub = el("div", "ctx ctx-sub"); document.body.append(sub);
+  const track = (e) => { if (e.altKey !== altDown) { altDown = e.altKey; syncAlt(); } };
+  ["keydown", "keyup", "mousemove", "mousedown", "contextmenu"].forEach((t) => window.addEventListener(t, track, true));
   document.addEventListener("click", hideCtx);
   document.addEventListener("scroll", (e) => { if (!ctx.contains(e.target) && !sub.contains(e.target)) hideCtx(); }, true);
   window.addEventListener("blur", hideCtx);
@@ -43,8 +49,11 @@ function fill(box, entries, nested) {
     const n = el("div", "ctx-item" + (it.danger ? " danger" : "") + (it.on ? " on" : "") + (it.disabled ? " disabled" : "") + (it.sub ? " has-sub" : ""));
     if (it.img !== undefined) { const im = el("img", "ctx-img"); if (it.img) im.src = it.img; n.append(im); }
     else if (it.icon) n.append(icon(it.icon));
-    n.append(el("span", "lbl", it.label));
-    if (it.key) n.append(el("span", "k", it.key));
+    const alt = it.alt;
+    n.append(el("span", "lbl" + (alt ? " noalt" : ""), it.label));
+    if (alt) n.append(el("span", "lbl ifalt", alt.label));
+    if (it.key) n.append(el("span", "k" + (alt ? " noalt" : ""), it.key));
+    if (alt && alt.key) n.append(el("span", "k ifalt", alt.key));
     if (it.sub) n.append(el("span", "k chev", "›"));
     if (!nested) n.addEventListener("mouseenter", () => {
       if (n.classList.contains("open")) return;
@@ -53,7 +62,7 @@ function fill(box, entries, nested) {
     });
     if (it.disabled) { /* inert */ }
     else if (it.sub) n.addEventListener("click", (e) => { e.stopPropagation(); clearTimeout(subTimer); openSub(n, it.sub); });
-    else n.addEventListener("click", (e) => { e.stopPropagation(); hideCtx(); it.fn(); });
+    else n.addEventListener("click", (e) => { e.stopPropagation(); hideCtx(); (alt && e.altKey ? alt.fn : it.fn)(); });
     box.append(n);
   }
   if (box.lastChild && box.lastChild.classList.contains("ctx-sep")) box.lastChild.remove();
@@ -85,6 +94,7 @@ async function openSub(item, build) {
 export function showMenu(entries, x, y) {
   hideSub();
   if (!fill(ctx, entries, false)) return;
+  syncAlt();
   ctx.classList.add("show");
   ctx.scrollTop = 0;
   place(ctx, x, y);
@@ -169,6 +179,8 @@ export function openContextMenu(P, x, y) {
     one && { label: isFolder(one) ? "Open folder" : "Open", fn: () => P.activate(P.entries.indexOf(one)), key: "⏎" },
     one && isFolder(one) && { label: "Open in New Tab", fn: () => openTab(one.path), key: "⌘-dbl-click" },
     { label: "Open With", sub: () => openWithEntries(P, sel.map((e) => e.path)) },
+    one && elsewhere(P, one) && { label: "Open Location", fn: () => openLocation(P), key: keyHint("openLocation"),
+      alt: { label: "Open Location in Other Pane", fn: () => openLocation(P, true), key: keyHint("openLocationOther") } },
     { label: "Quick Look", fn: () => quickLook(P), key: keyHint("quickLook") },
     { label: "Get Info", fn: () => getInfo(P), key: keyHint("getInfo") },
     one && { label: "Rename…", fn: () => P.startRename(one.path), key: keyHint("rename") },
@@ -192,7 +204,6 @@ export function openContextMenu(P, x, y) {
     { label: "Actions", sub: () => actionEntries(P, sel, () => openPrefs("actions")) },
     P.git && P.mode === "browse" && { label: "Git", sub: () => gitMenu(P) },
     { label: "Share…", fn: () => share(P, sel.map((e) => e.path), x, y) },
-    { label: "Reveal in Finder", fn: () => invoke("reveal_in_finder", { path: sel[0].path }) },
     one && one.is_dir && { label: "Open Terminal Here", fn: () => openTerminal(P, one.path) },
     dirs.length && { label: "Add to Places", fn: () => addBookmarks(dirs) },
     { label: sel.length > 1 ? "Copy paths" : "Copy path", fn: () => { navigator.clipboard.writeText(sel.map((e) => e.path).join("\n")); P.flash(sel.length > 1 ? "Copied paths" : "Copied path"); } },
@@ -201,6 +212,8 @@ export function openContextMenu(P, x, y) {
     twin && { label: "Move to other pane", fn: () => transferToOther(P, false), key: keyHint("moveOther") },
     { label: "Copy to", sub: () => destEntries(P, true) },
     { label: "Move to", sub: () => destEntries(P, false) },
+    "sep",
+    { label: "Reveal in Finder", fn: () => invoke("reveal_in_finder", { path: sel[0].path }) },
     "sep",
     { label: `Move ${sel.length > 1 ? sel.length + " items " : ""}to Bin`, fn: P.trashSelected, danger: true, key: keyHint("trash") },
   ], x, y);

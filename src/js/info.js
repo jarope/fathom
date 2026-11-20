@@ -22,10 +22,10 @@ async function ensureListener() {
 }
 
 const bytes = (n) => `${n.toLocaleString()} byte${n === 1 ? "" : "s"}`;
-const sizeLine = (logical, disk) => `${fmtSize(logical, false)} (${bytes(logical)})${disk ? ` · ${fmtSize(disk, false)} on disk` : ""}`;
+export const sizeLine = (logical, disk) => `${fmtSize(logical, false)} (${bytes(logical)})${disk ? ` · ${fmtSize(disk, false)} on disk` : ""}`;
 
 /** Start a background size count; calls show(text) as it goes. Returns a cancel fn. */
-async function countSize(paths, show) {
+export async function countSize(paths, show) {
   await ensureListener();
   let id;
   try { id = await invoke("dir_size", { paths }); } catch (e) { show("⚠ " + e); return () => {}; }
