@@ -297,3 +297,12 @@ VERSION                  Bump on each feature / fix
 
 The app icon is generated from `folder.png` in the repo root
 (`cargo tauri icon folder.png`).
+
+## Licence
+
+Fathom is free software: you can redistribute it and/or modify it under the
+terms of the **GNU General Public License, version 3 or (at your option) any
+later version** — see [`LICENSE`](LICENSE). It comes with no warranty.
+
+JetBrains Mono is included under the SIL Open Font License
+([`src/fonts/JetBrainsMono-OFL.txt`](src/fonts/JetBrainsMono-OFL.txt)).

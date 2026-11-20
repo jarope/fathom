@@ -190,11 +190,16 @@ glyphs and tints, Reduce Transparency / Increase Contrast, glass opacity.
 Phase 5 complete.
 
 ### Phase 6 — Public release (v1.0)
-- **Name check**: "Fathom" is already used by Fathom Analytics and the Fathom
-  AI meeting notetaker — check the trademark before going public; a rename is
-  cheap now and expensive later.
-- **Licence** choice (GPL-3.0 matches the Dolphin heritage; MIT/Apache if you
-  want maximum reuse).
+- **Name: keeping "Fathom"** ✅ — Finder → Fathom: it goes deeper into the
+  system (Spotlight-powered search), and its features come from a creature of
+  the sea (Dolphin). Other Fathoms (analytics, meeting notes, VST plugins, a
+  Jellyfin media client) are different categories; no file manager of that
+  name found (Nov 2026). Before release: check the Mac App Store listing name
+  is free and a quick trademark search in the software class.
+- **Licence: GPL-3.0-or-later** ✅ — free and open source, matching the
+  Dolphin heritage; improvements to Fathom stay open. `LICENSE` in the repo;
+  every Rust dependency is GPL-compatible (MIT / Apache / BSD / MPL-2.0 /
+  Zlib / Unicode); JetBrains Mono is SIL OFL (`src/fonts/JetBrainsMono-OFL.txt`).
 - **Developer ID signing + notarisation** (Apple Developer Program) — otherwise
   Gatekeeper blocks it for everyone else. Add `scripts/release.sh`.
 - **Auto-update** via `tauri-plugin-updater` + GitHub Releases.
