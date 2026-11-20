@@ -10,6 +10,7 @@ import { openTerminal } from "./ops.js";
 import { registerDropZone } from "./dnd.js";
 import { favourites, showTagged, tagPaths } from "./tags.js";
 import { saved, runSaved, removeSaved } from "./search.js";
+import { asButton } from "./a11y.js";
 
 let places = null;
 let bookmarks = store.get("fathom-places", []); // [{ name, path }]
@@ -59,6 +60,7 @@ export function renderSidebar() {
     n.dataset.path = path; n.dataset.kind = extra.bookmark ? "bookmark" : extra.volume ? "volume" : "std";
     n.title = path;
     n.append(icon(kind), el("span", "pname", name));
+    asButton(n, name);
     if (extra.volume && !extra.volume.is_root) {
       const b = el("button", "eject"); b.type = "button"; b.title = "Eject"; b.append(icon("eject"));
       n.append(b);
@@ -82,6 +84,7 @@ export function renderSidebar() {
       n.dataset.search = i;
       n.title = `${s.query}${s.contents ? " · contents" : ""}${s.mac ? " · this Mac" : s.root ? " · in " + s.root : ""}`;
       n.append(icon("search"), el("span", "pname", s.name));
+      asButton(n, `Saved search: ${s.name}`);
       sb.append(n);
     });
   }
@@ -91,6 +94,7 @@ export function renderSidebar() {
       const n = el("div", "place tagplace");
       n.dataset.tag = t.name; n.title = `Everything tagged “${t.name}” · drop files here to tag them`;
       n.append(el("i", `tg tc${t.color || 0}`), el("span", "pname", t.name));
+      asButton(n, `Tag: ${t.name}`);
       sb.append(n);
     });
   }

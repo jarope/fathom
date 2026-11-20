@@ -9,6 +9,7 @@ import { saveSettings } from "./settings.js";
 import { pushUndo, refreshAll, selectEverywhere, trashPaths } from "./ops.js";
 import { openContextMenu, showMenu } from "./menu.js";
 import { setActive, openTab } from "./tabs.js";
+import { a11yPane } from "./a11y.js";
 import { registerDropZone, startDrag } from "./dnd.js";
 import { loadGit, gitChip } from "./git.js";
 import { usesSpotlight, startSpotlight, cancelSpotlight, searchMenu, placeholder, modeLabel, addRecent, attachRecent } from "./search.js";
@@ -70,6 +71,7 @@ export function createPane(key) {
     kids: new Map(),     // expanded folder path -> its entries
   };
   const changed = () => app.hooks.changed(P);
+  const ariaSync = a11yPane(P);
   const views = { details: createDetails(P), grid: createGrid(P), columns: createColumns(P) };
   // Search / tag results are a flat list: Columns shows them as Details.
   const V = () => (P.viewMode === "columns" && P.mode !== "browse" ? views.details : views[P.viewMode] || views.details);
@@ -117,7 +119,12 @@ export function createPane(key) {
     P.spotResults = false;
     let listing;
     try { listing = await invoke("list_dir", { path, showHidden: P.showHidden }); }
-    catch (e) { P.flash("⚠ " + e, "warn"); return false; }
+    catch (e) {
+      // macOS privacy protection (Mail, Safari, Time Machine…): explain the fix.
+      if (/Operation not permitted|os error 1\)/.test(String(e))) { import("./system.js").then((m) => m.fullDiskAccessHelp(path)); P.flash("⚠ macOS is protecting this folder", "warn"); }
+      else P.flash("⚠ " + e, "warn");
+      return false;
+    }
     const moved = listing.dir !== P.cwd;
     const keep = keepSel && !moved;
     if (moved) {
@@ -457,6 +464,7 @@ export function createPane(key) {
   P.selectedPaths = () => P.selectedEntries().map((e) => e.path);
   P.reflect = () => {
     els.listing.querySelectorAll(".row").forEach((r) => r.classList.toggle("sel", P.selected.has(P.entries[+r.dataset.i].path)));
+    ariaSync();
     if (V().selChanged) V().selChanged();
     P.renderStatus(); changed();
   };

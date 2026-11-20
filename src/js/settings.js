@@ -18,7 +18,8 @@ export const DEFAULTS = {
   columns: { show: ["size", "modified"], widths: {} }, // details view columns (Name is always on)
   gridSize: 80,         // grid view icon size in points, 48–256
   shelfSize: 46,        // folder shelf icon size in points, 32–96
-  fileIcons: true,      // real Finder icons in Details / Columns rows
+  fileIcons: true,
+  autoUpdate: true,     // check GitHub for a new version once a day      // real Finder icons in Details / Columns rows
   shortcuts: {},        // command id -> ["Cmd+KeyT", …] (only the ones you changed)
 };
 

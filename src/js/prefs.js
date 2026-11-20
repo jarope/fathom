@@ -9,6 +9,7 @@ import { allCommands, keysFor, keyLabel, comboOf, rebuildKeymap, commandFor, RES
 import { toggleHidden, toggleShelf } from "./view.js";
 import { ACCENTS, applyAppearance, followSystem, systemAccent, accentSource } from "./appearance.js";
 import { themesFor, allThemes, BUILTIN, parseTheme, addTheme, removeTheme } from "./themes.js";
+import { checkForUpdates } from "./updates.js";
 
 const TERMINALS = ["Terminal", "iTerm", "Ghostty", "Warp"];
 const redrawPanes = () => app.tabs.forEach((t) => t.panes.forEach((p) => p.cwd && p.mode === "browse" && p.renderList()));
@@ -133,6 +134,20 @@ function general() {
     check("Hidden files", app.showHidden, (on) => on !== app.showHidden && toggleHidden()),
     check("Folder shelf (sub-folders as tiles above the files)", app.folderShelf, (on) => on !== app.folderShelf && toggleShelf()),
     check("Finder icons in lists (off = simple kind symbols)", prefs.fileIcons, (on) => { prefs.fileIcons = on; saveSettings(); app.tabs.forEach((t) => t.panes.forEach((p) => p.cwd && p.renderList())); })));
+
+  // Updates
+  const ustat = note("");
+  const unow = el("button", "mbtn small", "Check Now"); unow.type = "button";
+  unow.addEventListener("click", async () => {
+    unow.disabled = true; ustat.textContent = "Checking…"; ustat.classList.remove("warn");
+    const r = await checkForUpdates(true);
+    unow.disabled = false;
+    if (r.error) { ustat.textContent = "⚠ " + r.error; ustat.classList.add("warn"); }
+    else if (r.upToDate) ustat.textContent = `Fathom ${app.version || ""} is the newest version.`.replace("  ", " ");
+    else ustat.textContent = `Fathom ${r.found.version} is available — see the card at the bottom right.`;
+  });
+  const uw = el("div", "pf-inline"); uw.append(check("Check for updates automatically (once a day)", prefs.autoUpdate !== false, (on) => { prefs.autoUpdate = on; saveSettings(); }), unow);
+  box.append(field("Updates", uw, ustat));
 
   box.append(note("Saved in ~/.config/fathom/settings.json — hand edits are fine; restart Fathom to pick them up."));
   return box;

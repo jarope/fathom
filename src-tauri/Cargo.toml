@@ -1,6 +1,6 @@
 [package]
 name = "fathom"
-version = "0.26.0"
+version = "0.27.0"
 description = "Fathom — a lean twin-pane file manager for macOS. The daily essentials, done the way Linux managers do them."
 authors = ["Jason Peel"]
 license = "GPL-3.0-or-later"
@@ -38,6 +38,7 @@ notify = "8"
 # Finder tags are stored as a binary plist in an xattr.
 plist = "1"
 tauri-plugin-window-state = "2"
+tauri-plugin-updater = "2"
 
 [profile.release]
 opt-level = 3

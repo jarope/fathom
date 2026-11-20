@@ -20,6 +20,8 @@ body {
 .mono { font-family: var(--font-mono); }
 button { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.listing:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--accent-ring); }
+.place:focus-visible, .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
 /* Shared recipes */
 .glass, .ctx, .job, .pathwrap {
@@ -341,6 +343,10 @@ img.ki.fi { object-fit: contain; display: block; }
 .job-x { border: none; background: transparent; color: var(--text3); width: 22px; height: 22px; border-radius: var(--r-cap); cursor: pointer; font-size: 11px; flex: none; }
 .job-x:hover { color: var(--danger); background: var(--sel-quiet); }
 .job-bar { height: 5px; margin: 9px 0 7px; border-radius: var(--r-cap); background: var(--sel-quiet); overflow: hidden; position: relative; }
+.upd-sub { font: var(--t-callout); color: var(--text2); margin-top: 4px; }
+.upd-notes { font: var(--t-callout); color: var(--text2); margin-top: 6px; max-height: 90px; overflow: auto; white-space: pre-wrap; }
+.upd-btns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+.job-bar[hidden] { display: none; }
 .job-bar i { display: block; height: 100%; width: 0; border-radius: var(--r-cap); background: var(--accent); }
 .job-bar.indet i { width: 35% !important; position: absolute; animation: indet 1.1s ease-in-out infinite; }
 .job-meta { font: var(--t-callout); font-variant-numeric: tabular-nums; color: var(--text2); }

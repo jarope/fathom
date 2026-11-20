@@ -10,7 +10,34 @@ native ES modules in `src/js/`, no npm, no bundler). The look follows
 [`DESIGN.md`](DESIGN.md): neutral greys, one accent colour, macOS glass on the
 sidebar and popovers, the system font plus JetBrains Mono.
 
-## What it does today (v0.26.0)
+## Install
+
+Fathom runs on macOS 11 (Big Sur) or later, on Apple Silicon and Intel.
+
+**Homebrew**
+
+```bash
+brew install jarope/fathom/fathom
+```
+
+**Or download** the `.dmg` from
+[Releases](https://github.com/jarope/fathom/releases/latest) and drag
+Fathom to Applications.
+
+Fathom isn't notarised by Apple yet, so the first time you open a downloaded
+copy macOS will refuse. Either right-click Fathom → **Open** → **Open**, or
+go to System Settings → Privacy & Security and click **Open Anyway** (once).
+Homebrew does this for you.
+
+**Full Disk Access** (optional): to browse folders macOS keeps private —
+Mail, Messages, Safari, Time Machine — turn Fathom on in System Settings →
+Privacy & Security → Full Disk Access. Fathom offers to open that page when
+you need it.
+
+**Updates** arrive inside the app (once-a-day check; Preferences → General →
+Updates). They're signed, and Fathom checks the signature before installing.
+
+## What it does today (v0.27.0)
 
 - **Progress & cancel** — copies, moves, duplicates and archive jobs run in the
   background; anything that takes more than a moment gets a card (bottom-right)
@@ -295,10 +322,23 @@ tags, signing/notarisation…).
 ./scripts/build.sh    # release .app + .dmg → src-tauri/target/release/bundle/
 ```
 
-Both wrap `cargo tauri` (needs the Tauri CLI). Distributed as an unsigned
-`aarch64` DMG — recipients strip quarantine once:
-`xattr -dr com.apple.quarantine "/Applications/Fathom.app"` (or right-click →
-Open).
+Both wrap `cargo tauri` (needs the Tauri CLI).
+
+**Releasing** (maintainers):
+
+```bash
+./scripts/release.sh             # universal .app/.dmg + signed update bundle + latest.json → dist/v<VERSION>/
+./scripts/release.sh --publish   # …then tag, push the tag and create the GitHub release
+```
+
+Before releasing: bump `VERSION` (and `Cargo.toml`, `tauri.conf.json`) and add
+the version's section to [`CHANGELOG.md`](CHANGELOG.md) — it becomes the
+release notes and the in-app update text. Update signing uses
+`~/.tauri/fathom-updater.key` (keep a backup; never commit it) with its
+password in the login Keychain (`fathom-updater-key`). Then set the new
+`version` and `sha256` in the Homebrew cask
+([`packaging/homebrew/fathom.rb`](packaging/homebrew/fathom.rb), published in
+the `jarope/homebrew-fathom` tap).
 
 ## Layout
 

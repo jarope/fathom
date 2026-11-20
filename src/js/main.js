@@ -5,6 +5,7 @@ import { initMenu } from "./menu.js";
 import { initPreview } from "./preview.js";
 import { initPanel, refreshPanel } from "./panel.js";
 import { initWheel } from "./wheel.js";
+import { initUpdates } from "./updates.js";
 import { applyShelfSize } from "./details.js";
 import { initKeys } from "./keys.js";
 import { initHeader, updateTitle, syncViewButtons } from "./view.js";
@@ -52,6 +53,7 @@ initKeys();
     return;
   }
   try { app.home = await invoke("home_dir"); } catch { app.home = "/"; }
+  try { app.version = await window.__TAURI__.app.getVersion(); } catch { app.version = ""; }
   await loadSettings();
   applyShelfSize();
   await initAppearance();
@@ -64,6 +66,7 @@ initKeys();
   await initSystem();
   await initSearch();
   initGit();
+  initUpdates();
   await initActions();
   loadActions();
   loadTags().then(() => app.sidebar && renderSidebar());

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Merged into Fathom.app's Info.plist by Tauri. These are the reasons macOS
+     shows when it asks you to let Fathom into a protected place. -->
+<plist version="1.0">
+<dict>
+  <key>NSDesktopFolderUsageDescription</key>
+  <string>Fathom is a file manager: it shows and manages the files on your Desktop when you open it.</string>
+  <key>NSDocumentsFolderUsageDescription</key>
+  <string>Fathom is a file manager: it shows and manages the files in Documents when you open it.</string>
+  <key>NSDownloadsFolderUsageDescription</key>
+  <string>Fathom is a file manager: it shows and manages the files in Downloads when you open it.</string>
+  <key>NSRemovableVolumesUsageDescription</key>
+  <string>Fathom shows and manages files on external drives when you open them.</string>
+  <key>NSNetworkVolumesUsageDescription</key>
+  <string>Fathom shows and manages files on network drives when you open them.</string>
+  <key>NSAppleEventsUsageDescription</key>
+  <string>Fathom asks Finder to move items to the Bin, so Put Back still works.</string>
+</dict>
+</plist>

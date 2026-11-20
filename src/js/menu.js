@@ -38,17 +38,22 @@ const hideSub = () => { clearTimeout(subTimer); if (sub) sub.classList.remove("s
 /** Fill a menu element. entries: see showMenu. Returns false if nothing to show. */
 function fill(box, entries, nested) {
   box.innerHTML = "";
+  box.setAttribute("role", "menu");
   for (const it of entries) {
     if (!it) continue;
     if (it === "sep") {
-      if (box.lastChild && !box.lastChild.classList.contains("ctx-sep")) box.append(el("div", "ctx-sep"));
+      if (box.lastChild && !box.lastChild.classList.contains("ctx-sep")) { const sp = el("div", "ctx-sep"); sp.setAttribute("role", "separator"); box.append(sp); }
       continue;
     }
     if (it.custom) { const c = it.custom(); if (c) box.append(c); continue; }
-    if (it.heading) { box.append(el("div", "ctx-head", it.heading)); continue; }
+    if (it.heading) { const h = el("div", "ctx-head", it.heading); h.setAttribute("role", "presentation"); box.append(h); continue; }
     const n = el("div", "ctx-item" + (it.danger ? " danger" : "") + (it.on ? " on" : "") + (it.disabled ? " disabled" : "") + (it.sub ? " has-sub" : ""));
     if (it.img !== undefined) { const im = el("img", "ctx-img"); if (it.img) im.src = it.img; n.append(im); }
     else if (it.icon) n.append(icon(it.icon));
+    n.setAttribute("role", it.on !== undefined ? "menuitemcheckbox" : "menuitem");
+    if (it.on !== undefined) n.setAttribute("aria-checked", it.on ? "true" : "false");
+    if (it.disabled) n.setAttribute("aria-disabled", "true");
+    if (it.sub) n.setAttribute("aria-haspopup", "menu");
     const alt = it.alt;
     n.append(el("span", "lbl" + (alt ? " noalt" : ""), it.label));
     if (alt) n.append(el("span", "lbl ifalt", alt.label));

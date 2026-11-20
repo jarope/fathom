@@ -24,6 +24,7 @@ mod system;
 mod tags;
 mod thumbs;
 mod icons;
+mod update;
 mod info;
 mod batch;
 mod jobs;
@@ -896,6 +897,8 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .manage(update::Pending::default())
         .manage(std::sync::Arc::new(jobs::Jobs::default()))
         .manage(std::sync::Arc::new(spotlight::Spotlight::default()))
         .manage(std::sync::Arc::new(actions::Actions::default()))
@@ -907,6 +910,8 @@ pub fn run() {
             appearance::appearance,
             thumbs::file_thumb,
             icons::file_icons,
+            update::update_check,
+            update::update_install,
             info::file_info,
             info::dir_size,
             info::dir_size_cancel,

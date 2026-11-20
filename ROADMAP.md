@@ -225,13 +225,33 @@ Phase 5 complete.
   Dolphin heritage; improvements to Fathom stay open. `LICENSE` in the repo;
   every Rust dependency is GPL-compatible (MIT / Apache / BSD / MPL-2.0 /
   Zlib / Unicode); JetBrains Mono is SIL OFL (`src/fonts/JetBrainsMono-OFL.txt`).
-- **Developer ID signing + notarisation** (Apple Developer Program) — otherwise
-  Gatekeeper blocks it for everyone else. Add `scripts/release.sh`.
-- **Auto-update** via `tauri-plugin-updater` + GitHub Releases.
-- **Homebrew cask**; screenshots, a landing page, CHANGELOG.md.
-- Full Disk Access guidance (protected folders like Mail, Safari).
-- Accessibility pass (VoiceOver labels, focus rings, keyboard-only use).
-- Remove personal info from defaults (authors/copyright are fine; nothing else).
+- **Release script** ✅ `scripts/release.sh` — universal (Apple Silicon +
+  Intel) .app / .dmg, signed update bundle, `latest.json`, sha256; checks the
+  three version numbers and the CHANGELOG agree; `--publish` tags and creates
+  the GitHub release with `gh`. Ad-hoc signed until there's a Developer ID
+  (then set `APPLE_SIGNING_IDENTITY` / `APPLE_ID` / `APPLE_PASSWORD` /
+  `APPLE_TEAM_ID` and it signs + notarises).
+- **Auto-update** ✅ tauri-plugin-updater + GitHub Releases: daily quiet
+  check, update card (Install & Relaunch / Skip This Version), Preferences
+  toggle + Check Now; off in dev builds. Key: `~/.tauri/fathom-updater.key`,
+  password in the login Keychain (`fathom-updater-key`) — back the key up.
+- **Homebrew cask** ✅ `packaging/homebrew/fathom.rb` for the
+  `jarope/homebrew-fathom` tap (unsigned apps can't go in homebrew-cask).
+- **CHANGELOG.md** ✅ — each version's section is the release notes and the
+  update card text.
+- **Full Disk Access guidance** ✅ — protected folders explain themselves and
+  open the right Settings page; permission prompts say why (Info.plist).
+- **Accessibility pass** ✅ (first round) — file lists are VoiceOver lists
+  (name, kind, selected, position; the cursor is followed), menus / dialogs /
+  status bar marked up, sidebar places and tabs reachable with Tab and
+  opened with ⏎ / Space. Still to do: full keyboard focus order through the
+  toolbar, and a real VoiceOver walk-through.
+- Minimum macOS 11 (Big Sur).
+- **Still to do before v1.0**: create the public GitHub repo and the tap
+  repo; first `--publish`; screenshots + a landing page (GitHub Pages);
+  Developer ID signing + notarisation when there's an Apple Developer
+  account; decide whether the author email stays in `Cargo.toml` (it's
+  public once the repo is).
 
 ## Polish backlog (after feature-complete, before daily-driver)
 Deferred on purpose — features first, then a polish pass.

@@ -14,7 +14,10 @@ export function modal({ title, body, buttons, wide = false, onSubmit = null, foc
     const box = el("div", "modal" + (wide ? " wide" : ""));
     const err = el("div", "modal-err");
     const btns = el("div", "modal-btns");
-    box.append(el("h2", null, title), body, err, btns);
+    const h = el("h2", null, title); h.id = "mt" + Math.random().toString(36).slice(2, 8);
+    box.setAttribute("role", "dialog"); box.setAttribute("aria-modal", "true"); box.setAttribute("aria-labelledby", h.id);
+    err.setAttribute("role", "alert");
+    box.append(h, body, err, btns);
     wrap.append(box);
     document.body.append(wrap);
     app.modalOpen = true;

@@ -1,6 +1,6 @@
 // macOS integration: Open With ▸, Share ▸ and real Quick Look on Space.
 
-import { app, invoke, listen, dialog } from "./core.js";
+import { app, invoke, listen, dialog, el } from "./core.js";
 import { getZoom } from "./view.js";
 import { showPreviewFor } from "./preview.js";
 
@@ -80,4 +80,22 @@ export async function initSystem() {
   if (!listen) return;
   await listen("ql-nav", (e) => { const P = app.active; if (P) P.moveCursor(e.payload.dir); });
   await listen("ql-closed", () => { app.qlOpen = false; });
+}
+
+// ---- Full Disk Access ----
+// Some folders (Mail, Messages, Safari, Time Machine, other users' Library…)
+// are closed to every app until you allow it in System Settings. Say so,
+// once per folder per session, with a button to the right page.
+const fdaShown = new Set();
+export async function fullDiskAccessHelp(path) {
+  if (fdaShown.has(path)) return;
+  fdaShown.add(path);
+  const { modal } = await import("./dialog.js");
+  const body = el("div");
+  body.append(
+    el("div", "modal-lead", `macOS keeps “${path.split("/").pop() || path}” private, so no app can look inside until you allow it.`),
+    el("div", "modal-note", "To browse folders like this, turn on Fathom in System Settings › Privacy & Security › Full Disk Access, then quit and reopen Fathom. You only need to do this once."),
+  );
+  const go = await modal({ title: "Fathom needs Full Disk Access", body, buttons: [{ label: "Not Now", value: null }, { label: "Open Privacy Settings", value: true, primary: true }] });
+  if (go) invoke("open_path", { path: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles" }).catch(() => {});
 }

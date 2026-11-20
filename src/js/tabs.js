@@ -7,6 +7,7 @@ import { createPane } from "./pane.js";
 import { refreshPanel } from "./panel.js";
 import { registerDropZone } from "./dnd.js";
 import { showMenu } from "./menu.js";
+import { asButton } from "./a11y.js";
 
 let seq = 0;
 const panesEl = () => document.getElementById("panes");
@@ -115,6 +116,8 @@ export function renderTabs() {
     n.dataset.i = i;
     n.title = (t.active || t.panes[0]).cwd || "";
     n.append(icon("folder"), el("span", "tname", tabTitle(t)));
+    n.setAttribute("role", "tab"); n.setAttribute("aria-selected", t === app.tab ? "true" : "false");
+    asButton(n, `Tab: ${tabTitle(t)}`);
     const x = el("button", "tclose"); x.type = "button"; x.title = "Close tab (⌘W)"; x.append(icon("close"));
     n.append(x);
     bar.append(n);
