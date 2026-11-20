@@ -136,7 +136,7 @@ function general() {
     check("Finder icons in lists (off = simple kind symbols)", prefs.fileIcons, (on) => { prefs.fileIcons = on; saveSettings(); app.tabs.forEach((t) => t.panes.forEach((p) => p.cwd && p.renderList())); })));
 
   // Updates
-  const ustat = note("");
+  const ustat = note(app.version ? `You have Fathom ${app.version}.` : "");
   const unow = el("button", "mbtn small", "Check Now"); unow.type = "button";
   unow.addEventListener("click", async () => {
     unow.disabled = true; ustat.textContent = "Checking…"; ustat.classList.remove("warn");

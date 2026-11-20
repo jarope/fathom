@@ -5,6 +5,12 @@ release script uses the section for the version it's building as the release
 notes (and the text shown in the in-app update card), so keep each section
 short and written for people who use Fathom.
 
+## 0.27.3 — 2026-11-20
+
+- After an update, Fathom says so: a small card on the first launch with a
+  link to what's new.
+- Preferences → General → Updates shows which version you have.
+
 ## 0.27.2 — 2026-11-20
 
 - **New app icon**: a sounding line dropping through stacked folders.

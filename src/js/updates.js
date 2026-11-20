@@ -3,7 +3,7 @@
 // Installing downloads the signed build, verifies it, swaps it in and
 // relaunches (see update.rs). Development builds never check.
 
-import { invoke, listen, el, store } from "./core.js";
+import { app, invoke, listen, el, store } from "./core.js";
 import { prefs } from "./settings.js";
 
 const DAY = 24 * 3600 * 1000;
@@ -56,8 +56,37 @@ function showCard(u) {
 }
 const syncHost = () => { const h = document.getElementById("jobs"); if (h) h.classList.toggle("show", h.childElementCount > 0); };
 
-/** On launch: check if it's been a day (and updates are on). */
+const RELEASES = "https://github.com/jarope/fathom/releases";
+
+/** First launch after an update: a short "updated" card with a link to what's new. */
+function announceUpdated() {
+  const now = app.version, before = store.get("fathom-last-version", "");
+  if (!now) return;
+  store.set("fathom-last-version", now);
+  // No version on record: a fresh install, or 0.27.2 and earlier (which didn't
+  // record it). Those had the updater, so a past update check means "updated".
+  if (before === now || (!before && !store.get("fathom-update-checked", 0))) return;
+  const host = document.getElementById("jobs");
+  if (!host) return;
+  const c = el("div", "job glass upd");
+  const close = () => { c.remove(); syncHost(); };
+  const top = el("div", "job-top");
+  const x = el("button", "job-x", "✕"); x.type = "button"; x.title = "Close";
+  x.addEventListener("click", close);
+  top.append(el("div", "job-label", `Fathom updated to ${now}`), x);
+  const btns = el("div", "upd-btns");
+  const notes = el("button", "mbtn small", "What's New"); notes.type = "button";
+  notes.addEventListener("click", () => { invoke && invoke("open_path", { path: `${RELEASES}/tag/v${now}` }).catch(() => {}); close(); });
+  btns.append(notes);
+  c.append(top, ...(before ? [el("div", "upd-sub", `You were on ${before}.`)] : []), btns);
+  host.prepend(c);
+  syncHost();
+  setTimeout(() => c.isConnected && close(), 20000);
+}
+
+/** On launch: say if Fathom was just updated, then check if it's been a day (and updates are on). */
 export function initUpdates() {
+  announceUpdated();
   if (prefs.autoUpdate === false) return;
   const last = +store.get("fathom-update-checked", 0);
   if (Date.now() - last < DAY) return;
