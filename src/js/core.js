@@ -86,6 +86,8 @@ const ICONS = {
   applications: '<rect x="3" y="3" width="5.5" height="5.5" rx="1.3"/><rect x="11.5" y="3" width="5.5" height="5.5" rx="1.3"/><rect x="3" y="11.5" width="5.5" height="5.5" rx="1.3"/><rect x="11.5" y="11.5" width="5.5" height="5.5" rx="1.3"/>',
   folder: '<path d="M2.75 5.5A1.5 1.5 0 0 1 4.25 4h3.5l1.75 2h6.25a1.5 1.5 0 0 1 1.5 1.5v7a1.5 1.5 0 0 1-1.5 1.5H4.25a1.5 1.5 0 0 1-1.5-1.5z"/>',
   drive: '<rect x="2.75" y="6" width="14.5" height="8" rx="2"/><path d="M5.5 11h4"/><circle cx="14" cy="10" r="0.9" fill="currentColor"/>',
+  recent: '<circle cx="10" cy="10" r="7"/><path d="M10 6v4.25l2.75 1.75"/>',
+  network: '<circle cx="10" cy="10" r="7"/><path d="M3 10h14M10 3c2 2 3 4.4 3 7s-1 5-3 7c-2-2-3-4.4-3-7s1-5 3-7z"/>',
   bin: '<path d="M4 5.75h12M8 5.75V4.25h4v1.5"/><path d="M5.5 5.75l.75 10a1.25 1.25 0 0 0 1.25 1.15h5a1.25 1.25 0 0 0 1.25-1.15l.75-10"/><path d="M8.5 8.75v5M11.5 8.75v5"/>',
   eject: '<path d="M10 4.5l5 6H5z"/><path d="M5 14.75h10"/>',
   cloud: '<path d="M6 15.5h8.5a3.25 3.25 0 0 0 .3-6.49A4.75 4.75 0 0 0 5.6 8.6 3.45 3.45 0 0 0 6 15.5z"/>',

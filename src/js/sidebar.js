@@ -12,6 +12,7 @@ import { favourites, showTagged, tagPaths } from "./tags.js";
 import { saved, runSaved, removeSaved } from "./search.js";
 import { asButton } from "./a11y.js";
 import { emptyBin } from "./bin.js";
+import { recentMenu, connectToServer } from "./network.js";
 import { trashPaths } from "./ops.js";
 
 let places = null;
@@ -75,10 +76,16 @@ export function renderSidebar() {
   places.standard.forEach((p) => item(p.name, p.path, p.kind, { fav: true }));
   bookmarks.forEach((b) => item(b.name, b.path, "folder", { bookmark: true, fav: true }));
   if (!bookmarks.length) sb.append(el("div", "side-hint", "Drag folders here to pin them"));
+  const rec = el("div", "place recentplace"); rec.dataset.recent = "1"; rec.title = "Folders you were in lately";
+  rec.append(icon("recent"), el("span", "pname", "Recent"), el("span", "pchev", "›"));
+  asButton(rec, "Recent folders"); sb.append(rec);
   if (places.icloud) { sec("iCloud"); item("iCloud Drive", places.icloud, "cloud"); }
   sec("Locations");
-  places.volumes.forEach((v) => item(v.name, v.path, "drive", { volume: v }));
+  places.volumes.forEach((v) => item(v.name, v.path, v.network ? "network" : "drive", { volume: v }));
   if (places.bin) item("Bin", places.bin, "bin", { bin: true });
+  const srv = el("div", "place serverplace"); srv.dataset.server = "1"; srv.title = "Connect to Server (⌘K)";
+  srv.append(icon("network"), el("span", "pname", "Connect to Server…"));
+  asButton(srv, "Connect to Server"); sb.append(srv);
   if (saved.length) {
     sec("Searches");
     saved.forEach((s, i) => {
@@ -130,6 +137,8 @@ export function initSidebar() {
     const n = placeOf(ev); if (!n) return;
     if (n.dataset.tag) { if (app.active) showTagged(app.active, n.dataset.tag); return; }
     if (n.dataset.search) { if (app.active) runSaved(app.active, saved[+n.dataset.search]); return; }
+    if (n.dataset.recent) { ev.stopPropagation(); const r = n.getBoundingClientRect(); recentMenu(r.right - 8, r.top); return; }
+    if (n.dataset.server) { connectToServer(); return; }
     if (ev.target.closest(".eject")) { eject(n.dataset.path, n.querySelector(".pname").textContent); return; }
     if (ev.metaKey) openTab(n.dataset.path);
     else if (app.active) app.active.navigate(n.dataset.path);
@@ -137,7 +146,7 @@ export function initSidebar() {
   sb.addEventListener("auxclick", (ev) => { const n = placeOf(ev); if (n && n.dataset.path && ev.button === 1) openTab(n.dataset.path); });
   sb.addEventListener("contextmenu", (ev) => {
     ev.preventDefault();
-    const n = placeOf(ev); if (!n || n.dataset.tag) return;
+    const n = placeOf(ev); if (!n || n.dataset.tag || n.dataset.recent || n.dataset.server) return;
     if (n.dataset.search) {
       const i = +n.dataset.search;
       showMenu([
@@ -181,7 +190,7 @@ export function initSidebar() {
     root: sb,
     over: (n, data) => {
       const pl = n.closest(".place");
-      if (pl && pl.dataset.search) return null;
+      if (pl && (pl.dataset.search || pl.dataset.recent || pl.dataset.server)) return null;
       if (pl && pl.dataset.tag) return { el: pl, act: (d) => app.active && tagPaths(app.active, d.paths, pl.dataset.tag) };
       if (pl && pl.dataset.kind === "bin") return { el: pl, act: (d) => app.active && trashPaths(app.active, d.paths.filter((p) => !p.startsWith(app.bin + "/"))) };
       if (pl) return { el: pl, dest: pl.dataset.path };

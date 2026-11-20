@@ -304,6 +304,17 @@ img.ki.fi { object-fit: contain; display: block; }
 .place > svg { width: 17px; height: 17px; flex: none; color: var(--text2); pointer-events: none; }
 .place.fav > svg { color: var(--accent); }
 .place .pname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: none; }
+.place .pchev { color: var(--text3); font: var(--t-callout); pointer-events: none; }
+/* Connect to Server */
+.srv-url { width: 100%; height: 30px; padding: 0 10px; border-radius: var(--r-cap); border: 1px solid var(--edge); background: var(--content); color: var(--text); font: var(--t-body); font-family: ui-monospace, monospace; margin-top: 10px; }
+.srv-h { font: var(--t-callout); color: var(--text3); margin: 14px 0 4px; }
+.srv-list { max-height: 160px; overflow-y: auto; }
+.srv-row { display: flex; align-items: center; gap: 4px; }
+.srv-go { flex: 1; min-width: 0; text-align: left; border: none; background: transparent; color: var(--text); font: var(--t-callout); font-family: ui-monospace, monospace; padding: 4px 8px; border-radius: var(--r-row); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.srv-go:hover { background: var(--sel-quiet); }
+.srv-x { border: none; background: transparent; color: var(--text3); cursor: pointer; border-radius: var(--r-row); padding: 2px 6px; }
+.srv-x:hover { color: var(--danger); background: var(--sel-quiet); }
+.srv-status { font: var(--t-callout); color: var(--text2); margin-top: 8px; min-height: 1em; }
 .place:hover { background: var(--sel-quiet); }
 .place.on { background: var(--sel-quiet); font-weight: 600; }
 .place.drop-into { background: var(--accent-soft); box-shadow: inset 0 0 0 1.5px var(--accent); }

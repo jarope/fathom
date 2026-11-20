@@ -44,7 +44,7 @@ you need it.
 **Updates** arrive inside the app (once-a-day check; Preferences → General →
 Updates). They're signed, and Fathom checks the signature before installing.
 
-## What it does today (v0.29.0)
+## What it does today (v0.30.0)
 
 - **Progress & cancel** — copies, moves, duplicates and archive jobs run in the
   background; anything that takes more than a moment gets a card (bottom-right)
@@ -86,6 +86,11 @@ Updates). They're signed, and Fathom checks the signature before installing.
   volumes (with ⏏ eject). **Pin any folder** by dragging it onto the sidebar or
   right-click → *Add to Places*; reorder/remove pins from their right-click
   menu. Drop files onto a place to move them there (⌥ to copy).
+  **Recent** (⇧⌘O) lists the last 15 folders you were in (⌘-click for a new
+  tab). Network shares get a globe icon.
+- **Connect to Server** (⌘K, or the sidebar) — smb://, afp://, nfs:// or
+  WebDAV (https://). macOS mounts it with its own login prompt and Keychain;
+  Fathom opens it and remembers the last 10 servers.
 - **Tabs** — ⌘T new tab, ⌘W close, ⌃Tab / ⌘⇧[ ] to cycle, ⌘1…9 to jump.
   Middle-click or ⌘-double-click a folder (or ⌘-click a place) to open it in a
   new tab. Each tab keeps its own single/twin layout. The tab bar only shows
@@ -309,6 +314,8 @@ Defaults below — change any of them in Preferences → Shortcuts.
 | ⌘\\ | Toggle single / twin pane |
 | ⌘↑ | Up a folder |
 | ⇧⌘R / ⌥⇧⌘R | Open Location — the selected item's folder, here / in the other pane |
+| ⇧⌘O | Recent folders |
+| ⌘K | Connect to Server… |
 | ⌘[ / ⌘] | Back / Forward |
 | ⌘T / ⌘W | New tab / close tab |
 | ⌃Tab · ⌘⇧[ ] · ⌘1…9 | Switch tabs |

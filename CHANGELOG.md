@@ -5,6 +5,13 @@ release script uses the section for the version it's building as the release
 notes (and the text shown in the in-app update card), so keep each section
 short and written for people who use Fathom.
 
+## 0.30.0 — 2026-11-20
+
+- **Recent** in the sidebar (⇧⌘O): the last 15 folders you were in.
+- **Connect to Server** (⌘K): SMB, AFP, NFS or WebDAV, with macOS's own
+  login and Keychain; remembers your last servers. Network shares get their
+  own icon in the sidebar.
+
 ## 0.29.0 — 2026-11-20
 
 - **New from Template** (right-click): files and folders in `~/Templates`

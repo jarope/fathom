@@ -20,6 +20,7 @@ import { prefs } from "./settings.js";
 import { openPrefs } from "./prefs.js";
 import { getInfo } from "./info.js";
 import { actions, runOnSelection } from "./actions.js";
+import { connectToServer, recentMenu } from "./network.js";
 
 function zoomOrIcons(P, dir) {
   if (!P || P.viewMode !== "grid") { zoomStep(dir); return; }
@@ -58,6 +59,8 @@ export const COMMANDS = [
   { id: "up", group: "Go", label: "Enclosing Folder", keys: ["Cmd+ArrowUp"], run: (P) => P.goUp() },
   { id: "openLocation", group: "Go", label: "Open Location (the item's folder)", keys: ["Shift+Cmd+KeyR"], run: (P) => openLocation(P) },
   { id: "openLocationOther", group: "Go", label: "Open Location in Other Pane", keys: ["Alt+Shift+Cmd+KeyR"], run: (P) => openLocation(P, true) },
+  { id: "connect", group: "Go", label: "Connect to Server…", keys: ["Cmd+KeyK"], run: () => connectToServer() },
+  { id: "recent", group: "Go", label: "Recent Folders", keys: ["Shift+Cmd+KeyO"], run: (P) => { const r = P.els.listing.getBoundingClientRect(); recentMenu(r.left + 40, r.top + 10); } },
   { id: "revealFinder", group: "Go", label: "Reveal in Finder", keys: [], run: (P) => { const e = P.selectedEntries()[0]; invoke("reveal_in_finder", { path: e ? e.path : P.cwd }); } },
   { id: "home", group: "Go", label: "Home", keys: ["Shift+Cmd+KeyH"], run: (P) => P.goHome() },
   { id: "editPath", group: "Go", label: "Type a Path", keys: ["Cmd+KeyL"], run: (P) => P.editPath() },

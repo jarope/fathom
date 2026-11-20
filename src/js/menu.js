@@ -69,7 +69,7 @@ function fill(box, entries, nested) {
     });
     if (it.disabled) { /* inert */ }
     else if (it.sub) n.addEventListener("click", (e) => { e.stopPropagation(); clearTimeout(subTimer); openSub(n, it.sub); });
-    else n.addEventListener("click", (e) => { e.stopPropagation(); hideCtx(); (alt && e.altKey ? alt.fn : it.fn)(); });
+    else n.addEventListener("click", (e) => { e.stopPropagation(); hideCtx(); (alt && e.altKey ? alt.fn : it.fn)(e); });
     box.append(n);
   }
   if (box.lastChild && box.lastChild.classList.contains("ctx-sep")) box.lastChild.remove();

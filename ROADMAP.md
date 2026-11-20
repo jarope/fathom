@@ -21,7 +21,7 @@ Status key: ✅ done · 🟡 partial · ⬜ not started
 | **Open Terminal here** / Terminal panel (F4) | Embedded panel | ✅ opens Terminal.app (⌥⌘T) · ⬜ embedded panel |
 | **Background context menu** | New, paste, terminal, view options | ✅ |
 | **Tabs** (Ctrl+T) | Tabs per window, each optionally split | ✅ ⌘T, each tab single/twin, drop onto tabs |
-| **Places panel** | Home, Desktop, Downloads, devices, network, bookmarks, recent | ✅ favourites, pins, iCloud, volumes + eject · ⬜ recent, network |
+| **Places panel** | Home, Desktop, Downloads, devices, network, bookmarks, recent | ✅ favourites, pins, iCloud, volumes + eject, Recent (⇧⌘O), network shares, Bin |
 | **Breadcrumb location bar** | Clickable segments with sub-folder drop-downs; Ctrl+L to edit | ✅ segments, › drop-downs, ⌘L to type, drop targets |
 | **View modes** | Icons, Compact, Details, Columns (back in 2026) | ✅ Details (expandable), Grid, Columns |
 | **Zoom** | Ctrl+wheel / slider | ✅ window zoom (⌘+ / ⌘−, scroll over Aa), grid and shelf icon size (pinch / ⌘-scroll, slider) |
@@ -38,7 +38,7 @@ Status key: ✅ done · 🟡 partial · ⬜ not started
 | **Trash view** | Browse + restore | ✅ Bin in the sidebar: browse, Put Back (Fathom's and Finder's records), Delete Immediately, Empty Bin |
 | **Tags / ratings** | Baloo | ✅ Finder tags: dots, menu, ⌃⌘1–7, sidebar, drop-to-tag |
 | **Content search** | Baloo | ✅ Spotlight: contents / names, here or whole Mac, streamed; saved searches |
-| **Remote locations** | sftp, smb, etc. via KIO | ⬜ mounted volumes only for now |
+| **Remote locations** | sftp, smb, etc. via KIO | ✅ Connect to Server (⌘K): SMB / AFP / NFS / WebDAV mounted by macOS · ⬜ sftp (no macOS support) |
 | **Git status overlays** | Plugin | ✅ badges, folder roll-up, branch ↑↓ chip, Commit… / Push |
 | **Per-folder view settings** | Remembered | ✅ view mode + sort per folder (since v0.19) |
 | **Session restore** | Tabs/paths reopened | ✅ tabs, folders, layout, sort, window size |

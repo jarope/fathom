@@ -18,6 +18,7 @@ mod archive;
 mod bin_ops;
 mod bin_view;
 mod templates;
+mod network;
 mod dnd;
 mod git;
 mod query;
@@ -738,6 +739,8 @@ struct Volume {
     name: String,
     path: String,
     is_root: bool,
+    /// A network share (SMB, AFP, NFS, WebDAV…).
+    network: bool,
 }
 
 #[derive(Serialize)]
@@ -794,7 +797,9 @@ fn places() -> Result<Places, String> {
             }
             let c = canon(&p);
             let is_root = c == "/";
-            volumes.push(Volume { name, path: if is_root { "/".into() } else { p.to_string_lossy().into_owned() }, is_root });
+            let path = if is_root { "/".into() } else { p.to_string_lossy().into_owned() };
+            let network = !is_root && network::is_network(&path);
+            volumes.push(Volume { name, path, is_root, network });
         }
     }
     volumes.sort_by(|a, b| b.is_root.cmp(&a.is_root).then_with(|| a.name.to_lowercase().cmp(&b.name.to_lowercase())));
@@ -933,6 +938,7 @@ pub fn run() {
             templates::templates,
             templates::create_from_template,
             templates::templates_setup,
+            network::connect_server,
             dnd::start_drag,
             dnd::drop_action,
             dnd::classify_paths,

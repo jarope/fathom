@@ -24,6 +24,7 @@ import { loadActions, initActions } from "./actions.js";
 import { rebuildKeymap } from "./keys.js";
 import { openPrefs } from "./prefs.js";
 import { initAppearance } from "./appearance.js";
+import { recordRecent } from "./network.js";
 
 app.showHidden = !!store.get("fathom-hidden", 0);
 app.sidebar = store.get("fathom-sidebar", true) !== false;
@@ -31,7 +32,7 @@ app.infoPanel = !!store.get("fathom-dock", false);
 app.folderShelf = store.get("fathom-shelf", true) !== false;
 
 app.hooks.changed = (P) => { if (P === app.active) refreshPanel(); qlFollow(P); };
-app.hooks.navigated = () => { refreshPanel(); renderTabs(); markActive(); updateTitle(); syncViewButtons(); syncWatch(); saveSession(); };
+app.hooks.navigated = (P) => { recordRecent(P); refreshPanel(); renderTabs(); markActive(); updateTitle(); syncViewButtons(); syncWatch(); saveSession(); };
 app.hooks.viewMode = () => syncViewButtons();
 app.hooks.save = saveSession;
 app.hooks.expanded = () => syncWatch();
