@@ -38,7 +38,7 @@ Status key: ✅ done · 🟡 partial · ⬜ not started
 | **Trash view** | Browse + restore | ✅ Bin in the sidebar: browse, Put Back (Fathom's and Finder's records), Delete Immediately, Empty Bin |
 | **Tags / ratings** | Baloo | ✅ Finder tags: dots, menu, ⌃⌘1–7, sidebar, drop-to-tag |
 | **Content search** | Baloo | ✅ Spotlight: contents / names, here or whole Mac, streamed; saved searches |
-| **Remote locations** | sftp, smb, etc. via KIO | ✅ Connect to Server (⌘K): SMB / AFP / NFS / WebDAV mounted by macOS · 🟡 sftp built in (see SFTP below) |
+| **Remote locations** | sftp, smb, etc. via KIO | ✅ Connect to Server (⌘K): SMB / AFP / NFS / WebDAV mounted by macOS · ✅ sftp built in (see SFTP below) |
 | **Git status overlays** | Plugin | ✅ badges, folder roll-up, branch ↑↓ chip, Commit… / Push |
 | **Per-folder view settings** | Remembered | ✅ view mode + sort per folder (since v0.19) |
 | **Session restore** | Tabs/paths reopened | ✅ tabs, folders, layout, sort, window size |
@@ -254,6 +254,12 @@ Phase 5 complete.
   `brew trust` once); `release.sh --publish` updates it.
 - **Demo folder** ✅ `scripts/demo.sh` → ~/Fathom Demo (made-up files).
 - **Still to do before v1.0**: screenshots + a landing page (GitHub Pages).
+- **Self-signed code-signing certificate** ⬜ — no Apple Developer account
+  needed: a "Code Signing" certificate made in Keychain Access, used via
+  `APPLE_SIGNING_IDENTITY` in release.sh. Gives every release the same
+  signing identity, so Full Disk Access / Automation grants survive updates
+  (ad-hoc signatures change per build). Doesn't change first-install
+  Gatekeeper ("Open Anyway" still needed). Back up the certificate + key.
   No Developer ID / notarisation — decided against.
 
 ## SFTP — built into Fathom (v0.35; polish in D)

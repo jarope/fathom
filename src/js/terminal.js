@@ -109,6 +109,8 @@ function termMenu(e) {
     hasBlocks() && { label: "Next Command", key: "⌘↓", fn: () => { jump(1); term.focus(); } },
     hasBlocks() && "sep",
     { label: "Clear", key: "⌘K", fn: () => { term.clear(); term.focus(); } },
+    "sep",
+    { label: "Hide Terminal Panel", key: "⌃`", fn: () => toggleTerminal(false) },
   ], e.clientX, e.clientY);
 }
 
@@ -147,6 +149,7 @@ export async function toggleTerminal(force) {
 function init() {
   panel = document.getElementById("termPanel");
   host = panel.querySelector(".term-host");
+  panel.querySelector(".term-close").addEventListener("click", () => toggleTerminal(false));
   const h = +store.get("fathom-terminal-h", 220);
   panel.style.height = Math.max(90, h) + "px";
   // Drag the top edge to resize.

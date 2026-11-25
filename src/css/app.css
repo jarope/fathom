@@ -84,6 +84,9 @@ button { font: inherit; color: inherit; }
 .termp[hidden] { display: none; }
 .term-grip { position: absolute; left: 0; right: 0; top: -3px; height: 6px; cursor: row-resize; z-index: 2; }
 .term-host { flex: 1; min-height: 0; padding: 6px 4px 4px 10px; }
+.term-close { position: absolute; top: 5px; right: 18px; z-index: 3; width: 20px; height: 20px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--text3); cursor: default; opacity: .7; }
+.term-close svg { width: 10px; height: 10px; }
+.term-close:hover { opacity: 1; color: var(--text); background: var(--sel-quiet); }
 /* A footer board under the shell so its last line never sits on (or past) the
    window's bottom edge — taller in full screen, where the edge is the display's. */
 .termp::after { content: ""; flex: none; height: 10px; border-top: 1px solid var(--separator); background: var(--window); }

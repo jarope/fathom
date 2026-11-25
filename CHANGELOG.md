@@ -5,6 +5,12 @@ release script uses the section for the version it's building as the release
 notes (and the text shown in the in-app update card), so keep each section
 short and written for people who use Fathom.
 
+## 0.35.1 — 2026-11-25
+
+- The terminal panel has a close button (×, top right), and its right-click
+  menu has Hide Terminal Panel. The shell keeps running while hidden, and
+  ⌃` or F4 still shows and hides it.
+
 ## 0.35.0 — 2026-11-25
 
 - **Servers (SFTP), built in**: ⌘K Connect to Server now takes
