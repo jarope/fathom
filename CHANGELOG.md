@@ -5,7 +5,7 @@ release script uses the section for the version it's building as the release
 notes (and the text shown in the in-app update card), so keep each section
 short and written for people who use Fathom.
 
-## 0.32.0 — 2026-11-20
+## 0.33.0 — 2026-11-25
 
 - **Aloft** (new mode): Incorporated another project, called Aloft, which looks at disk size. 
   This allows for a dual pane view of a folder and see the disk size of items within it.
