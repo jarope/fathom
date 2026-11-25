@@ -283,9 +283,15 @@ Phases (each shippable):
   ssh, opt-in e2e: `FATHOM_SSH=<wrapper> FATHOM_E2E_CONN=<host> cargo test
   e2e -- --ignored`) and in the app against a private sshd on 127.0.0.1:2222
   (runs as you, key-only, `UsePAM no`; Remote Login stays off).
-- ⬜ **B — copy / move both ways** through the job engine (progress, cancel,
-  conflicts), F5/F6, drag between panes; uploads go to `.fathom-part` first.
-- ⬜ **C — rename, delete, new folder, open & save back**.
+- 🟡 **B — copy / move both ways** through the job engine (progress, cancel,
+  conflicts), F5/F6, drag between panes; uploads go to `.fathom-part` first,
+  server-side Replace via `.fathom-new` then swap (`remote/xfer.rs`). Tested
+  in cargo (vs sftp-server, and e2e through real ssh); awaiting a try in the app.
+- 🟡 **C — rename, delete, new folder, open & save back** (`remote/files.rs`):
+  saves upload via `.fathom-part` + posix-rename; a server copy changed since
+  opening asks (replace / save as copy / don't upload). Tested in cargo e2e
+  through real ssh; awaiting a try in the app. Batch rename, duplicate,
+  compress / extract stay Mac-only for now.
 - ⬜ **D — polish**: streamed huge listings, Quick Look via cached download,
   chmod, Open SSH Session Here, server→server, resume, remote name search.
 

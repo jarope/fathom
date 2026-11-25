@@ -66,9 +66,11 @@ const LABELS = { keep: "Keep both", replace: "Replace", skip: "Skip", merge: "Me
 /** Resolves to { [srcPath]: policy } or null if cancelled. */
 export async function resolveConflicts(conflicts, destDir, copy) {
   const choice = new Map(conflicts.map((c) => [c.src, c.src_is_dir && c.dst_is_dir ? "merge" : "keep"]));
+  const onServer = destDir.startsWith("sftp://");
   const body = el("div", "cf");
   body.append(el("p", "modal-lead",
-    `${conflicts.length === 1 ? "An item" : conflicts.length + " items"} with the same name already exist${conflicts.length === 1 ? "s" : ""} in “${baseName(destDir)}”.`));
+    `${conflicts.length === 1 ? "An item" : conflicts.length + " items"} with the same name already exist${conflicts.length === 1 ? "s" : ""} in “${baseName(destDir) || destDir}”.` +
+    (onServer ? " This is on a server, so Replace deletes the server's copy (there's no Bin) — only after the new one has fully arrived." : "")));
 
   const list = el("div", "cf-list");
   const segs = [];
@@ -92,6 +94,8 @@ export async function resolveConflicts(conflicts, destDir, copy) {
     const opts = c.src_is_dir && c.dst_is_dir ? ["merge", "keep", "replace", "skip"] : ["keep", "replace", "skip"];
     opts.forEach((o) => {
       const b = el("button", "seg-b", LABELS[o]); b.type = "button"; b.dataset.v = o;
+      // A server has no Bin: replacing there deletes its copy (once the new one is fully uploaded).
+      if (o === "replace") b.title = onServer ? "Deletes the server's copy — there's no Bin on a server. The old one is only removed once the new one has fully arrived." : "The existing one goes to the Bin";
       b.addEventListener("click", () => { choice.set(c.src, o); paint(); });
       seg.append(b);
     });

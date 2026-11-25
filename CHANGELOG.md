@@ -14,8 +14,18 @@ short and written for people who use Fathom.
   refreshes by itself. Logging in uses your Mac's own ssh, so your keys,
   agent and config work as in Terminal; passwords, new-server fingerprints
   and key passphrases are asked in Fathom (passwords can be kept in the
-  Keychain), and a server whose key has changed is refused. Browse-only for
-  now: copying, opening and changing files on servers comes next.
+  Keychain), and a server whose key has changed is refused.
+- **Copy and move to and from servers**: F5 / F6, drag between panes,
+  ⌘C / ⌘V and Copy to / Move to all work both ways, with the usual progress
+  card, Cancel and Keep both / Replace / Skip / Merge. Uploads only appear
+  under their real name once complete, and replacing on a server (which has
+  no Bin) deletes the old copy only after the new one has fully arrived.
+  Transfers involving a server can't be undone.
+- **Work on server files directly**: new folder / file, rename (⌘Z undoes),
+  and Delete — which asks first, as servers have no Bin. Double-click a
+  server file to open it in its app: each save uploads back by itself, and
+  if someone changed the server's copy meanwhile you choose whether to
+  replace theirs, save yours as a copy, or not upload.
 
 ## 0.34.0 — 2026-11-25
 

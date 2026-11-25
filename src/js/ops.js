@@ -3,13 +3,13 @@
 // extract, batch rename, and undo. Nothing is ever overwritten in place: a
 // "Replace" sends the existing item to the Bin first.
 
-import { isRemote } from "./loc.js";
-import { app, invoke, store, baseName, plural } from "./core.js";
+import { isRemote, displayName, serverLabel, connOf } from "./loc.js";
+import { app, invoke, store, el, baseName, plural } from "./core.js";
 import { visiblePanes } from "./tabs.js";
 import { closePreview } from "./preview.js";
 import { runJob } from "./jobs.js";
 import { prefs } from "./settings.js";
-import { resolveConflicts, batchRenameDialog } from "./dialog.js";
+import { resolveConflicts, batchRenameDialog, modal } from "./dialog.js";
 
 const flashActive = (msg, cls) => (app.active || app.tab.panes[0]).flash(msg, cls);
 
@@ -20,13 +20,41 @@ export function copyPaths(P) {
   navigator.clipboard.writeText(paths.join("\n"));
   P.flash(paths.length > 1 ? `Copied ${paths.length} paths` : P.selected.size ? "Copied path" : "Copied folder path");
 }
-/** Servers are browse-only for now (SFTP Phase A): say so instead of failing.
- *  True when something here is on a server — the caller should stop. */
+/** Things that need the files on this Mac (duplicate, compress, extract,
+ *  batch rename): say so on a server instead of failing. True = stop. */
 export function serverSoon(P, ...paths) {
   if (!paths.flat().some(isRemote)) return false;
   const who = P || app.active;
-  if (who) who.flash("Servers are browse-only for now — copying, opening and changing files there comes in the next update", "warn");
+  if (who) who.flash("That isn't available on servers — copy it to your Mac first", "warn");
   return true;
+}
+
+/** Delete server items for good, after asking (servers have no Bin). */
+export async function deleteRemote(P, paths) {
+  if (!paths.length) return;
+  const what = paths.length === 1 ? `“${displayName(paths[0])}”` : plural(paths.length, "item");
+  const ok = await modal({
+    title: `Delete ${what} from ${serverLabel(connOf(paths[0]))}?`,
+    body: el("div", "modal-lead", "Servers have no Bin, so this deletes it for good — it can't be undone."),
+    buttons: [{ label: "Cancel", value: false }, { label: "Delete", value: true, primary: true, danger: true }],
+  });
+  if (!ok) return;
+  let res;
+  try { res = await runJob("sftp_delete", { paths }, `Deleting ${what}`); }
+  catch (e) { P.flash("⚠ " + e, "warn"); return; }
+  await refreshAll();
+  const r = res.report;
+  let msg = res.cancelled ? `Cancelled — deleted ${plural(r.done, "item")} before stopping` : `Deleted ${plural(r.done, "item")}`;
+  if (r.errors.length) msg += ` · ⚠ ${r.errors[0]}`;
+  P.flash(msg, r.errors.length || res.cancelled ? "warn" : "msg");
+}
+
+/** Open server files in their apps; saves go back up (see remote/files.rs). */
+export function openRemote(P, paths) {
+  paths.forEach((p) => {
+    P.flash(`Opening “${displayName(p)}”…`);
+    invoke("sftp_open", { path: p }).then(() => P.flash(`Opened “${displayName(p)}” · saves upload to the server`)).catch((e) => P.flash("⚠ " + e, "warn"));
+  });
 }
 
 export const refreshAll = () => Promise.all(visiblePanes().map((p) => p.reload()));
@@ -103,7 +131,8 @@ export const redo = () => step(redoStack, undoStack, 1);
 
 /** Move paths to the Bin, remembering where they went so ⌘Z puts them back. */
 export async function trashPaths(P, paths) {
-  if (!paths.length || serverSoon(P, paths)) return;
+  if (!paths.length) return;
+  if (paths.some(isRemote)) { if (paths.every(isRemote)) deleteRemote(P, paths); else P.flash("Delete server items and Mac items separately", "warn"); return; }
   let b;
   try { b = await invoke("move_to_trash", { paths }); }
   catch (e) { P.flash("⚠ " + e, "warn"); return; }
@@ -146,7 +175,8 @@ export async function paste(P, dest, { move = false } = {}) {
 
 // ---- Move / copy (conflict check → job with progress → refresh + undo) ----
 export async function performTransfer(paths, destDir, copy) {
-  if (!paths || !paths.length || !destDir || serverSoon(null, paths, destDir)) return;
+  if (!paths || !paths.length || !destDir) return;
+  const server = isRemote(destDir) || paths.some(isRemote);
   let policies = null;
   try {
     const conflicts = await invoke("plan_transfer", { sources: paths, destDir });
@@ -156,12 +186,15 @@ export async function performTransfer(paths, destDir, copy) {
     }
   } catch (e) { flashActive("⚠ " + e, "warn"); return; }
 
-  const label = `${copy ? "Copying" : "Moving"} ${plural(paths.length, "item")} to “${baseName(destDir)}”`;
+  const where = isRemote(destDir) ? displayName(destDir) : baseName(destDir);
+  const label = `${copy ? "Copying" : "Moving"} ${plural(paths.length, "item")} to “${where}”${isRemote(destDir) ? " on " + serverLabel(connOf(destDir)) : ""}`;
   let res;
   try { res = await runJob("start_transfer", { sources: paths, destDir, copy, policies }, label); }
   catch (e) { flashActive("⚠ " + e, "warn"); return; }
   const rep = res.report, n = rep.pairs.length;
-  if (n) pushUndo(copy
+  // Undo works through the Bin and exact local moves, so not when a server is involved.
+  const undoable = n && !rep.pairs.some(([a, b]) => isRemote(a) || isRemote(b));
+  if (undoable) pushUndo(copy
     ? { kind: "copy", created: rep.pairs.map((x) => x[1]), label: `copy of ${plural(n, "item")}` }
     : { kind: "move", pairs: rep.pairs, label: `move of ${plural(n, "item")}`, replacedNote: rep.replaced > 0 });
   await refreshAll();
@@ -169,12 +202,13 @@ export async function performTransfer(paths, destDir, copy) {
 
   const bits = [`${copy ? "Copied" : "Moved"} ${rep.done}`];
   if (rep.merged) bits.push(`${rep.merged} merged`);
-  if (rep.replaced) bits.push(`${rep.replaced} replaced (old ones in the Bin)`);
+  if (rep.replaced) bits.push(isRemote(destDir) ? `${rep.replaced} replaced` : `${rep.replaced} replaced (old ones in the Bin)`);
   if (rep.renamed) bits.push(`${rep.renamed} kept as “copy”`);
   if (rep.skipped) bits.push(`${rep.skipped} skipped`);
   let msg = bits.join(" · ");
   if (res.cancelled) msg = rep.done ? `Cancelled — ${msg} before stopping` : `Cancelled — nothing was ${copy ? "copied" : "moved"}`;
-  if (n) msg += " · ⌘Z undoes";
+  if (undoable) msg += " · ⌘Z undoes";
+  else if (n && server) msg += " · can't be undone (server)";
   flashActive(rep.errors.length ? `${msg} · ⚠ ${rep.errors[0]}` : msg, rep.errors.length || res.cancelled ? "warn" : "msg");
   if (app.previewOpen && !copy) closePreview(); // the previewed item just left this folder
 }

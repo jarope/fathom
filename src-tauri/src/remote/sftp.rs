@@ -32,6 +32,7 @@ const REALPATH: u8 = 16;
 const STAT: u8 = 17;
 const RENAME: u8 = 18;
 const READLINK: u8 = 19;
+const SYMLINK: u8 = 20;
 const STATUS: u8 = 101;
 const HANDLE: u8 = 102;
 const DATA: u8 = 103;
@@ -324,6 +325,10 @@ impl Sftp {
     }
 
     // ---- changes
+
+    /// Make `link` point at `target`. (OpenSSH takes the two the other way
+    /// round from the draft; every server you'll meet is OpenSSH's.)
+    pub fn symlink(&self, target: &str, link: &str) -> Result<()> { Self::status(self.call(SYMLINK, Buf::new().str(target).str(link))?) }
 
     pub fn mkdir(&self, path: &str) -> Result<()> { Self::status(self.call(MKDIR, Buf::new().str(path).attrs(&Attrs::default()))?) }
     pub fn rmdir(&self, path: &str) -> Result<()> { Self::status(self.call(RMDIR, Buf::new().str(path))?) }

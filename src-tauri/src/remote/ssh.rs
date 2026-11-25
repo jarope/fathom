@@ -25,7 +25,10 @@ pub fn ssh_program() -> PathBuf {
 /// cleared the first time.
 pub fn control_dir() -> std::io::Result<PathBuf> {
     static DIR: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
-    if let Some(d) = DIR.get() { return Ok(d.clone()); }
+    if let Some(d) = DIR.get() {
+        if !d.is_dir() { use std::os::unix::fs::DirBuilderExt; std::fs::DirBuilder::new().mode(0o700).recursive(true).create(d)?; }
+        return Ok(d.clone());
+    }
     use std::os::unix::fs::{DirBuilderExt, MetadataExt};
     let uid = unsafe { libc::getuid() };
     let top = PathBuf::from(format!("/tmp/fathom-ssh-{uid}"));
@@ -133,13 +136,37 @@ fn base_command(args: &[String], conn: &str) -> Command {
     c
 }
 
+/// An SFTP session over the master; ends its ssh process when dropped.
+pub struct Channel {
+    sftp: Sftp,
+    child: Mutex<Child>,
+}
+
+impl std::ops::Deref for Channel {
+    type Target = Sftp;
+    fn deref(&self) -> &Sftp { &self.sftp }
+}
+
+impl Channel {
+    /// A channel from a client and the process it talks to (tests).
+    #[cfg(test)]
+    pub(crate) fn from_parts(sftp: Sftp, child: Child) -> Channel { Channel { sftp, child: Mutex::new(child) } }
+}
+
+impl Drop for Channel {
+    fn drop(&mut self) {
+        let mut c = self.child.lock().unwrap();
+        let _ = c.kill();
+        let _ = c.wait();
+    }
+}
+
 /// A logged-in server: its master process and the browsing channel.
 pub struct Conn {
     pub key: String,
     ctl: PathBuf,
     master: Mutex<Option<Child>>,
-    browse: Mutex<Option<Arc<Sftp>>>,
-    channels: Mutex<Vec<Child>>,
+    browse: Mutex<Option<Arc<Channel>>>,
     /// The login folder (REALPATH ".") — where `sftp://conn` opens.
     pub home: String,
 }
@@ -175,7 +202,7 @@ impl Conn {
         }
         // Keep draining the master's stderr so it never blocks on a full pipe.
         if let Some(mut e) = err { std::thread::spawn(move || { let mut b = [0u8; 1024]; while matches!(e.read(&mut b), Ok(n) if n > 0) {} }); }
-        let mut c = Conn { key: key.to_string(), ctl, master: Mutex::new(Some(m)), browse: Mutex::new(None), channels: Mutex::new(Vec::new()), home: String::new() };
+        let mut c = Conn { key: key.to_string(), ctl, master: Mutex::new(Some(m)), browse: Mutex::new(None), home: String::new() };
         let s = c.open_channel()?;
         c.home = s.realpath(".").map_err(|e| format!("Connected, but couldn't find your folder on the server: {e}"))?;
         *c.browse.lock().unwrap() = Some(Arc::new(s));
@@ -183,7 +210,7 @@ impl Conn {
     }
 
     /// A new SFTP channel over the master (transfers get their own).
-    pub fn open_channel(&self) -> Result<Sftp, String> {
+    pub fn open_channel(&self) -> Result<Channel, String> {
         let mut ch = base_command(&channel_args(&self.ctl, &self.key), &self.key)
             .stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped())
             .spawn().map_err(|e| format!("Couldn't run ssh: {e}"))?;
@@ -192,8 +219,7 @@ impl Conn {
         match Sftp::start(r, w) {
             Ok(s) => {
                 std::thread::spawn(move || { let mut b = [0u8; 1024]; while matches!(err.read(&mut b), Ok(n) if n > 0) {} });
-                self.channels.lock().unwrap().push(ch);
-                Ok(s)
+                Ok(Channel { sftp: s, child: Mutex::new(ch) })
             }
             Err(_) => {
                 let _ = ch.kill(); let _ = ch.wait();
@@ -204,7 +230,7 @@ impl Conn {
     }
 
     /// The browsing channel (None once the connection has dropped).
-    pub fn sftp(&self) -> Option<Arc<Sftp>> {
+    pub fn sftp(&self) -> Option<Arc<Channel>> {
         self.browse.lock().unwrap().as_ref().filter(|s| s.alive()).cloned()
     }
 
@@ -214,7 +240,6 @@ impl Conn {
 
     /// Log out: close the channels and the master.
     pub fn close(&self) {
-        for mut c in self.channels.lock().unwrap().drain(..) { let _ = c.kill(); let _ = c.wait(); }
         *self.browse.lock().unwrap() = None;
         if let Some(mut m) = self.master.lock().unwrap().take() { let _ = m.kill(); let _ = m.wait(); }
         let _ = std::fs::remove_dir_all(&self.ctl);

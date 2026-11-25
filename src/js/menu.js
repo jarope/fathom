@@ -239,6 +239,8 @@ export function openContextMenu(P, x, y) {
     "sep",
     { label: "Reveal in Finder", fn: () => invoke("reveal_in_finder", { path: sel[0].path }) },
     "sep",
-    { label: `Move ${sel.length > 1 ? sel.length + " items " : ""}to Bin`, fn: P.trashSelected, danger: true, key: keyHint("trash") },
+    P.cwd && P.cwd.startsWith("sftp://")
+      ? { label: `Delete ${sel.length > 1 ? sel.length + " items" : ""}…`.replace(" …", "…"), fn: P.trashSelected, danger: true, key: keyHint("trash") }
+      : { label: `Move ${sel.length > 1 ? sel.length + " items " : ""}to Bin`, fn: P.trashSelected, danger: true, key: keyHint("trash") },
   ], x, y);
 }

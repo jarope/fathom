@@ -530,7 +530,14 @@ pub(crate) fn unique_new(dir: &Path, base: &str) -> PathBuf {
 /// Create a new folder (or empty file) inside `parent`, picking a free name
 /// based on `name`. Returns the created path.
 #[tauri::command]
-fn create_item(parent: String, name: String, is_dir: bool) -> Result<String, String> {
+async fn create_item(parent: String, name: String, is_dir: bool) -> Result<String, String> {
+    if remote::is_remote(&parent) {
+        return tauri::async_runtime::spawn_blocking(move || remote::files::create(&parent, &name, is_dir)).await.map_err(|e| e.to_string())?;
+    }
+    create_item_local(parent, name, is_dir)
+}
+
+fn create_item_local(parent: String, name: String, is_dir: bool) -> Result<String, String> {
     let name = check_name(&name)?;
     let dir = Path::new(&parent);
     if !dir.is_dir() {
@@ -549,7 +556,14 @@ fn create_item(parent: String, name: String, is_dir: bool) -> Result<String, Str
 /// Rename `path` to `new_name` in place. Never overwrites an existing item —
 /// except a case-only rename of the item itself (APFS is case-insensitive).
 #[tauri::command]
-fn rename_path(path: String, new_name: String) -> Result<String, String> {
+async fn rename_path(path: String, new_name: String) -> Result<String, String> {
+    if remote::is_remote(&path) {
+        return tauri::async_runtime::spawn_blocking(move || remote::files::rename(&path, &new_name)).await.map_err(|e| e.to_string())?;
+    }
+    rename_path_local(path, new_name)
+}
+
+fn rename_path_local(path: String, new_name: String) -> Result<String, String> {
     let new_name = check_name(&new_name)?;
     let src = Path::new(&path);
     let parent = src.parent().ok_or("Can't rename the root.")?;
@@ -1036,6 +1050,9 @@ pub fn run() {
             remote::sftp_config_hosts,
             remote::sftp_mtimes,
             remote::askpass::sftp_prompt_reply,
+            remote::files::sftp_delete,
+            remote::files::sftp_open,
+            remote::files::sftp_sync_resolve,
             open_path
         ])
         // Remember mouse-downs: a drag that leaves the window starts from one.
@@ -1085,14 +1102,14 @@ mod tests {
     #[test]
     fn create_picks_free_names() {
         let d = tmp("create");
-        let a = create_item(s(&d), "New Folder".into(), true).unwrap();
-        let b = create_item(s(&d), "New Folder".into(), true).unwrap();
-        let f = create_item(s(&d), "New File.txt".into(), false).unwrap();
-        let g = create_item(s(&d), "New File.txt".into(), false).unwrap();
+        let a = create_item_local(s(&d), "New Folder".into(), true).unwrap();
+        let b = create_item_local(s(&d), "New Folder".into(), true).unwrap();
+        let f = create_item_local(s(&d), "New File.txt".into(), false).unwrap();
+        let g = create_item_local(s(&d), "New File.txt".into(), false).unwrap();
         assert!(a.ends_with("/New Folder") && b.ends_with("/New Folder 2"));
         assert!(f.ends_with("/New File.txt") && g.ends_with("/New File 2.txt"));
-        assert!(create_item(s(&d), "a/b".into(), true).is_err());
-        assert!(create_item(s(&d), "  ".into(), true).is_err());
+        assert!(create_item_local(s(&d), "a/b".into(), true).is_err());
+        assert!(create_item_local(s(&d), "  ".into(), true).is_err());
     }
 
     #[test]
@@ -1100,9 +1117,9 @@ mod tests {
         let d = tmp("rename");
         std::fs::write(d.join("a.txt"), "A").unwrap();
         std::fs::write(d.join("b.txt"), "B").unwrap();
-        assert!(rename_path(s(&d.join("a.txt")), "b.txt".into()).is_err());
+        assert!(rename_path_local(s(&d.join("a.txt")), "b.txt".into()).is_err());
         assert_eq!(std::fs::read_to_string(d.join("b.txt")).unwrap(), "B");
-        let np = rename_path(s(&d.join("a.txt")), "A.txt".into()).unwrap();
+        let np = rename_path_local(s(&d.join("a.txt")), "A.txt".into()).unwrap();
         assert!(np.ends_with("/A.txt"));
         let names: Vec<_> = std::fs::read_dir(&d).unwrap().map(|e| e.unwrap().file_name()).collect();
         assert!(names.iter().any(|n| n == "A.txt"));

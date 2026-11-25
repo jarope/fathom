@@ -155,7 +155,7 @@ impl Ctl {
             },
         );
     }
-    fn add_bytes(&mut self, n: u64) {
+    pub(crate) fn add_bytes(&mut self, n: u64) {
         self.done_bytes += n;
         self.tick(false);
     }
@@ -492,21 +492,27 @@ pub fn run(items: Vec<Item>, do_move: bool, ctl: &mut Ctl) -> OpReport {
 /// A name clash the user should decide about before a transfer starts.
 #[derive(Serialize)]
 pub struct Conflict {
-    name: String,
-    src: String,
-    dst: String,
-    src_is_dir: bool,
-    dst_is_dir: bool,
-    src_size: u64,
-    dst_size: u64,
-    src_modified: Option<u64>,
-    dst_modified: Option<u64>,
+    pub(crate) name: String,
+    pub(crate) src: String,
+    pub(crate) dst: String,
+    pub(crate) src_is_dir: bool,
+    pub(crate) dst_is_dir: bool,
+    pub(crate) src_size: u64,
+    pub(crate) dst_size: u64,
+    pub(crate) src_modified: Option<u64>,
+    pub(crate) dst_modified: Option<u64>,
 }
 
 /// Which top-level items would collide in `dest_dir`. (An item landing on
 /// itself — a copy into its own folder — isn't a clash: it becomes "copy".)
 #[tauri::command]
-pub fn plan_transfer(sources: Vec<String>, dest_dir: String) -> Result<Vec<Conflict>, String> {
+pub async fn plan_transfer(sources: Vec<String>, dest_dir: String) -> Result<Vec<Conflict>, String> {
+    // A server on either side: ask it (off the main thread — it may log in).
+    if crate::remote::xfer::involves_server(&sources, &dest_dir) {
+        return tauri::async_runtime::spawn_blocking(move || crate::remote::xfer::plan(&sources, &dest_dir))
+            .await
+            .map_err(|e| e.to_string())?;
+    }
     let dest = canon(Path::new(&dest_dir));
     let mut out = Vec::new();
     for s in sources {
@@ -544,6 +550,17 @@ pub fn start_transfer(
     policies: Option<HashMap<String, Policy>>,
 ) -> Result<u64, String> {
     let policies = policies.unwrap_or_default();
+    // A server on either side: the remote engine (remote/xfer.rs), same job events.
+    if crate::remote::xfer::involves_server(&sources, &dest_dir) {
+        let items: Vec<(String, Policy)> = sources
+            .into_iter()
+            .map(|s| {
+                let p = policies.get(&s).copied().unwrap_or_default();
+                (s, p)
+            })
+            .collect();
+        return Ok(spawn_job(app, jobs.inner().clone(), move |ctl| crate::remote::xfer::run(items, &dest_dir, !copy, ctl)));
+    }
     let items = sources
         .into_iter()
         .map(|s| Item {

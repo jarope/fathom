@@ -87,6 +87,19 @@ async function answerPrompt(p) {
   invoke("sftp_prompt_reply", { id: p.id, answer, remember: !!(remember && remember.checked) }).catch(() => {});
 }
 
+async function syncConflict({ url, name }) {
+  const v = await modal({
+    title: `“${name}” changed on the server`,
+    body: el("div", "modal-lead", `Someone (or something) changed “${name}” on ${serverLabel(connOf(url))} after you opened it. Your edit is still safe on this Mac.`),
+    buttons: [
+      { label: "Don't Upload", value: "skip" },
+      { label: "Save as a Copy", value: "copy" },
+      { label: "Replace Theirs", value: "upload", primary: true, danger: true },
+    ],
+  });
+  invoke("sftp_sync_resolve", { url, choice: v || "skip" }).catch(() => {});
+}
+
 // Prompts arrive one at a time per server, but two servers could ask at once.
 let chain = Promise.resolve();
 
@@ -95,6 +108,13 @@ export async function initRemote(changed) {
   if (!listen) return;
   try { (await invoke("sftp_connected")).forEach((c) => connected.add(c)); } catch {}
   await listen("sftp-prompt", (e) => { chain = chain.then(() => answerPrompt(e.payload)).catch(() => {}); });
+  // Saving a server file you opened uploads it; say so (quietly) or ask.
+  await listen("sftp-synced", (e) => {
+    const { name, ok, error } = e.payload, P = app.active;
+    if (P) P.flash(ok ? `Saved “${name}” to the server` : `⚠ Couldn't save “${name}” to the server: ${error}`, ok ? "msg" : "warn");
+    if (ok) app.tabs.flatMap((t) => t.panes).filter((p) => p.cwd && isRemote(p.cwd) && connOf(p.cwd) === connOf(e.payload.url)).forEach((p) => p.refresh());
+  });
+  await listen("sftp-sync-conflict", (e) => { chain = chain.then(() => syncConflict(e.payload)).catch(() => {}); });
   await listen("sftp-state", (e) => {
     const { conn, state } = e.payload;
     const was = connected.has(conn);

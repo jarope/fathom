@@ -7,7 +7,7 @@ import { createDetails, sortValue } from "./details.js";
 import { createGrid, gridSize, setGridSize, GRID_MIN, GRID_MAX } from "./grid.js";
 import { createColumns } from "./columns.js";
 import { saveSettings } from "./settings.js";
-import { pushUndo, refreshAll, selectEverywhere, trashPaths, serverSoon } from "./ops.js";
+import { pushUndo, refreshAll, selectEverywhere, trashPaths, openRemote } from "./ops.js";
 import { openContextMenu, showMenu } from "./menu.js";
 import { setActive, openTab } from "./tabs.js";
 import { a11yPane } from "./a11y.js";
@@ -453,18 +453,18 @@ export function createPane(key) {
 
   // -------------------------------------------------------- create / rename
   P.newItem = async (isDir) => {
-    if (!P.cwd || serverSoon(P, P.cwd)) return;
+    if (!P.cwd) return;
     let path;
     try { path = await invoke("create_item", { parent: P.cwd, name: isDir ? "New Folder" : "New File.txt", isDir }); }
     catch (e) { P.flash("⚠ " + e, "warn"); return; }
-    pushUndo({ kind: "create", created: [path], label: `new ${isDir ? "folder" : "file"}` });
+    if (!isRemote(path)) pushUndo({ kind: "create", created: [path], label: `new ${isDir ? "folder" : "file"}` }); // undo uses the Bin
     els.search.value = ""; // make sure the filter can't hide the new item
     if (P.mode === "search") await P.navigate(P.cwd, { push: false });
     await refreshAll();
     P.startRename(path);
   };
   P.startRename = (path) => {
-    const i = P.entries.findIndex((e) => e.path === path); if (i < 0 || serverSoon(P, path)) return;
+    const i = P.entries.findIndex((e) => e.path === path); if (i < 0) return;
     P.selectSingle(i);
     reveal(i); // draws the row if it was scrolled out of view
     const row = rowAt(i); if (!row) return;
@@ -546,11 +546,11 @@ export function createPane(key) {
     const i = P.entries.findIndex((e) => e.name.toLowerCase().startsWith(taBuf));
     if (i >= 0) { P.selectSingle(i); reveal(i); }
   };
-  P.activate = (i) => { const e = P.entries[i]; if (isFolder(e)) P.navigate(e.path); else if (!serverSoon(P, e.path)) invoke("open_path", { path: e.path }); };
+  P.activate = (i) => { const e = P.entries[i]; if (isFolder(e)) P.navigate(e.path); else if (isRemote(e.path)) openRemote(P, [e.path]); else invoke("open_path", { path: e.path }); };
   P.enterOrOpen = () => {
     const sel = P.selectedEntries();
     if (sel.length === 1) P.activate(P.entries.indexOf(sel[0]));
-    else if (!serverSoon(P, sel.map((x) => x.path))) sel.filter((x) => !isFolder(x)).forEach((x) => invoke("open_path", { path: x.path }));
+    else { const files = sel.filter((x) => !isFolder(x)).map((x) => x.path); openRemote(P, files.filter(isRemote)); files.filter((p) => !isRemote(p)).forEach((path) => invoke("open_path", { path })); }
   };
 
   P.trashSelected = () => (isBinDir(P.cwd) && P.mode === "browse" ? deleteNow(P, P.selectedPaths()) : trashPaths(P, P.selectedPaths()));

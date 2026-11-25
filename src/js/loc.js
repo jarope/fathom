@@ -72,8 +72,7 @@ export function caps(p) {
     terminal: local, tags: local, usage: local, infoExtras: local, pasteboard: local,
     nativeDrag: local, openWith: local, reveal: local, share: local, actions: local,
     archive: local, duplicate: local, templates: local,
-    // Phase A is read-only on servers; B/C switch these on.
-    write: local, open: local,
+    write: true, open: true,
   };
 }
 

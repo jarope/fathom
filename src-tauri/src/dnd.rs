@@ -27,6 +27,12 @@ pub fn drop_action(sources: Vec<String>, dest_dir: String) -> DropInfo {
     if cmd {
         return DropInfo { copy: false };
     }
+    // Servers: moving within one server is a rename; anything crossing machines copies.
+    if crate::remote::xfer::involves_server(&sources, &dest_dir) {
+        let conn = |p: &str| crate::remote::parse(p).map(|(c, _)| c);
+        let d = conn(&dest_dir);
+        return DropInfo { copy: d.is_none() || sources.iter().any(|s| conn(s) != d) };
+    }
     let dev = |p: &str| Path::new(p).symlink_metadata().ok().map(|m| m.dev());
     let dest = Path::new(&dest_dir).metadata().ok().map(|m| m.dev());
     let copy = sources.iter().any(|s| dev(s).is_none() || dev(s) != dest);

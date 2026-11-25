@@ -7,8 +7,10 @@
 
 pub mod askpass;
 pub mod config;
+pub mod files;
 pub mod sftp;
 pub mod ssh;
+pub mod xfer;
 
 use serde::Serialize;
 use ssh::Conn;
@@ -62,6 +64,7 @@ fn emit_state(conn: &str, state: &str, error: Option<String>) {
 /// At launch.
 pub fn init(app: AppHandle) {
     let _ = APP.set(app.clone());
+    files::init(app.clone());
     askpass::start(app);
 }
 
@@ -243,6 +246,24 @@ mod tests {
         c.close();
         drop(c);
         assert!(list(&format!("{SCHEME}{conn}/tmp"), false, true).is_ok(), "reconnects");
+        // Up and back down through the real connection.
+        let d = std::env::temp_dir().join(format!("fathom-e2e-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&d);
+        std::fs::create_dir_all(d.join("mac/pkg/sub")).unwrap();
+        std::fs::create_dir_all(d.join("srv")).unwrap();
+        std::fs::create_dir_all(d.join("back")).unwrap();
+        let big: Vec<u8> = (0..5_000_000u32).map(|i| (i % 251) as u8).collect();
+        std::fs::write(d.join("mac/pkg/sub/big"), &big).unwrap();
+        let d = d.canonicalize().unwrap();
+        let p = |s: &str| d.join(s).to_string_lossy().into_owned();
+        let mut ctl = crate::jobs::Ctl::detached();
+        let up = xfer::run(vec![(p("mac/pkg"), crate::jobs::Policy::KeepBoth)], &format!("{SCHEME}{conn}{}", p("srv")), false, &mut ctl);
+        assert_eq!(up.done, 1, "{:?}", up.errors);
+        let down = xfer::run(vec![(format!("{SCHEME}{conn}{}", p("srv/pkg")), crate::jobs::Policy::KeepBoth)], &p("back"), true, &mut crate::jobs::Ctl::detached());
+        assert_eq!(down.done, 1, "{:?}", down.errors);
+        assert_eq!(std::fs::read(d.join("back/pkg/sub/big")).unwrap(), big);
+        assert!(!d.join("srv/pkg").exists(), "moved off the server");
+        std::fs::remove_dir_all(&d).unwrap();
         shutdown();
     }
     #[test]

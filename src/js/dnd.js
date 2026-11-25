@@ -103,7 +103,9 @@ export function startDrag(P, entries, down) {
   const move = (e) => {
     place(e);
     ghost.classList.toggle("copy", e.altKey);
-    if (outside(e)) {
+    // Server items have no file on the Mac to hand to other apps: they stay a
+    // drag inside Fathom (drop them on a Mac folder here to download).
+    if (outside(e) && !data.paths.some((p) => p.startsWith("sftp://"))) {
       // Leaving the window: carry on as a real macOS drag (Finder, Mail…).
       finish();
       invoke("start_drag", { paths: data.paths }).catch((err) => { app.dragData = null; P.flash("⚠ " + err, "warn"); });
