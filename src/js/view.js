@@ -24,6 +24,7 @@ export function syncViewButtons() {
   document.getElementById("vmGrid")?.classList.toggle("on", m === "grid");
   document.getElementById("vmDetails")?.classList.toggle("on", m === "details");
   document.getElementById("vmColumns")?.classList.toggle("on", m === "columns");
+  document.getElementById("vmUsage")?.classList.toggle("on", m === "usage");
 }
 
 export function toggleHidden() {
@@ -105,6 +106,7 @@ export function initHeader() {
   $("vmGrid").addEventListener("click", () => app.active && app.active.setViewMode("grid"));
   $("vmDetails").addEventListener("click", () => app.active && app.active.setViewMode("details"));
   $("vmColumns").addEventListener("click", () => app.active && app.active.setViewMode("columns"));
+  $("vmUsage").addEventListener("click", () => app.active && app.active.setViewMode("usage"));
   syncViewButtons();
   $("viewTwin").addEventListener("click", () => setView("twin"));
 

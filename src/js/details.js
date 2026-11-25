@@ -13,6 +13,7 @@ import { thumbInto } from "./grid.js";
 import { applyGit } from "./git.js";
 import { showMenu } from "./menu.js";
 import { prefs, saveSettings } from "./settings.js";
+import { usageOf, usageTotal, shareMode } from "./usage.js";
 
 export const ROW_H = 34;  // matches --row-h
 
@@ -60,7 +61,7 @@ const shownColumns = () => {
   const c = prefs.columns && Array.isArray(prefs.columns.show) ? prefs.columns.show.filter((k) => COLUMNS[k]) : ["size", "modified"];
   return COLUMN_ORDER.filter((k) => c.includes(k)); // keep a stable order
 };
-const widthOf = (k) => Math.max(MIN_W, (prefs.columns && prefs.columns.widths && prefs.columns.widths[k]) || COLUMNS[k].w);
+const widthOf = (k) => USAGE_COLS[k] ? USAGE_COLS[k].w : Math.max(MIN_W, (prefs.columns && prefs.columns.widths && prefs.columns.widths[k]) || COLUMNS[k].w);
 
 /** Sort value for a column key (folder = search results' parent column). */
 export function sortValue(e, k) {
@@ -98,21 +99,28 @@ function columnMenu(x, y) {
   ], x, y);
 }
 
+// Usage view: fixed columns — the measured size and the share bar.
+const USAGE_COLS = {
+  usize: { label: "Size", w: 92, right: true, sort: "size" },
+  share: { label: "Share", w: 92, right: true, sort: "size" },
+};
+
 // ---- The view ----
-export function createDetails(P) {
+// usage: the disk-usage variant (no tree, no shelf, measured sizes + share).
+export function createDetails(P, { usage = false } = {}) {
   const L = P.els.listing;
   let vbody = null, nDirs = 0, rows = new Map(), cols = [], paintQueued = 0;
 
   // Name fills the spare room until you size it; then it's fixed and an empty
   // track at the end takes up the slack. Too wide for the pane → scroll sideways.
-  const nameW = () => { const w = prefs.columns && prefs.columns.widths && prefs.columns.widths.name; return w ? Math.max(NAME_MIN, w) : 0; };
+  const nameW = () => { if (usage) return 0; const w = prefs.columns && prefs.columns.widths && prefs.columns.widths.name; return w ? Math.max(NAME_MIN, w) : 0; };
   const template = () => {
-    const nw = nameW(), search = P.mode === "search";
+    const nw = nameW(), search = P.mode === "search" && !usage;
     return `${nw ? nw + "px" : "minmax(150px, 1fr)"}${search ? " minmax(140px, 1fr)" : ""} ${cols.map((k) => widthOf(k) + "px").join(" ")}${nw && !search ? " 1fr" : ""}`;
   };
   const setLayout = () => {
     L.style.setProperty("--cols", template());
-    const tracks = [nameW() || 150, ...(P.mode === "search" ? [140] : []), ...cols.map(widthOf)];
+    const tracks = [nameW() || 150, ...(P.mode === "search" && !usage ? [140] : []), ...cols.map(widthOf)];
     L.style.setProperty("--minw", ROW_PAD + tracks.reduce((a, b) => a + b, 0) + GAP * (tracks.length - 1) + "px");
   };
 
@@ -134,6 +142,14 @@ export function createDetails(P) {
       c.append(rz);
       return c;
     };
+    if (usage) {
+      h.append(cell("Name", "name"));
+      cols.forEach((k) => {
+        const label = k === "share" ? (shareMode() === "disk" ? "% of Disk" : "% of Folder") : USAGE_COLS[k].label;
+        h.append(cell(label, USAGE_COLS[k].sort, "right"));
+      });
+      return h;
+    }
     h.append(grip(cell("Name", "name"), "name"));
     if (P.mode === "search") h.append(cell("Folder", "folder"));
     cols.forEach((k) => h.append(grip(cell(COLUMNS[k].label, k, COLUMNS[k].right ? "right" : ""), k)));
@@ -186,7 +202,7 @@ export function createDetails(P) {
     if (P.selected.has(h.path)) r.classList.add("sel");
     if (clip && clip.cut && clip.paths.includes(h.path)) r.classList.add("cut");
     const name = el("div", "c-name" + (h.is_dir ? " dir" : ""));
-    if (P.mode === "browse") {
+    if (P.mode === "browse" && !usage) {
       name.style.paddingLeft = (h.depth || 0) * INDENT + "px";
       const d = el("span", "disc");
       if (isFolder(h)) { d.classList.add("can"); if (P.expanded.has(h.path)) d.classList.add("open"); d.title = P.expanded.has(h.path) ? "Collapse (←)" : "Expand (→)"; d.append(icon("forward")); }
@@ -197,9 +213,21 @@ export function createDetails(P) {
     const td = tagDots(h.tags); if (td) name.append(td);
     name.title = h.name;
     r.append(name);
+    if (usage) { usageCells(r, h); return r; }
     if (P.mode === "search") { const f = el("div", "c-folder", h.parent); f.title = h.parent; r.append(f); }
     cols.forEach((k) => { const c = COLUMNS[k]; r.append(el("div", c.cls + (c.right ? " right" : ""), c.text(h))); });
     return r;
+  }
+
+  function usageCells(r, h) {
+    const u = usageOf(P, h), total = usageTotal(P);
+    const share = u && total ? Math.min(100, (u.bytes / total) * 100) : 0;
+    r.classList.add("urow");
+    r.style.setProperty("--u", share.toFixed(2));
+    const sz = el("div", "c-size right" + (u && u.done ? "" : " measuring"), u ? fmtSize(u.bytes, false) + (u.done ? (u.partial ? " +" : "") : " …") : "—");
+    if (u && u.partial) sz.title = "Some of it couldn't be read, so this is a lower bound";
+    const pc = el("div", "c-size right", u && total ? (share < 0.1 && u.bytes ? "<0.1%" : share.toFixed(1) + "%") : "");
+    r.append(sz, pc);
   }
 
   /** Draw the rows in (and just around) the scrolled window; reuse the rest. */
@@ -220,13 +248,14 @@ export function createDetails(P) {
     vbody.append(frag);
     applyGit(P);
   }
-  const queuePaint = () => { if (!paintQueued && P.viewMode !== "grid") paintQueued = requestAnimationFrame(paint); };
+  const mine = () => (usage ? P.viewMode === "usage" : P.viewMode !== "grid" && P.viewMode !== "usage");
+  const queuePaint = () => { if (!paintQueued && mine()) paintQueued = requestAnimationFrame(paint); };
   L.addEventListener("scroll", queuePaint, { passive: true });
   if (window.ResizeObserver) new ResizeObserver(queuePaint).observe(L);
 
   /** Rebuild the whole list (new folder, sort, filter, columns, expand). */
   function render() {
-    L.classList.toggle("searching", P.mode === "search");
+    L.classList.toggle("searching", P.mode === "search" && !usage);
     L.innerHTML = "";
     rows = new Map(); vbody = null;
     if (paintQueued) { cancelAnimationFrame(paintQueued); paintQueued = 0; }
@@ -238,11 +267,11 @@ export function createDetails(P) {
       L.append(e);
       return;
     }
-    cols = shownColumns();
+    cols = usage ? ["usize", "share"] : shownColumns();
     setLayout();
     // Folder shelf: top-level folders as a strip of tiles above the rows.
     nDirs = 0;
-    if (app.folderShelf && P.mode === "browse") {
+    if (app.folderShelf && P.mode === "browse" && !usage) {
       while (nDirs < P.entries.length && isFolder(P.entries[nDirs]) && !(P.entries[nDirs].depth > 0)) nDirs++;
     }
     // The shelf and the column header stay put together at the top while the

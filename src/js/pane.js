@@ -13,6 +13,7 @@ import { a11yPane } from "./a11y.js";
 import { registerDropZone, startDrag } from "./dnd.js";
 import { loadGit, gitChip } from "./git.js";
 import { isBinDir, binLabel, loadOrigins, syncBinBar, deleteNow } from "./bin.js";
+import { ensureUsage, cancelUsage, usageBytes, usageStatus, invalidateUsage } from "./usage.js";
 import { usesSpotlight, startSpotlight, cancelSpotlight, searchMenu, placeholder, modeLabel, addRecent, attachRecent } from "./search.js";
 
 const TEMPLATE = `
@@ -65,7 +66,8 @@ export function createPane(key) {
     anchor: -1, cursor: -1, mode: "browse", showHidden: false,
     history: [], hi: -1, msgTimer: null,
     sortKey: "name", sortDir: 1, // 1 asc, -1 desc; folders always first
-    viewMode: "details",          // "details" | "grid" | "columns"
+    viewMode: "details",          // "details" | "grid" | "columns" | "usage"
+    uSort: { key: "size", dir: -1 }, // Usage view's own sort (largest first), kept apart from the folder's
     colRoot: null,                // Columns view: the first (leftmost) folder
     renaming: false, pendingRefresh: false, editing: false,
     expanded: new Set(), // folders opened in place (tree)
@@ -73,7 +75,7 @@ export function createPane(key) {
   };
   const changed = () => app.hooks.changed(P);
   const ariaSync = a11yPane(P);
-  const views = { details: createDetails(P), grid: createGrid(P), columns: createColumns(P) };
+  const views = { details: createDetails(P), grid: createGrid(P), columns: createColumns(P), usage: createDetails(P, { usage: true }) };
   // Search / tag results are a flat list: Columns shows them as Details.
   const V = () => (P.viewMode === "columns" && P.mode !== "browse" ? views.details : views[P.viewMode] || views.details);
   const rowAt = (i) => V().rowAt(i);
@@ -92,6 +94,7 @@ export function createPane(key) {
     if (extra && extra !== P.flashMsg) P.flashMsg = null; // a newer message replaces it
     extra = extra || P.flashMsg; // a recent message survives redraws
     if (P.viewMode === "grid") els.status.append(sizeSlider());
+    if (P.viewMode === "usage") { if (extra) els.status.append(extra); els.status.append(...usageStatus(P)); return; }
     if (extra) els.status.append(extra);
     else if (P.space) els.status.append(el("span", "mono", `${fmtSize(P.space.free, false)} free of ${fmtSize(P.space.total, false)}`));
   };
@@ -132,7 +135,8 @@ export function createPane(key) {
       P.expanded.clear(); P.kids.clear();
       const v = viewMemory()[listing.dir];
       // Browsing in Columns stays in Columns (Finder); otherwise the folder's own view.
-      if (v) { P.sortKey = v.sortKey; P.sortDir = v.sortDir; if (v.viewMode && P.viewMode !== "columns") P.viewMode = v.viewMode; }
+      // Usage is the same: drilling in keeps measuring, and it's never remembered per folder.
+      if (v) { P.sortKey = v.sortKey; P.sortDir = v.sortDir; if (v.viewMode && v.viewMode !== "usage" && P.viewMode !== "columns" && P.viewMode !== "usage") P.viewMode = v.viewMode; }
       // Never sorted + shelf on: the tiles have no column header to sort by,
       // so start from Name rather than whatever the last folder used.
       else if (app.folderShelf) { P.sortKey = "name"; P.sortDir = 1; }
@@ -191,6 +195,7 @@ export function createPane(key) {
   P.arrowSide = (dir, extend) => {
     if (P.viewMode === "grid") { P.moveCursor(dir, extend); return; }
     if (P.viewMode === "columns" && P.mode === "browse") { columnStep(dir); return; }
+    if (P.viewMode === "usage") { columnStep(dir); return; } // → measure the folder, ← back out
     const i = P.cursor, e = P.entries[i];
     if (e && !V().isTile(i) && P.mode === "browse") {
       if (dir > 0 && isFolder(e)) { if (!P.expanded.has(e.path)) P.setExpanded(i, true); else if (P.entries[i + 1] && P.entries[i + 1].depth > (e.depth || 0)) { P.selectSingle(i + 1); reveal(i + 1); } return; }
@@ -219,6 +224,7 @@ export function createPane(key) {
   P.refresh = () => {
     if (!P.cwd || P.mode !== "browse") return;
     if (P.renaming) { P.pendingRefresh = true; return; }
+    invalidateUsage(P.cwd); // the folder changed: its measure (and its parents') is stale
     return P.reload();
   };
   P.setHidden = (on) => { P.showHidden = on; if (P.mode === "browse" && P.cwd) P.reload(); };
@@ -518,13 +524,14 @@ export function createPane(key) {
 
   // ------------------------------------------------------------------- sort
   // Folders first; then the sort column; ties by name.
+  // Usage: no folders-first; Size is the measured footprint.
   function cmp(a, b) {
-    const fa = isFolder(a), fb = isFolder(b);
-    if (fa !== fb) return fa ? -1 : 1;
-    const va = sortValue(a, P.sortKey), vb = sortValue(b, P.sortKey);
+    const usage = P.viewMode === "usage", key = usage ? P.uSort.key : P.sortKey;
+    if (!usage) { const fa = isFolder(a), fb = isFolder(b); if (fa !== fb) return fa ? -1 : 1; }
+    const va = usage && key === "size" ? usageBytes(P, a) : sortValue(a, key), vb = usage && key === "size" ? usageBytes(P, b) : sortValue(b, key);
     let r = typeof va === "number" ? va - vb : va.localeCompare(vb);
     if (r === 0) r = a.name.toLowerCase().localeCompare(b.name.toLowerCase());
-    return r * P.sortDir;
+    return r * (usage ? P.uSort.dir : P.sortDir);
   }
   /** A sorted copy of any listing, by this pane's rules (Columns' side columns). */
   P.sortEntries = (list) => list.slice().sort(cmp);
@@ -534,6 +541,13 @@ export function createPane(key) {
     P.entries.sort(cmp);
   };
   P.sortBy = (k) => {
+    if (P.viewMode === "usage") {
+      P.uSort = P.uSort.key === k ? { key: k, dir: -P.uSort.dir } : { key: k, dir: k === "size" ? -1 : 1 };
+      const selPaths = P.selectedPaths();
+      P.rebuild(); P.cursor = -1; P.anchor = -1;
+      P.renderList(); P.selectPaths(selPaths); changed();
+      return;
+    }
     if (P.sortKey === k) P.sortDir = -P.sortDir;
     else { P.sortKey = k; P.sortDir = ["name", "folder", "kind", "ext"].includes(k) ? 1 : -1; } // numbers/dates: largest/newest first
     const selPaths = P.selectedPaths();
@@ -541,13 +555,14 @@ export function createPane(key) {
     P.renderList(); P.selectPaths(selPaths); changed(); app.hooks.save();
     P.remember();
   };
-  P.remember = () => { if (P.mode === "browse" && P.cwd) rememberView(P.cwd, { sortKey: P.sortKey, sortDir: P.sortDir, viewMode: P.viewMode }); };
+  P.remember = () => { if (P.mode === "browse" && P.cwd && P.viewMode !== "usage") rememberView(P.cwd, { sortKey: P.sortKey, sortDir: P.sortDir, viewMode: P.viewMode }); };
 
   /** Switch this pane between Details and Grid (remembered for this folder). */
   P.setViewMode = (m) => {
     if (!views[m] || m === P.viewMode) return;
     const cur = P.entries[P.cursor] ? P.entries[P.cursor].path : null;
     const sel = new Set(P.selected);
+    if (P.viewMode === "usage") cancelUsage(P);
     P.viewMode = m;
     P.rebuild(); P.selected = sel;
     if (cur) P.cursor = P.anchor = P.entries.findIndex((e) => e.path === cur);
@@ -563,7 +578,9 @@ export function createPane(key) {
   P.renderList = () => {
     els.listing.classList.toggle("grid", P.viewMode === "grid");
     els.listing.classList.toggle("columns", V() === views.columns);
+    els.listing.classList.toggle("usage", P.viewMode === "usage");
     V().render();
+    if (P.viewMode === "usage") ensureUsage(P);
   };
 
   // --------------------------------------------------------- pointer input

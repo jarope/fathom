@@ -134,6 +134,7 @@ export const viewEntries = (P) => [
   { label: "Grid", on: P.viewMode === "grid", fn: () => P.setViewMode("grid"), key: keyHint("viewGrid") },
   { label: "Details", on: P.viewMode === "details", fn: () => P.setViewMode("details"), key: keyHint("viewDetails") },
   { label: "Columns", on: P.viewMode === "columns", fn: () => P.setViewMode("columns"), key: keyHint("viewColumns") },
+  { label: "Usage", on: P.viewMode === "usage", fn: () => P.setViewMode("usage"), key: keyHint("viewUsage") },
 ];
 /** Sort By ▸ — the grid has no column header, so sorting lives here too. */
 export function sortEntries(P) {

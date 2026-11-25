@@ -690,3 +690,15 @@ body.dragging, body.dragging * { cursor: default !important; }
 .gi-pgrid input { accent-color: var(--accent); width: 15px; height: 15px; }
 .gi-octal { font: var(--t-mono); font-size: 11px; color: var(--text3); }
 .gi-err { font: var(--t-callout); color: var(--danger); }
+
+/* Usage view: a quiet bar behind each row's figures (width = its share) */
+.listing.usage .urow { position: relative; isolation: isolate; }
+.listing.usage .urow::before { content: ""; position: absolute; left: 4px; top: 5px; bottom: 5px; width: calc((100% - 8px) * var(--u, 0) / 100); border-radius: 5px; background: var(--accent-soft); z-index: -1; pointer-events: none; }
+.listing.usage .urow.sel::before { background: rgba(255, 255, 255, 0.22); }
+.panes.twin .pane:not(.active) .listing.usage .urow.sel::before { background: var(--accent-soft); }
+.listing.usage .c-size.measuring { color: var(--text3); }
+.pstatus .useg .seg-b { padding: 2px 9px; font: var(--t-foot); font-weight: 600; }
+.pstatus .useg .seg-b, .pstatus .upill .seg-b { height: 17px; box-sizing: border-box; }
+.pstatus .upill .ubtn { display: inline-flex; align-items: center; justify-content: center; padding: 0 9px; }
+.pstatus .ubtn svg { width: 15px; height: 15px; display: block; }
+.pstatus .ubtn:hover { color: var(--text); background: var(--row-hover); }

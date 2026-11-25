@@ -30,6 +30,7 @@ mod thumbs;
 mod icons;
 mod update;
 mod info;
+mod usage;
 mod batch;
 mod jobs;
 mod pasteboard;
@@ -926,6 +927,8 @@ pub fn run() {
             info::file_info,
             info::dir_size,
             info::dir_size_cancel,
+            usage::usage_scan,
+            usage::usage_cancel,
             info::set_mode,
             places,
             eject_volume,
