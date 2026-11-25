@@ -5,6 +5,18 @@ release script uses the section for the version it's building as the release
 notes (and the text shown in the in-app update card), so keep each section
 short and written for people who use Fathom.
 
+## 0.35.0 — 2026-11-25
+
+- **Servers (SFTP), built in**: ⌘K Connect to Server now takes
+  `sftp://host`, `user@host` or a host from your ~/.ssh/config, and the
+  server joins a new Servers section in the sidebar. Browse it like any
+  folder — every view, breadcrumbs, filter, twin panes, tabs — and it
+  refreshes by itself. Logging in uses your Mac's own ssh, so your keys,
+  agent and config work as in Terminal; passwords, new-server fingerprints
+  and key passphrases are asked in Fathom (passwords can be kept in the
+  Keychain), and a server whose key has changed is refused. Browse-only for
+  now: copying, opening and changing files on servers comes next.
+
 ## 0.34.0 — 2026-11-25
 
 - **Command blocks in the terminal panel** (zsh): each command and its

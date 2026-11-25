@@ -1,6 +1,7 @@
 // Header controls and window-wide view settings: theme, hidden files,
 // sidebar, layout buttons, and the title-bar drag region.
 
+import { isRemote, displayName } from "./loc.js";
 import { app, store } from "./core.js";
 import { showMenu } from "./menu.js";
 import { setView } from "./tabs.js";
@@ -14,7 +15,7 @@ export function updateTitle() {
   const n = document.getElementById("locName");
   const P = app.active;
   if (!n || !P || !P.cwd) return;
-  n.textContent = P.cwd === "/" ? "Macintosh HD" : binLabel(P.cwd) || P.cwd.split("/").pop();
+  n.textContent = isRemote(P.cwd) ? displayName(P.cwd) : P.cwd === "/" ? "Macintosh HD" : binLabel(P.cwd) || P.cwd.split("/").pop();
   n.title = P.cwd;
 }
 

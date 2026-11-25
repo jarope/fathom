@@ -2,6 +2,7 @@
 // the status bar, and a simple Commit… / Push. Anything fancier stays in
 // the user's own git tools.
 
+import { isRemote } from "./loc.js";
 import { app, invoke, el, plural, baseName } from "./core.js";
 import { showMenu } from "./menu.js";
 import { modal } from "./dialog.js";
@@ -16,7 +17,7 @@ const STATES = Object.keys(BADGE);
 /** Fetch git status for P's folder, then badge its rows and status bar. */
 export async function loadGit(P) {
   const seq = (P.gitSeq = (P.gitSeq || 0) + 1);
-  if (!invoke || !P.cwd || P.mode !== "browse") { P.git = null; return; }
+  if (!invoke || !P.cwd || P.mode !== "browse" || isRemote(P.cwd)) { P.git = null; return; }
   const dir = P.cwd;
   let g = null;
   try { g = await invoke("git_status", { dir }); } catch { g = null; }

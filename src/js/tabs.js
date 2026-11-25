@@ -2,6 +2,7 @@
 // single/twin layout; switching tabs swaps which panes are on screen. The
 // tab bar only appears once there are two or more tabs.
 
+import { isRemote, displayName } from "./loc.js";
 import { app, el, icon, baseName } from "./core.js";
 import { createPane } from "./pane.js";
 import { refreshPanel } from "./panel.js";
@@ -104,7 +105,7 @@ function applyView() {
 // ---- tab bar ----
 const tabTitle = (t) => {
   const p = t.active || t.panes[0];
-  return p.cwd ? (p.cwd === app.home ? "Home" : binLabel(p.cwd) || baseName(p.cwd)) : "…";
+  return p.cwd ? (isRemote(p.cwd) ? displayName(p.cwd) : p.cwd === app.home ? "Home" : binLabel(p.cwd) || baseName(p.cwd)) : "…";
 };
 
 export function renderTabs() {

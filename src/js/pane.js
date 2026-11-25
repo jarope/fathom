@@ -2,11 +2,12 @@
 // selection, rename, drag & drop and status line. Tabs own two of these.
 
 import { app, invoke, el, icon, store, fmtSize, isFolder } from "./core.js";
+import { isRemote, crumbs as locCrumbs, fromTyped, connOf, serverLabel, caps } from "./loc.js";
 import { createDetails, sortValue } from "./details.js";
 import { createGrid, gridSize, setGridSize, GRID_MIN, GRID_MAX } from "./grid.js";
 import { createColumns } from "./columns.js";
 import { saveSettings } from "./settings.js";
-import { pushUndo, refreshAll, selectEverywhere, trashPaths } from "./ops.js";
+import { pushUndo, refreshAll, selectEverywhere, trashPaths, serverSoon } from "./ops.js";
 import { openContextMenu, showMenu } from "./menu.js";
 import { setActive, openTab } from "./tabs.js";
 import { a11yPane } from "./a11y.js";
@@ -95,6 +96,8 @@ export function createPane(key) {
     extra = extra || P.flashMsg; // a recent message survives redraws
     if (P.viewMode === "grid") els.status.append(sizeSlider());
     if (P.viewMode === "usage") { if (extra) els.status.append(extra); els.status.append(...usageStatus(P)); return; }
+    if (P.busyMsg && !extra) extra = Object.assign(el("span"), { innerHTML: '<span class="spinner"></span> ' }), extra.append(el("span", "msg", P.busyMsg));
+    if (isRemote(P.cwd) && !P.isOffline) { const s = el("span", "srv", "⇅ " + serverLabel(connOf(P.cwd))); s.title = "On a server (SFTP) — " + connOf(P.cwd); els.status.append(s); }
     if (extra) els.status.append(extra);
     else if (P.space) els.status.append(el("span", "mono", `${fmtSize(P.space.free, false)} free of ${fmtSize(P.space.total, false)}`));
   };
@@ -116,23 +119,31 @@ export function createPane(key) {
   // ------------------------------------------------------------ navigation
   // keepFilter: keep the live filter text. keepSel: keep selection, cursor and
   // scroll (used by reloads/auto-refresh of the same folder). Returns success.
-  P.navigate = async (path, { push = true, keepFilter = false, keepSel = false } = {}) => {
+  // quiet: on a server, don't ask for a password (restoring tabs); if a login
+  // would be needed, the pane shows a Reconnect placeholder instead.
+  P.navigate = async (path, { push = true, keepFilter = false, keepSel = false, quiet = false } = {}) => {
     if (!invoke) { els.status.textContent = "Native backend unavailable."; return false; }
     cancelSpotlight(P);
     if (pendingDraw) { cancelAnimationFrame(pendingDraw); pendingDraw = 0; }
     P.spotResults = false;
     let listing;
-    try { listing = await invoke("list_dir", { path, showHidden: P.showHidden }); }
+    const remote = isRemote(path);
+    if (remote && !quiet) P.flashBusy(`Connecting to ${serverLabel(connOf(path))}…`);
+    try { listing = await invoke("list_dir", { path, showHidden: P.showHidden, quiet }); }
     catch (e) {
+      if (remote) { P.flashBusy(null); if (quiet) { P.offline(path, String(e)); return true; } P.flash("⚠ " + e, "warn"); return false; }
       // macOS privacy protection (Mail, Safari, Time Machine…): explain the fix.
       if (/Operation not permitted|os error 1\)/.test(String(e))) { import("./system.js").then((m) => m.fullDiskAccessHelp(path)); P.flash("⚠ macOS is protecting this folder", "warn"); }
       else P.flash("⚠ " + e, "warn");
       return false;
     }
+    if (remote) P.flashBusy(null);
+    P.isOffline = false;
     const moved = listing.dir !== P.cwd;
     const keep = keepSel && !moved;
     if (moved) {
       P.expanded.clear(); P.kids.clear();
+      if (isRemote(listing.dir) && P.viewMode === "usage") { cancelUsage(P); P.viewMode = "details"; }
       const v = viewMemory()[listing.dir];
       // Browsing in Columns stays in Columns (Finder); otherwise the folder's own view.
       // Usage is the same: drilling in keeps measuring, and it's never remembered per folder.
@@ -158,7 +169,7 @@ export function createPane(key) {
     changed();
     if (moved) { P.space = null; P.git = null; app.hooks.navigated(P); }
     loadGit(P);
-    syncBinBar(P); loadOrigins(P);
+    if (!isRemote(listing.dir)) { syncBinBar(P); loadOrigins(P); }
     invoke("free_space", { path: listing.dir }).then((s) => { P.space = s; P.renderStatus(); }).catch(() => {});
     return true;
   };
@@ -233,6 +244,28 @@ export function createPane(key) {
   P.goBack = () => { if (P.hi > 0) { P.hi--; P.navigate(P.history[P.hi], { push: false }); } };
   P.goFwd = () => { if (P.hi < P.history.length - 1) { P.hi++; P.navigate(P.history[P.hi], { push: false }); } };
   P.goHome = () => P.navigate(app.home);
+  /** A server tab restored at launch that needs a login: say so, offer Reconnect. */
+  P.offline = (path, err) => {
+    P.isOffline = true;
+    P.cwd = path; P.parent = null; P.base = []; P.entries = []; P.selected = new Set(); P.git = null;
+    if (!P.history.length) { P.history = [path]; P.hi = 0; }
+    const L = els.listing;
+    L.classList.remove("split", "grid", "columns", "usage");
+    L.innerHTML = "";
+    const box = el("div", "empty-state offline");
+    box.append(el("span", "big", "⌁"), el("span", "msg", `Not connected to ${serverLabel(connOf(path))}`));
+    if (err) box.append(el("span", "sub", err));
+    const b = el("button", "mbtn", "Reconnect"); b.type = "button";
+    b.addEventListener("click", () => P.navigate(path, { push: false }));
+    box.append(b);
+    L.append(box);
+    P.renderCrumbs(); P.updateNav(); P.renderStatus();
+  };
+  /** Status-bar message while something slow (a login) runs; null clears it. */
+  P.flashBusy = (msg) => {
+    P.busyMsg = msg;
+    P.renderStatus();
+  };
 
   els.back.addEventListener("click", P.goBack);
   els.fwd.addEventListener("click", P.goFwd);
@@ -247,10 +280,9 @@ export function createPane(key) {
     const c = els.crumbs;
     c.innerHTML = "";
     if (!P.cwd) return;
-    const parts = P.cwd.split("/").filter(Boolean);
-    const paths = ["/", ...parts.map((_, i) => "/" + parts.slice(0, i + 1).join("/"))];
-    const labels = ["/", ...parts];
-    paths.forEach((p, i) => { const b = binLabel(p); if (b) labels[i] = b; });
+    const cs = locCrumbs(P.cwd);
+    const paths = cs.map((x) => x.path), labels = cs.map((x) => x.label);
+    if (!isRemote(P.cwd)) paths.forEach((p, i) => { const b = binLabel(p); if (b) labels[i] = b; });
     const sep = (dir) => { const s = el("span", "csep", "›"); s.dataset.dir = dir; return s; };
     paths.forEach((p, i) => {
       if (i > 0) c.append(sep(paths[i - 1]));
@@ -293,6 +325,7 @@ export function createPane(key) {
     if (e.key === "Enter") {
       let v = els.path.value.trim();
       if (v === "~" || v.startsWith("~/")) v = app.home + v.slice(1);
+      else if (!v.startsWith("/")) v = fromTyped(v) || v; // user@host:/path, sftp://…, ssh://…
       endEdit(); els.path.blur();
       if (v) P.navigate(v);
     } else if (e.key === "Escape") { endEdit(); els.path.blur(); }
@@ -349,6 +382,7 @@ export function createPane(key) {
     const query = els.search.value.trim();
     if (!query) { P.reload(); return; }
     if (!P.cwd) return;
+    if (isRemote(P.cwd)) { P.flash("On servers the filter works as you type; ⏎ searching sub-folders comes later"); return; }
     addRecent(query);
     if (usesSpotlight()) { startSpotlight(P, query); return; }
     P.spotResults = false;
@@ -419,7 +453,7 @@ export function createPane(key) {
 
   // -------------------------------------------------------- create / rename
   P.newItem = async (isDir) => {
-    if (!P.cwd) return;
+    if (!P.cwd || serverSoon(P, P.cwd)) return;
     let path;
     try { path = await invoke("create_item", { parent: P.cwd, name: isDir ? "New Folder" : "New File.txt", isDir }); }
     catch (e) { P.flash("⚠ " + e, "warn"); return; }
@@ -430,7 +464,7 @@ export function createPane(key) {
     P.startRename(path);
   };
   P.startRename = (path) => {
-    const i = P.entries.findIndex((e) => e.path === path); if (i < 0) return;
+    const i = P.entries.findIndex((e) => e.path === path); if (i < 0 || serverSoon(P, path)) return;
     P.selectSingle(i);
     reveal(i); // draws the row if it was scrolled out of view
     const row = rowAt(i); if (!row) return;
@@ -512,11 +546,11 @@ export function createPane(key) {
     const i = P.entries.findIndex((e) => e.name.toLowerCase().startsWith(taBuf));
     if (i >= 0) { P.selectSingle(i); reveal(i); }
   };
-  P.activate = (i) => { const e = P.entries[i]; if (isFolder(e)) P.navigate(e.path); else invoke("open_path", { path: e.path }); };
+  P.activate = (i) => { const e = P.entries[i]; if (isFolder(e)) P.navigate(e.path); else if (!serverSoon(P, e.path)) invoke("open_path", { path: e.path }); };
   P.enterOrOpen = () => {
     const sel = P.selectedEntries();
     if (sel.length === 1) P.activate(P.entries.indexOf(sel[0]));
-    else sel.filter((x) => !isFolder(x)).forEach((x) => invoke("open_path", { path: x.path }));
+    else if (!serverSoon(P, sel.map((x) => x.path))) sel.filter((x) => !isFolder(x)).forEach((x) => invoke("open_path", { path: x.path }));
   };
 
   P.trashSelected = () => (isBinDir(P.cwd) && P.mode === "browse" ? deleteNow(P, P.selectedPaths()) : trashPaths(P, P.selectedPaths()));
@@ -560,6 +594,7 @@ export function createPane(key) {
   /** Switch this pane between Details and Grid (remembered for this folder). */
   P.setViewMode = (m) => {
     if (!views[m] || m === P.viewMode) return;
+    if (m === "usage" && isRemote(P.cwd)) { P.flash("The Usage view isn't available on servers"); return; }
     const cur = P.entries[P.cursor] ? P.entries[P.cursor].path : null;
     const sel = new Set(P.selected);
     if (P.viewMode === "usage") cancelUsage(P);
@@ -575,7 +610,10 @@ export function createPane(key) {
 
   // ----------------------------------------------------------------- render
   P.resizeGrid = () => views.grid.resize();
+  /** What scrolls: the rows' own scroller in Details / Usage, else the listing. */
+  P.scroller = () => (V().scroller ? V().scroller() : els.listing);
   P.renderList = () => {
+    if (!V().scroller) els.listing.classList.remove("split");
     els.listing.classList.toggle("grid", P.viewMode === "grid");
     els.listing.classList.toggle("columns", V() === views.columns);
     els.listing.classList.toggle("usage", P.viewMode === "usage");
@@ -610,10 +648,7 @@ export function createPane(key) {
     const update = () => {
       let [x1, y1] = pt(last);
       x1 = Math.max(0, Math.min(L.scrollWidth, x1)); y1 = Math.max(L.scrollTop - above, Math.min(L.scrollHeight, y1)); // up into the shelf
-  /** What scrolls: the rows' own scroller in Details / Usage, else the listing. */
-  P.scroller = () => (V().scroller ? V().scroller() : els.listing);
       if (!band) {
-    if (!V().scroller) els.listing.classList.remove("split");
         if (Math.abs(x1 - x0) < 4 && Math.abs(y1 - y0) < 4) return;
         band = el("div", "band"); L.append(band);
       }

@@ -3,6 +3,7 @@
 // extract, batch rename, and undo. Nothing is ever overwritten in place: a
 // "Replace" sends the existing item to the Bin first.
 
+import { isRemote } from "./loc.js";
 import { app, invoke, store, baseName, plural } from "./core.js";
 import { visiblePanes } from "./tabs.js";
 import { closePreview } from "./preview.js";
@@ -19,6 +20,15 @@ export function copyPaths(P) {
   navigator.clipboard.writeText(paths.join("\n"));
   P.flash(paths.length > 1 ? `Copied ${paths.length} paths` : P.selected.size ? "Copied path" : "Copied folder path");
 }
+/** Servers are browse-only for now (SFTP Phase A): say so instead of failing.
+ *  True when something here is on a server — the caller should stop. */
+export function serverSoon(P, ...paths) {
+  if (!paths.flat().some(isRemote)) return false;
+  const who = P || app.active;
+  if (who) who.flash("Servers are browse-only for now — copying, opening and changing files there comes in the next update", "warn");
+  return true;
+}
+
 export const refreshAll = () => Promise.all(visiblePanes().map((p) => p.reload()));
 export const selectEverywhere = (paths) => visiblePanes().forEach((p) => p.selectPaths(paths));
 
@@ -93,7 +103,7 @@ export const redo = () => step(redoStack, undoStack, 1);
 
 /** Move paths to the Bin, remembering where they went so ⌘Z puts them back. */
 export async function trashPaths(P, paths) {
-  if (!paths.length) return;
+  if (!paths.length || serverSoon(P, paths)) return;
   let b;
   try { b = await invoke("move_to_trash", { paths }); }
   catch (e) { P.flash("⚠ " + e, "warn"); return; }
@@ -109,7 +119,7 @@ export async function trashPaths(P, paths) {
 export async function setClip(P, cut) {
   const paths = P.selectedPaths(); if (!paths.length) return;
   app.clip = { paths, cut, cc: null };
-  try { app.clip.cc = await invoke("pasteboard_write", { paths }); } catch {}
+  if (!paths.some(isRemote)) { try { app.clip.cc = await invoke("pasteboard_write", { paths }); } catch {} }
   visiblePanes().forEach((p) => p.markCut());
   P.flash(`${cut ? "Cut" : "Copied"} ${plural(paths.length, "item")} — ⌘V to paste${cut ? "" : " (works in Finder too)"}`);
 }
@@ -136,7 +146,7 @@ export async function paste(P, dest, { move = false } = {}) {
 
 // ---- Move / copy (conflict check → job with progress → refresh + undo) ----
 export async function performTransfer(paths, destDir, copy) {
-  if (!paths || !paths.length || !destDir) return;
+  if (!paths || !paths.length || !destDir || serverSoon(null, paths, destDir)) return;
   let policies = null;
   try {
     const conflicts = await invoke("plan_transfer", { sources: paths, destDir });
@@ -191,12 +201,12 @@ async function createJob(P, cmd, args, label, undoLabel, doneMsg) {
 }
 
 export function duplicateSel(P) {
-  const sel = P.selectedPaths(); if (!sel.length) return;
+  const sel = P.selectedPaths(); if (!sel.length || serverSoon(P, sel)) return;
   return createJob(P, "start_duplicate", { sources: sel }, `Duplicating ${plural(sel.length, "item")}`, (n) => `duplicate of ${plural(n, "item")}`, (n) => `Duplicated ${plural(n, "item")}`);
 }
 
 export function compressSel(P) {
-  const sel = P.selectedPaths(); if (!sel.length) return;
+  const sel = P.selectedPaths(); if (!sel.length || serverSoon(P, sel)) return;
   const label = sel.length === 1 ? `Compressing “${baseName(sel[0])}”` : `Compressing ${plural(sel.length, "item")}`;
   return createJob(P, "start_compress", { sources: sel }, label, () => "compress", (n) => (n ? "Created the archive" : "No archive created"));
 }
@@ -206,13 +216,13 @@ export const isArchive = (e) => !e.is_dir && ARCHIVE_RE.test(e.name);
 
 export function extractSel(P) {
   const archives = P.selectedEntries().filter(isArchive).map((e) => e.path);
-  if (!archives.length) return;
+  if (!archives.length || serverSoon(P, archives)) return;
   const label = archives.length === 1 ? `Extracting “${baseName(archives[0])}”` : `Extracting ${plural(archives.length, "archive")}`;
   return createJob(P, "start_extract", { archives }, label, (n) => `extract of ${plural(n, "archive")}`, (n) => `Extracted ${plural(n, "archive")}`);
 }
 
 export async function batchRename(P) {
-  const entries = P.selectedEntries(); if (entries.length < 2) return;
+  const entries = P.selectedEntries(); if (entries.length < 2 || serverSoon(P, P.cwd)) return;
   let pairs = null;
   const done = await batchRenameDialog(entries, async (items) => {
     try { pairs = await invoke("batch_rename_cmd", { items }); return null; }

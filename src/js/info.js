@@ -5,6 +5,7 @@
 //   the app it opens with, and permissions you can change.
 //   Several: how many, total size, where, shared tags.
 
+import { isRemote } from "./loc.js";
 import { app, invoke, listen, el, fmtSize, fmtDate, plural, kindIcon, isFolder } from "./core.js";
 import { modal } from "./dialog.js";
 import { kindLabel } from "./details.js";
@@ -117,6 +118,7 @@ function permEditor(P, info) {
 /** Open Get Info for P's selection, or its folder when nothing is selected. */
 export async function getInfo(P) {
   if (!P || !invoke) return;
+  if (isRemote(P.cwd)) { P.flash("Get Info isn't available on servers yet — the Info panel (F11) shows the basics"); return; }
   let sel = P.selectedEntries();
   if (!sel.length) {
     if (!P.cwd) return;

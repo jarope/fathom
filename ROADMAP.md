@@ -38,7 +38,7 @@ Status key: ✅ done · 🟡 partial · ⬜ not started
 | **Trash view** | Browse + restore | ✅ Bin in the sidebar: browse, Put Back (Fathom's and Finder's records), Delete Immediately, Empty Bin |
 | **Tags / ratings** | Baloo | ✅ Finder tags: dots, menu, ⌃⌘1–7, sidebar, drop-to-tag |
 | **Content search** | Baloo | ✅ Spotlight: contents / names, here or whole Mac, streamed; saved searches |
-| **Remote locations** | sftp, smb, etc. via KIO | ✅ Connect to Server (⌘K): SMB / AFP / NFS / WebDAV mounted by macOS · ⬜ sftp (no macOS support) |
+| **Remote locations** | sftp, smb, etc. via KIO | ✅ Connect to Server (⌘K): SMB / AFP / NFS / WebDAV mounted by macOS · 🟡 sftp built in (see SFTP below) |
 | **Git status overlays** | Plugin | ✅ badges, folder roll-up, branch ↑↓ chip, Commit… / Push |
 | **Per-folder view settings** | Remembered | ✅ view mode + sort per folder (since v0.19) |
 | **Session restore** | Tabs/paths reopened | ✅ tabs, folders, layout, sort, window size |
@@ -255,6 +255,39 @@ Phase 5 complete.
 - **Demo folder** ✅ `scripts/demo.sh` → ~/Fathom Demo (made-up files).
 - **Still to do before v1.0**: screenshots + a landing page (GitHub Pages).
   No Developer ID / notarisation — decided against.
+
+## SFTP — built into Fathom (in progress)
+macOS can't mount sftp, so Fathom does it itself. Decided Nov 2026:
+- **Transport**: `/usr/bin/ssh` does the connection (one ControlMaster per
+  server, `ssh -S … -s sftp` channels), so ~/.ssh/config, agent, ProxyJump,
+  hardware keys and known_hosts behave exactly as in Terminal. Fathom has its
+  own small blocking SFTP v3 client over ssh's stdio (`src-tauri/src/remote/`),
+  tested against `/usr/libexec/sftp-server`. Prompts via `SSH_ASKPASS` → our
+  own binary (`--askpass`) → a Fathom dialog; optional Keychain passwords.
+  A changed host key is always refused.
+- **Paths**: `sftp://<alias or user@host:port>/<abs path>`; `src/js/loc.js`
+  holds parent/join/crumbs/caps so every path list keeps working.
+- **Your choices**: sidebar shows saved servers only (+ "Add from ssh
+  config…"); Replace onto a server allowed, worded "Replace (deletes the
+  server's copy)", old copy removed only after the upload succeeds; saved
+  remote files upload silently (asked only if the server copy changed);
+  restored server tabs reconnect silently or show "Disconnected — Reconnect".
+- Off on servers: Quick Look / thumbnails (until D), Spotlight, git, tags,
+  Usage, terminal follow, Bin (delete is permanent, confirmed).
+
+Phases (each shippable):
+- ✅ **A — connect & browse** (read-only): client, transport, askpass, config
+  hosts, Servers in the sidebar, ⌘K `sftp://` / `user@host`, all views,
+  crumbs, filter, polling refresh (3 s mtime / 30 s full), quiet restore with
+  a Reconnect placeholder. Tested in cargo (client vs sftp-server, stand-in
+  ssh, opt-in e2e: `FATHOM_SSH=<wrapper> FATHOM_E2E_CONN=<host> cargo test
+  e2e -- --ignored`) and in the app against a private sshd on 127.0.0.1:2222
+  (runs as you, key-only, `UsePAM no`; Remote Login stays off).
+- ⬜ **B — copy / move both ways** through the job engine (progress, cancel,
+  conflicts), F5/F6, drag between panes; uploads go to `.fathom-part` first.
+- ⬜ **C — rename, delete, new folder, open & save back**.
+- ⬜ **D — polish**: streamed huge listings, Quick Look via cached download,
+  chmod, Open SSH Session Here, server→server, resume, remote name search.
 
 ## Polish backlog (after feature-complete, before daily-driver)
 Deferred on purpose — features first, then a polish pass.

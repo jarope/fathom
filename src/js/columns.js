@@ -13,6 +13,7 @@
 // Clicking in another column moves the active column there (Finder). → opens
 // the selected folder, ← goes back out (see pane.js arrowSide).
 
+import { serverSoon } from "./ops.js";
 import { app, invoke, el, icon, kindIcon, fmtSize, fmtDate, isFolder } from "./core.js";
 import { tagDots } from "./tags.js";
 import { fileIcon } from "./icons.js";
@@ -104,7 +105,7 @@ export function createColumns(P) {
     const dir = col.dataset.path, row = ev.target.closest(".mrow");
     if (kind === "dblclick") {
       if (!row) return;
-      if (row.dataset.dir) P.navigate(row.dataset.path); else invoke("open_path", { path: row.dataset.path });
+      if (row.dataset.dir) P.navigate(row.dataset.path); else if (!serverSoon(P, row.dataset.path)) invoke("open_path", { path: row.dataset.path });
       return;
     }
     if (kind === "contextmenu") ev.preventDefault();

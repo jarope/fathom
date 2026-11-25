@@ -47,6 +47,7 @@ initPanel();
 initWheel();
 initTabs();
 initSidebar();
+import("./remote.js").then((m) => m.initRemote(() => renderSidebar()));
 initKeys();
 
 (async () => {

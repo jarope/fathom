@@ -31,6 +31,7 @@ mod icons;
 mod update;
 mod info;
 mod usage;
+mod remote;
 mod batch;
 mod jobs;
 mod pasteboard;
@@ -67,6 +68,14 @@ pub(crate) struct Entry {
     /// Finder tags (omitted when untagged, which is almost always).
     #[serde(skip_serializing_if = "Vec::is_empty")]
     tags: Vec<tags::Tag>,
+}
+
+impl Entry {
+    /// An entry on a server (remote/mod.rs): no birth / added dates, no tags.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn remote(path: String, name: String, parent: String, is_dir: bool, is_symlink: bool, size: u64, modified: Option<u64>, mode: u32) -> Entry {
+        Entry { path, name, parent, is_dir, is_symlink, size, modified, created: None, added: None, mode, tags: Vec::new() }
+    }
 }
 
 /// Finder's "Date Added" (ATTR_CMN_ADDEDTIME), without following symlinks.
@@ -152,9 +161,25 @@ struct Listing {
     entries: Vec<Entry>,
 }
 
-/// List the immediate contents of a directory.
+/// List the immediate contents of a directory (or a server folder, `sftp://…`;
+/// `quiet`: don't prompt to log in). Async so a slow server never blocks the window.
 #[tauri::command]
-fn list_dir(path: String, show_hidden: bool) -> Result<Listing, String> {
+async fn list_dir(path: String, show_hidden: bool, quiet: Option<bool>) -> Result<Listing, String> {
+    if remote::is_remote(&path) {
+        return tauri::async_runtime::spawn_blocking(move || {
+            remote::list(&path, show_hidden, quiet.unwrap_or(false)).map(|l| {
+                let mut entries = l.entries;
+                sort_entries(&mut entries);
+                Listing { dir: l.dir, parent: l.parent, entries }
+            })
+        })
+        .await
+        .map_err(|e| e.to_string())?;
+    }
+    list_local(path, show_hidden)
+}
+
+fn list_local(path: String, show_hidden: bool) -> Result<Listing, String> {
     let dir = std::fs::canonicalize(&path).map_err(|e| format!("Can't open {path}: {e}"))?;
     if !dir.is_dir() {
         return Err(format!("Not a folder: {}", dir.display()));
@@ -556,6 +581,9 @@ struct Space {
 /// Free / total bytes on the volume holding `path`.
 #[tauri::command]
 fn free_space(path: String) -> Result<Space, String> {
+    if remote::is_remote(&path) {
+        return remote::space(&path).map(|(free, total)| Space { free, total });
+    }
     #[cfg(unix)]
     {
         use std::ffi::CString;
@@ -903,6 +931,14 @@ fn watch_dirs(
 }
 
 
+/// main.rs: when ssh runs Fathom as its askpass helper, answer and exit.
+pub fn askpass_client() -> bool {
+    if !remote::askpass::is_client() {
+        return false;
+    }
+    std::process::exit(remote::askpass::client());
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -992,15 +1028,29 @@ pub fn run() {
             ql_thumbnail,
             svg_data_uri,
             reveal_in_finder,
+            remote::sftp_connect,
+            remote::sftp_cancel,
+            remote::sftp_disconnect,
+            remote::sftp_connected,
+            remote::sftp_forget,
+            remote::sftp_config_hosts,
+            remote::sftp_mtimes,
+            remote::askpass::sftp_prompt_reply,
             open_path
         ])
         // Remember mouse-downs: a drag that leaves the window starts from one.
-        .setup(|_| {
+        .setup(|app| {
             dnd::install_mouse_monitor();
+            remote::init(app.handle().clone());
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running Fathom");
+        .build(tauri::generate_context!())
+        .expect("error while running Fathom")
+        .run(|_, e| {
+            if let tauri::RunEvent::Exit = e {
+                remote::shutdown();
+            }
+        });
 }
 
 #[cfg(test)]

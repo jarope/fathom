@@ -9,6 +9,7 @@
 //
 // Preferences → "Finder icons in lists" turns it off (glyphs only).
 
+import { isRemote } from "./loc.js";
 import { invoke, el, kindIcon } from "./core.js";
 import { prefs } from "./settings.js";
 
@@ -19,7 +20,9 @@ const waiting = new Map(); // key -> [glyph elements]
 let queued = false;
 
 export function iconKey(e) {
-  if (e.is_dir || e.is_symlink) return "path:" + e.path;
+  // On a server there's no file to ask about: folders get the plain folder icon.
+  if (isRemote(e.path)) { if (e.is_dir) return "ext:public.folder"; }
+  else if (e.is_dir || e.is_symlink) return "path:" + e.path;
   const m = /\.([^./]+)$/.exec(e.name);
   return "ext:" + (m ? m[1].toLowerCase() : "");
 }

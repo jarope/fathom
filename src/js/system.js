@@ -1,5 +1,6 @@
 // macOS integration: Open With ▸, Share ▸ and real Quick Look on Space.
 
+import { isRemote } from "./loc.js";
 import { app, invoke, listen, dialog, el } from "./core.js";
 import { getZoom } from "./view.js";
 import { showPreviewFor } from "./preview.js";
@@ -56,6 +57,7 @@ function qlItems(P) {
 
 export async function quickLook(P) {
   if (app.qlOpen) { closeQuickLook(); return; }
+  if (isRemote(P.cwd)) { P.flash("Quick Look isn't available on servers yet"); return; }
   const it = qlItems(P); if (!it) return;
   try {
     if (await invoke("quick_look", { ...it, open: true })) app.qlOpen = true;
@@ -71,7 +73,7 @@ export function closeQuickLook() {
 
 /** Keep an open panel in step with the active pane's selection. */
 export function qlFollow(P) {
-  if (!app.qlOpen || P !== app.active) return;
+  if (!app.qlOpen || P !== app.active || isRemote(P.cwd)) return;
   const it = qlItems(P); if (!it) return;
   invoke("quick_look", { ...it, open: false }).then((open) => { if (!open) app.qlOpen = false; }).catch(() => {});
 }

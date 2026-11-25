@@ -884,6 +884,7 @@ dependencies = [
  "objc2-quick-look-ui",
  "plist",
  "portable-pty",
+ "security-framework",
  "serde",
  "serde_json",
  "tauri",

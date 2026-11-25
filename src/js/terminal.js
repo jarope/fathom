@@ -125,7 +125,7 @@ async function followShell() {
 
 /** The active pane moved: `cd` the shell there (only if it's at its prompt). */
 export async function followPane(P) {
-  if (!id || !terminalOpen() || !P || P !== app.active || !P.cwd || P.mode !== "browse") return;
+  if (!id || !terminalOpen() || !P || P !== app.active || !P.cwd || P.mode !== "browse" || P.cwd.startsWith("sftp://")) return;
   if (P.cwd === lastShellDir) return;
   let did = false;
   try { did = await invoke("term_cd", { id, path: P.cwd }); } catch {}

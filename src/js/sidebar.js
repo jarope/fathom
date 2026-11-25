@@ -18,6 +18,8 @@ import { emptyBin } from "./bin.js";
 import { recentMenu, connectToServer } from "./network.js";
 import { renderTree, treeClick, treeKey, invalidateTree } from "./foldertree.js";
 import { trashPaths } from "./ops.js";
+import { servers, isConnected, disconnectServer, forgetServer, openServer, configHosts } from "./remote.js";
+import { remoteUrl, connOf, serverLabel, isRemote } from "./loc.js";
 
 let places = null;
 // [{ name, path }] in your order. null until first seeded from the standard folders.
@@ -134,6 +136,19 @@ export function renderSidebar() {
   const srv = el("div", "place serverplace"); srv.dataset.server = "1"; srv.title = "Connect to Server (⌘K)";
   srv.append(icon("network"), el("span", "pname", "Connect to Server…"));
   asButton(srv, "Connect to Server"); sb.append(srv);
+  const svs = servers();
+  if (svs.length) {
+    sec("Servers");
+    svs.forEach(({ conn }) => {
+      const n = el("div", "place remoteplace" + (isConnected(conn) ? " live" : ""));
+      n.dataset.path = remoteUrl(conn); n.dataset.kind = "server"; n.dataset.conn = conn;
+      n.title = `${conn} (SFTP)` + (isConnected(conn) ? " · connected" : "");
+      n.append(icon("network"), el("span", "pname", serverLabel(conn)));
+      if (isConnected(conn)) { const b = el("button", "eject"); b.type = "button"; b.title = "Disconnect"; b.append(icon("eject")); n.append(b); }
+      asButton(n, `Server ${serverLabel(conn)}`);
+      sb.append(n);
+    });
+  }
   if (saved.length) {
     sec("Searches");
     saved.forEach((s, i) => {
@@ -163,7 +178,7 @@ export function markActive() {
   if (!sb) return;
   if (app.sideMode === "folders" && app.sidebar) { if (app.active) invalidateTree(app.active.cwd); renderSidebar(); return; }
   const cwd = app.active && app.active.cwd;
-  sb.querySelectorAll(".place").forEach((n) => n.classList.toggle("on", n.dataset.path === cwd));
+  sb.querySelectorAll(".place").forEach((n) => n.classList.toggle("on", n.dataset.conn ? connOf(cwd || "") === n.dataset.conn : n.dataset.path === cwd));
 }
 
 async function eject(path, name) {
@@ -196,6 +211,7 @@ export function initSidebar() {
     if (n.dataset.search) { if (app.active) runSaved(app.active, saved[+n.dataset.search]); return; }
     if (n.dataset.recent) { ev.stopPropagation(); const r = n.getBoundingClientRect(); recentMenu(r.right - 8, r.top); return; }
     if (n.dataset.server) { connectToServer(); return; }
+    if (n.dataset.conn && ev.target.closest(".eject")) { disconnectServer(n.dataset.conn); return; }
     if (ev.target.closest(".eject")) { eject(n.dataset.path, n.querySelector(".pname").textContent); return; }
     if (ev.metaKey) openTab(n.dataset.path);
     else if (app.active) app.active.navigate(n.dataset.path);
@@ -216,6 +232,18 @@ export function initSidebar() {
     }
     const path = n.dataset.path, kind = n.dataset.kind, name = n.querySelector(".pname").textContent;
     const P = app.active;
+    if (kind === "server") {
+      const conn = n.dataset.conn;
+      showMenu([
+        { label: "Open", fn: () => openServer(conn, P) },
+        { label: "Open in New Tab", fn: () => openTab(path), key: "⌘-click" },
+        P && app.tab.view === "twin" && { label: "Open in Other Pane", fn: () => openServer(conn, other(P)) },
+        "sep",
+        isConnected(conn) && { label: "Disconnect", fn: () => disconnectServer(conn) },
+        { label: "Forget Server…", fn: () => forgetServer(conn), danger: true },
+      ], ev.clientX, ev.clientY);
+      return;
+    }
     if (kind === "bin") {
       showMenu([
         { label: "Open", fn: () => P && P.navigate(path) },

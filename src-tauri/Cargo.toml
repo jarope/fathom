@@ -41,6 +41,8 @@ tauri-plugin-window-state = "2"
 tauri-plugin-updater = "2"
 # The terminal panel (F4): a real pseudo-terminal for your shell.
 portable-pty = "0.9"
+# Saved server passwords (sftp) in the macOS Keychain.
+security-framework = "3"
 
 [profile.release]
 opt-level = 3

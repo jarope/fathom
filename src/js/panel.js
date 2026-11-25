@@ -8,6 +8,7 @@
 //   Nothing:   the folder itself.
 // Click the picture for Quick Look. Drag the left edge to resize.
 
+import { isRemote } from "./loc.js";
 import { app, invoke, store, el, fmtSize, fmtDate, plural, kindIcon, isFolder } from "./core.js";
 import { kindLabel } from "./details.js";
 import { thumbInto } from "./grid.js";
@@ -127,7 +128,7 @@ async function draw() {
   body.append(actions);
 
   // Spotlight facts (one quick lookup, after the selection settles).
-  if (here || !invoke) return;
+  if (here || !invoke || isRemote(e.path)) return;
   await new Promise((r) => setTimeout(r, 120));
   if (g !== gen) return;
   let info;

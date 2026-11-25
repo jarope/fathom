@@ -4,6 +4,7 @@
 // smooth. Cells are ".row.cell" with data-i, so selection, rename, menus,
 // drag & drop and git badges work unchanged.
 
+import { isRemote } from "./loc.js";
 import { app, el, invoke, kindIcon } from "./core.js";
 import { tagDots } from "./tags.js";
 import { applyGit } from "./git.js";
@@ -68,7 +69,7 @@ function pump() {
 
 /** Put e's picture into host: cached now, or the kind glyph until it arrives. */
 function loadPic(host, e, size) {
-  if (!invoke) return;
+  if (!invoke || isRemote(e.path)) return; // no thumbnails from servers (yet)
   const px = bucket(size), key = thumbKey(e, px);
   if (cache.has(key)) { setPic(host, cache.get(key)); return; }
   const job = waiting.get(key);

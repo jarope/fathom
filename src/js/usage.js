@@ -75,7 +75,7 @@ export function cancelUsage(P) {
 
 /** Called on every render in Usage: measure whatever on screen isn't known yet. */
 export async function ensureUsage(P) {
-  if (!invoke || !P.cwd) return;
+  if (!invoke || !P.cwd || P.cwd.startsWith("sftp://")) return;
   const s = state(P), key = P.mode + "|" + P.cwd;
   if (s.key !== key) { cancelUsage(P); s.key = key; s.sizes = new Map(); s.ms = 0; }
   const missing = [];
