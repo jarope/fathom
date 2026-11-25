@@ -7,6 +7,12 @@ short and written for people who use Fathom.
 
 ## 0.32.0 — 2026-11-20
 
+- **Aloft** (new mode): Incorporated another project, called Aloft, which looks at disk size. 
+  This allows for a dual pane view of a folder and see the disk size of items within it.
+
+
+## 0.32.0 — 2026-11-20
+
 - **Terminal panel** (⌃`, F4, or right-click empty space): your shell under the files. It follows the folder
   you're in, and a `cd` in the shell takes the pane along. Resizable, keeps
   running while hidden, ⌘K clears.
