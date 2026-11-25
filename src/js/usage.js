@@ -57,11 +57,11 @@ function schedule(P, wait = 400) {
   s.timer = setTimeout(() => {
     s.timer = 0;
     if (P.viewMode !== "usage" || !P.cwd) return;
-    const sel = P.selectedPaths(), cur = P.entries[P.cursor] ? P.entries[P.cursor].path : null, top = P.els.listing.scrollTop;
+    const sel = P.selectedPaths(), cur = P.entries[P.cursor] ? P.entries[P.cursor].path : null, top = P.scroller().scrollTop;
     P.rebuild();
     P.renderList(); P.selectPaths(sel);
     if (cur) P.cursor = P.entries.findIndex((e) => e.path === cur);
-    P.els.listing.scrollTop = top;
+    P.scroller().scrollTop = top;
     P.renderStatus();
   }, wait);
 }

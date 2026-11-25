@@ -31,7 +31,8 @@ export function applyAppearance() {
   const themeAccent = applyTheme(root, theme === "dark" ? prefs.darkTheme : prefs.lightTheme, theme);
   setAccentInline(root, custom ? prefs.accent : !named && themeAccent ? themeAccent : null);
   try { localStorage.setItem("fathom-look", theme + " " + accent); } catch {}
-  const g = Math.min(100, Math.max(50, Number(prefs.glass) || 80));
+  // Reduce Transparency / Increase Contrast (System Settings) make it solid whatever the slider says.
+  const g = sys.reduce_transparency || sys.increase_contrast ? 100 : Math.min(100, Math.max(20, Number(prefs.glass) || 80));
   root.style.setProperty("--glass-a", String(g / 100));
   try { localStorage.setItem("fathom-look-style", themeStyle(root)); } catch {}
   root.classList.toggle("rt", !!sys.reduce_transparency);

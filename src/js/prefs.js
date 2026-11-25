@@ -117,12 +117,12 @@ function general() {
   };
   drawThemes();
   box.append(field("Colour theme", tbox, note("Solarized, Nord, Dracula, Gruvbox and Catppuccin are built in. Import a base16 scheme (YAML / JSON), a VS Code colour theme (.json from an extension's themes folder), or a Fathom theme file.")));
-  const rng = el("input"); rng.type = "range"; rng.min = 50; rng.max = 100; rng.step = 5; rng.value = prefs.glass;
+  const rng = el("input"); rng.type = "range"; rng.min = 20; rng.max = 100; rng.step = 5; rng.value = prefs.glass;
   const out = el("output", null, prefs.glass + "%");
   rng.addEventListener("input", () => { prefs.glass = +rng.value; out.textContent = rng.value + "%"; applyAppearance(); });
   rng.addEventListener("change", () => saveSettings());
   const rwrap = el("div", "pf-range"); rwrap.append(rng, out);
-  box.append(field("Glass", rwrap, note("Sidebar, toolbar and menus. 100% is solid, the same as Reduce Transparency in System Settings › Accessibility.")));
+  box.append(field("Glass", rwrap, note("Sidebar, title bar, toolbars and status bars (file lists stay solid). 100% is solid. Reduce Transparency in System Settings › Accessibility overrides this.")));
 
   const sample = Math.floor(Date.now() / 1000) - 3600 * 26;
   const dateOpts = [["iso", "ISO"], ["locale", "System style"], ["relative", "Relative"]].map(([v, l]) => [v, `${l} — ${fmtDate(sample, v)}`]);
@@ -132,6 +132,9 @@ function general() {
 
   box.append(field("Terminal app", select(TERMINALS.map((t) => [t, t]), prefs.terminal, (v) => { prefs.terminal = v; saveSettings(); }),
     note("Used by Open Terminal Here and actions that run in a terminal.")));
+  box.append(field("Terminal panel",
+    check("Command blocks", prefs.termBlocks !== false, (on) => { prefs.termBlocks = on; saveSettings(); }),
+    note("Groups each command with its output and marks failed ones; ⌘↑ / ⌘↓ jump between commands, ⇧⌘C copies the last output, right-click for more. zsh only; applies to the next shell you start.")));
 
   box.append(field("Show",
     check("Hidden files", app.showHidden, (on) => on !== app.showHidden && toggleHidden()),

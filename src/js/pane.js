@@ -144,7 +144,7 @@ export function createPane(key) {
     const filter = keepFilter && P.mode === "browse" ? els.search.value : "";
     const prevSel = keep ? new Set(P.selected) : new Set();
     const prevCursor = keep && P.entries[P.cursor] ? P.entries[P.cursor].path : null;
-    const scroll = keep ? els.listing.scrollTop : 0;
+    const scroll = keep ? P.scroller().scrollTop : 0;
 
     P.cwd = listing.dir; P.parent = listing.parent; P.base = listing.entries;
     P.mode = "browse"; P.selected = prevSel;
@@ -153,7 +153,7 @@ export function createPane(key) {
     if (prevCursor) { const i = P.entries.findIndex((e) => e.path === prevCursor); if (i >= 0) { P.cursor = i; P.anchor = i; } }
     if (push) { P.history = P.history.slice(0, P.hi + 1); P.history.push(listing.dir); P.hi = P.history.length - 1; }
 
-    P.renderList(); els.listing.scrollTop = scroll;
+    P.renderList(); P.scroller().scrollTop = scroll;
     P.renderCrumbs(); P.renderStatus(); P.updateNav();
     changed();
     if (moved) { P.space = null; P.git = null; app.hooks.navigated(P); }
@@ -381,10 +381,10 @@ export function createPane(key) {
   const drawResults = () => {
     pendingDraw = 0;
     if (P.mode !== "search" || !P.spotResults) return; // cancelled / left the results meanwhile
-    const top = els.listing.scrollTop;
+    const top = P.scroller().scrollTop;
     P.entries = P.base.slice(); P.applySort();
     const cur = P.cursor >= 0 ? P.entries[P.cursor] : null;
-    P.renderList(); els.listing.scrollTop = top;
+    P.renderList(); P.scroller().scrollTop = top;
     if (cur) P.cursor = P.entries.indexOf(cur);
     P.renderStatus(Object.assign(el("span"), { innerHTML: '<span class="spinner"></span> <span class="msg">Searching…</span>' }));
   };
@@ -566,7 +566,7 @@ export function createPane(key) {
     P.viewMode = m;
     P.rebuild(); P.selected = sel;
     if (cur) P.cursor = P.anchor = P.entries.findIndex((e) => e.path === cur);
-    els.listing.scrollTop = 0;
+    P.scroller().scrollTop = 0;
     P.renderList(); P.renderStatus();
     if (P.cursor >= 0) reveal(P.cursor);
     P.remember(); changed(); app.hooks.save();
@@ -601,7 +601,7 @@ export function createPane(key) {
   let bandJustEnded = false;
   els.listing.addEventListener("mousedown", (ev) => {
     if (ev.button !== 0 || V().noBand || ev.target.closest(".row, .head, .shelf, input") || !P.entries.length) return;
-    const L = els.listing, lr = L.getBoundingClientRect();
+    const L = P.scroller(), lr = L.getBoundingClientRect(), above = V().topHeight ? V().topHeight() : 0;
     if (ev.clientX - lr.left >= L.clientWidth) return; // the scrollbar
     const pt = (e) => [e.clientX - lr.left + L.scrollLeft, e.clientY - lr.top + L.scrollTop];
     const [x0, y0] = pt(ev);
@@ -609,8 +609,11 @@ export function createPane(key) {
     let band = null, last = ev;
     const update = () => {
       let [x1, y1] = pt(last);
-      x1 = Math.max(0, Math.min(L.scrollWidth, x1)); y1 = Math.max(0, Math.min(L.scrollHeight, y1));
+      x1 = Math.max(0, Math.min(L.scrollWidth, x1)); y1 = Math.max(L.scrollTop - above, Math.min(L.scrollHeight, y1)); // up into the shelf
+  /** What scrolls: the rows' own scroller in Details / Usage, else the listing. */
+  P.scroller = () => (V().scroller ? V().scroller() : els.listing);
       if (!band) {
+    if (!V().scroller) els.listing.classList.remove("split");
         if (Math.abs(x1 - x0) < 4 && Math.abs(y1 - y0) < 4) return;
         band = el("div", "band"); L.append(band);
       }

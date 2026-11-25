@@ -2,9 +2,14 @@
 // expandable folders. Only the rows on screen exist in the page (a virtual
 // window over P.entries), so 50k-entry folders scroll as smoothly as 50.
 //
-// Layout inside .listing:  [.shelf]  .head  .vbody(height = rows × ROW_H)
-// Rows are absolutely positioned in .vbody and keep data-i = their index in
-// P.entries, so selection, menus, drag & drop and git badges work unchanged.
+// Layout inside .listing (class "split"):
+//   .dtop [.shelf] .head   — fixed at the top; never scrolls
+//   .lscroll > .vbody      — the scroller; vbody height = rows × ROW_H
+// The shelf and header used to be a sticky block inside the scroller, but
+// WebKit's threaded scrolling could draw rows above it for a frame, so they
+// now sit outside it. Rows are absolutely positioned in .vbody and keep
+// data-i = their index in P.entries, so selection, menus, drag & drop and git
+// badges (all delegated on .listing) work unchanged.
 
 import { app, el, icon, kindIcon, kindOf, fmtSize, fmtDate, isFolder } from "./core.js";
 import { tagDots } from "./tags.js";
@@ -110,6 +115,7 @@ const USAGE_COLS = {
 export function createDetails(P, { usage = false } = {}) {
   const L = P.els.listing;
   let vbody = null, nDirs = 0, rows = new Map(), cols = [], paintQueued = 0;
+  let S = L, top = null; // the scroller (.lscroll once rendered) and the fixed .dtop
 
   // Name fills the spare room until you size it; then it's fixed and an empty
   // track at the end takes up the slack. Too wide for the pane → scroll sideways.
@@ -235,9 +241,9 @@ export function createDetails(P, { usage = false } = {}) {
     paintQueued = 0;
     if (!vbody) return;
     const n = P.entries.length - nDirs;
-    const top = vbody.offsetTop, view = L.clientHeight || 600;
-    const first = Math.max(0, Math.floor((L.scrollTop - top) / ROW_H) - OVERSCAN);
-    const last = Math.min(n - 1, Math.ceil((L.scrollTop + view - top) / ROW_H) + OVERSCAN);
+    const top = vbody.offsetTop, view = S.clientHeight || 600;
+    const first = Math.max(0, Math.floor((S.scrollTop - top) / ROW_H) - OVERSCAN);
+    const last = Math.min(n - 1, Math.ceil((S.scrollTop + view - top) / ROW_H) + OVERSCAN);
     const want = new Set();
     for (let j = first; j <= last; j++) want.add(j + nDirs);
     for (const [i, r] of rows) {
@@ -250,14 +256,30 @@ export function createDetails(P, { usage = false } = {}) {
   }
   const mine = () => (usage ? P.viewMode === "usage" : P.viewMode !== "grid" && P.viewMode !== "usage");
   const queuePaint = () => { if (!paintQueued && mine()) paintQueued = requestAnimationFrame(paint); };
-  L.addEventListener("scroll", queuePaint, { passive: true });
-  if (window.ResizeObserver) new ResizeObserver(queuePaint).observe(L);
+  // The fixed header follows the rows sideways and leaves room for their scrollbar.
+  const syncTop = () => {
+    if (!top || S === L) return;
+    const h = top.querySelector(".head");
+    if (h) h.style.transform = S.scrollLeft ? `translateX(${-S.scrollLeft}px)` : "";
+    top.style.paddingRight = Math.max(0, S.offsetWidth - S.clientWidth) + "px";
+  };
+  const onScroll = () => { syncTop(); queuePaint(); };
+  if (window.ResizeObserver) new ResizeObserver(() => { syncTop(); queuePaint(); }).observe(L);
+  // The listing has focus but no longer scrolls itself, so page keys scroll the rows.
+  L.addEventListener("keydown", (ev) => {
+    if (S === L || !mine() || ev.metaKey || ev.altKey || ev.ctrlKey || ev.target.closest("input")) return;
+    const page = Math.max(ROW_H, S.clientHeight - ROW_H);
+    const to = { PageDown: S.scrollTop + page, PageUp: S.scrollTop - page, Home: 0, End: S.scrollHeight }[ev.key];
+    if (to === undefined) return;
+    ev.preventDefault(); S.scrollTop = to;
+  });
 
   /** Rebuild the whole list (new folder, sort, filter, columns, expand). */
   function render() {
     L.classList.toggle("searching", P.mode === "search" && !usage);
     L.innerHTML = "";
-    rows = new Map(); vbody = null;
+    L.classList.remove("split");
+    rows = new Map(); vbody = null; S = L; top = null;
     if (paintQueued) { cancelAnimationFrame(paintQueued); paintQueued = 0; }
     if (!P.entries.length) {
       const e = el("div", "empty-state");
@@ -274,48 +296,57 @@ export function createDetails(P, { usage = false } = {}) {
     if (app.folderShelf && P.mode === "browse" && !usage) {
       while (nDirs < P.entries.length && isFolder(P.entries[nDirs]) && !(P.entries[nDirs].depth > 0)) nDirs++;
     }
-    // The shelf and the column header stay put together at the top while the
-    // files scroll under them (one sticky block, so no gap can open between).
-    const top = el("div", "dtop");
+    // The shelf and the column header sit together above the scroller, so
+    // nothing that scrolls can ever show above them.
+    top = el("div", "dtop");
     if (nDirs) {
       const s = el("div", "shelf");
       for (let i = 0; i < nDirs; i++) s.append(tile(i));
       top.append(s);
     }
     if (nDirs < P.entries.length) top.append(head());
-    L.append(top);
+    // A vertical wheel over the fixed block still scrolls the list.
+    top.addEventListener("wheel", (ev) => {
+      if (ev.defaultPrevented || ev.ctrlKey || ev.metaKey || Math.abs(ev.deltaY) <= Math.abs(ev.deltaX)) return;
+      S.scrollTop += ev.deltaMode === 1 ? ev.deltaY * ROW_H : ev.deltaY;
+    }, { passive: true });
+    S = el("div", "lscroll");
+    S.addEventListener("scroll", onScroll, { passive: true });
+    L.classList.add("split");
+    L.append(top, S);
     if (nDirs < P.entries.length) {
       vbody = el("div", "vbody");
       vbody.style.height = (P.entries.length - nDirs) * ROW_H + "px";
-      L.append(vbody);
+      S.append(vbody);
       paint();
     }
+    syncTop();
     applyGit(P); // tiles
   }
 
-  /** Scroll so entry i is fully visible (below the sticky header). */
+  /** Scroll so entry i is fully visible. */
   function reveal(i) {
     if (i < 0 || i >= P.entries.length) return;
     if (i < nDirs) { const t = L.querySelector(`.tile[data-i="${i}"]`); if (t) t.scrollIntoView({ block: "nearest", inline: "nearest" }); return; }
     if (!vbody) return;
-    const headH = (L.querySelector(".dtop") || { offsetHeight: 0 }).offsetHeight;
     const y = vbody.offsetTop + (i - nDirs) * ROW_H;
-    if (y - headH < L.scrollTop) L.scrollTop = y - headH;
-    else if (y + ROW_H > L.scrollTop + L.clientHeight) L.scrollTop = y + ROW_H - L.clientHeight;
+    if (y < S.scrollTop) S.scrollTop = y;
+    else if (y + ROW_H > S.scrollTop + S.clientHeight) S.scrollTop = y + ROW_H - S.clientHeight;
     paint();
   }
 
   const rowAt = (i) => (i < nDirs ? L.querySelector(`.tile[data-i="${i}"]`) : rows.get(i) || null);
   const isTile = (i) => i < nDirs;
 
-  /** Entries whose row or tile meets the rectangle (listing content coordinates). */
+  /** Entries whose row or tile meets the rectangle (scroller content
+   *  coordinates; the shelf's tiles sit above, at negative y). */
   function indicesIn(x0, y0, x1, y1) {
     const out = [];
     if (nDirs) {
-      const lr = L.getBoundingClientRect();
+      const lr = S.getBoundingClientRect();
       L.querySelectorAll(".tile").forEach((t) => {
         const r = t.getBoundingClientRect();
-        const tx = r.left - lr.left + L.scrollLeft, ty = r.top - lr.top + L.scrollTop;
+        const tx = r.left - lr.left + S.scrollLeft, ty = r.top - lr.top + S.scrollTop;
         if (tx < x1 && tx + r.width > x0 && ty < y1 && ty + r.height > y0) out.push(+t.dataset.i);
       });
     }
@@ -327,5 +358,5 @@ export function createDetails(P, { usage = false } = {}) {
     return out;
   }
 
-  return { render, paint, reveal, rowAt, isTile, indicesIn, perRow: () => 1 };
+  return { render, paint, reveal, rowAt, isTile, indicesIn, perRow: () => 1, scroller: () => S, topHeight: () => (top && S !== L ? top.offsetHeight : 0) };
 }

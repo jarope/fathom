@@ -3,7 +3,7 @@
 
 import { isFolder } from "./core.js";
 import { app, invoke, el, icon, plural } from "./core.js";
-import { undoStack, redoStack, undo, redo, setClip, paste, duplicateSel, transferToOther, pickAndTransfer, recentDests, openTerminal, compressSel, extractSel, batchRename, isArchive } from "./ops.js";
+import { undoStack, redoStack, undo, redo, setClip, paste, copyPaths, duplicateSel, transferToOther, pickAndTransfer, recentDests, openTerminal, compressSel, extractSel, batchRename, isArchive } from "./ops.js";
 import { openTab } from "./tabs.js";
 import { addBookmarks, placeTargets } from "./sidebar.js";
 import { other, openLocation, elsewhere } from "./tabs.js";
@@ -179,8 +179,8 @@ export function openContextMenu(P, x, y) {
       { label: "Open in New Tab", fn: () => openTab(P.cwd), key: keyHint("newTab") },
       { label: "Open Terminal Here", fn: () => openTerminal(P, P.cwd), key: keyHint("terminal") },
       { label: terminalOpen() ? "Hide Terminal Panel" : "Show Terminal Panel", fn: () => toggleTerminal(), key: keyHint("terminalPanel") },
-      { label: "Add to Places", fn: () => addBookmarks([P.cwd]) },
-      { label: "Copy folder path", fn: () => { navigator.clipboard.writeText(P.cwd); P.flash("Copied path"); } },
+      { label: "Add to Favourites", fn: () => addBookmarks([P.cwd]) },
+      { label: "Copy folder path", fn: () => copyPaths(P), key: keyHint("copyPath") },
       { label: "Get Info", fn: () => getInfo(P), key: keyHint("getInfo") },
       "sep",
       { label: "View", sub: () => viewEntries(P) },
@@ -229,8 +229,8 @@ export function openContextMenu(P, x, y) {
     P.git && P.mode === "browse" && { label: "Git", sub: () => gitMenu(P) },
     { label: "Share…", fn: () => share(P, sel.map((e) => e.path), x, y) },
     one && one.is_dir && { label: "Open Terminal Here", fn: () => openTerminal(P, one.path) },
-    dirs.length && { label: "Add to Places", fn: () => addBookmarks(dirs) },
-    { label: sel.length > 1 ? "Copy paths" : "Copy path", fn: () => { navigator.clipboard.writeText(sel.map((e) => e.path).join("\n")); P.flash(sel.length > 1 ? "Copied paths" : "Copied path"); } },
+    dirs.length && { label: "Add to Favourites", fn: () => addBookmarks(dirs) },
+    { label: sel.length > 1 ? "Copy paths" : "Copy path", fn: () => copyPaths(P), key: keyHint("copyPath") },
     "sep",
     twin && { label: "Copy to other pane", fn: () => transferToOther(P, true), key: keyHint("copyOther") },
     twin && { label: "Move to other pane", fn: () => transferToOther(P, false), key: keyHint("moveOther") },

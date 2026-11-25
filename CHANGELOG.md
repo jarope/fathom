@@ -5,6 +5,25 @@ release script uses the section for the version it's building as the release
 notes (and the text shown in the in-app update card), so keep each section
 short and written for people who use Fathom.
 
+## 0.34.0 — 2026-11-25
+
+- **Command blocks in the terminal panel** (zsh): each command and its
+  output read as one block, failed commands are marked with their exit code
+  (and in the scrollbar), ⌘↑ / ⌘↓ jump between commands, ⇧⌘C copies the last
+  command's output, and right-click offers Copy Command, Copy Output and
+  Select Output for the block under the pointer. Your own zsh setup and
+  prompt load as usual; switch it off in Preferences.
+- When the terminal follows the file pane (zsh), it now changes folder quietly
+  and redraws the prompt instead of typing a `cd` command, and anything
+  you'd half-typed stays.
+- **Copy Path** (⌥⌘C) for the selection, or the folder when nothing is
+  selected; rebindable in Preferences › Shortcuts.
+- The terminal panel has a footer strip, so its last line no longer runs off
+  the bottom of the screen in full screen.
+- The title bar, toolbars and status bars now follow the Glass setting.
+- Fixed: file names could show through a thin gap above the folder shelf.
+- "Add to Places" is now "Add to Favourites".
+
 ## 0.33.0 — 2026-11-25
 
 - **Usage view** (⌥⌘4, or the new View button): see what's taking the space.

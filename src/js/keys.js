@@ -6,7 +6,7 @@
 // "Shift+Cmd+KeyN" — layout-independent, and ⌥ doesn't change it.
 
 import { app, invoke } from "./core.js";
-import { undo, redo, setClip, paste, duplicateSel, transferToOther, openTerminal, batchRename } from "./ops.js";
+import { undo, redo, setClip, paste, copyPaths, duplicateSel, transferToOther, openTerminal, batchRename } from "./ops.js";
 import { openTab, closeTab, cycleTab, gotoTab, setView, openLocation } from "./tabs.js";
 import { showPreviewFor, closePreview, previewStep } from "./preview.js";
 import { togglePanel } from "./panel.js";
@@ -44,6 +44,7 @@ export const COMMANDS = [
   { id: "duplicate", group: "Files", label: "Duplicate", keys: ["Cmd+KeyD"], run: (...a) => duplicateSel(...a) },
   { id: "trash", group: "Files", label: "Move to Bin", keys: ["Backspace", "Delete", "Cmd+Backspace"], run: (P) => P.selected.size && P.trashSelected() },
   { id: "copy", group: "Files", label: "Copy", keys: ["Cmd+KeyC"], run: (P) => setClip(P, false) },
+  { id: "copyPath", group: "Files", label: "Copy Path", keys: ["Alt+Cmd+KeyC"], run: (P) => copyPaths(P) },
   { id: "cut", group: "Files", label: "Cut", keys: ["Cmd+KeyX"], run: (P) => setClip(P, true) },
   { id: "paste", group: "Files", label: "Paste", keys: ["Cmd+KeyV"], run: (P) => paste(P) },
   { id: "moveHere", group: "Files", label: "Move Here (from clipboard)", keys: ["Alt+Cmd+KeyV"], run: (P) => paste(P, null, { move: true }) },

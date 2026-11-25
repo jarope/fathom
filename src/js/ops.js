@@ -12,6 +12,13 @@ import { resolveConflicts, batchRenameDialog } from "./dialog.js";
 
 const flashActive = (msg, cls) => (app.active || app.tab.panes[0]).flash(msg, cls);
 
+/** Copy the selected items' paths (one per line), or the folder's when nothing is selected (⌥⌘C). */
+export function copyPaths(P) {
+  const paths = P.selected.size ? P.selectedPaths() : P.cwd ? [P.cwd] : [];
+  if (!paths.length) return;
+  navigator.clipboard.writeText(paths.join("\n"));
+  P.flash(paths.length > 1 ? `Copied ${paths.length} paths` : P.selected.size ? "Copied path" : "Copied folder path");
+}
 export const refreshAll = () => Promise.all(visiblePanes().map((p) => p.reload()));
 export const selectEverywhere = (paths) => visiblePanes().forEach((p) => p.selectPaths(paths));
 

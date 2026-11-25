@@ -9,12 +9,13 @@ export const DEFAULTS = {
   startFolder: "",      // used when startup = "folder" ("" = Home)
   dateFormat: "iso",    // "iso" | "locale" | "relative"
   terminal: "Terminal", // Terminal | iTerm | Ghostty | Warp
+  termBlocks: true,     // terminal panel: command blocks via zsh shell integration
   theme: "",            // "system" | "light" | "dark" ("" until first run picks one)
   accent: "system",     // "system" (macOS accent, or the colour theme's) | orange | indigo | teal | graphite | "#rrggbb"
   lightTheme: "",       // colour theme for light mode ("" = Fathom's own; see themes.js)
   darkTheme: "",        // colour theme for dark mode
   themes: [],           // imported colour themes
-  glass: 80,            // glass opacity, 50–100 (100 = solid)
+  glass: 80,            // glass opacity, 20–100 (100 = solid)
   columns: { show: ["size", "modified"], widths: {} }, // details view columns (Name is always on)
   gridSize: 80,         // grid view icon size in points, 48–256
   shelfSize: 46,        // folder shelf icon size in points, 32–96

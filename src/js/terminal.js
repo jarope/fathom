@@ -5,6 +5,9 @@
 // remembered; drag the top edge to resize.
 
 import { app, invoke, listen, store } from "./core.js";
+import { prefs } from "./settings.js";
+import { showMenu } from "./menu.js";
+import { attachBlocks, resetBlocks, hasBlocks, blockAt, lineAt, jump, commandText, outputText, selectOutput } from "./termblocks.js";
 
 let term = null, fit = null, id = 0, panel = null, host = null;
 let lastShellDir = "", followTimer = 0, exited = false, ro = null;
@@ -26,23 +29,35 @@ async function start() {
   try { await document.fonts.load('12px "JetBrains Mono"'); } catch {}
   term = new Terminal({
     fontFamily: '"JetBrains Mono", "SF Mono", Menlo, monospace', fontSize: 12, lineHeight: 1.15,
-    cursorBlink: true, allowProposedApi: false, scrollback: 5000, macOptionIsMeta: true,
+    cursorBlink: true, allowProposedApi: true, // decorations, for command blocks
+    overviewRuler: { width: 10 }, // marks failed commands (and each prompt) in the scrollbar scrollback: 5000, macOptionIsMeta: true,
     minimumContrastRatio: 3, // ANSI colours stay readable on light themes too
     theme: theme(),
   });
   fit = new FitAddon();
   term.loadAddon(fit);
+  attachBlocks(term);
   term.open(host);
   fit.fit();
+  host.addEventListener("contextmenu", (e) => { e.preventDefault(); e.stopPropagation(); termMenu(e); });
   // ⌘K clears, as in Terminal.app; Fathom's own shortcuts don't fire while typing here.
   term.attachCustomKeyEventHandler((e) => {
     if (e.type === "keydown" && e.metaKey && e.code === "KeyK") { term.clear(); return false; }
+    // Command blocks: ⌘↑ / ⌘↓ jump between commands, ⇧⌘C copies the last command's output.
+    if (e.metaKey && !e.altKey && !e.ctrlKey && (e.code === "ArrowUp" || e.code === "ArrowDown")) {
+      if (e.type === "keydown") jump(e.code === "ArrowUp" ? -1 : 1);
+      e.preventDefault(); return false;
+    }
+    if (e.metaKey && e.shiftKey && e.code === "KeyC") {
+      if (e.type === "keydown") copy(outputText(blockAt()));
+      e.preventDefault(); return false;
+    }
     // Hand the panel's own toggle (⌃` / F4) and ⌘-shortcuts back to Fathom.
     if ((e.ctrlKey && e.code === "Backquote") || e.code === "F4") return false;
     return true;
   });
   term.onData((d) => {
-    if (exited) { exited = false; term.reset(); spawn(); return; }
+    if (exited) { exited = false; term.reset(); resetBlocks(); spawn(); return; }
     if (id) invoke("term_write", { id, data: d }).catch(() => {});
   });
   term.onResize(({ cols, rows }) => { if (id) invoke("term_resize", { id, cols, rows }).catch(() => {}); });
@@ -70,8 +85,31 @@ async function start() {
 async function spawn() {
   const P = app.active;
   const cwd = (P && P.cwd) || app.home;
-  try { id = await invoke("term_open", { cwd, cols: term.cols, rows: term.rows }); lastShellDir = cwd; }
+  try { id = await invoke("term_open", { cwd, cols: term.cols, rows: term.rows, blocks: prefs.termBlocks !== false }); lastShellDir = cwd; }
   catch (e) { term.write(`\r\n\x1b[31m${e}\x1b[0m\r\n`); }
+}
+
+const copy = (t) => { if (t) navigator.clipboard.writeText(t); };
+
+/** Right-click in the terminal: clipboard, and the command block under the pointer. */
+function termMenu(e) {
+  const b = hasBlocks() ? blockAt(lineAt(e)) : null;
+  const sel = term.getSelection();
+  showMenu([
+    { label: "Copy", key: "⌘C", disabled: !sel, fn: () => copy(sel) },
+    { label: "Paste", key: "⌘V", fn: async () => { try { const t = await navigator.clipboard.readText(); if (t) term.paste(t); } catch {} term.focus(); } },
+    { label: "Select All", key: "⌘A", fn: () => term.selectAll() },
+    "sep",
+    b && { heading: b.exit ? `Command (exit ${b.exit})` : "Command" },
+    b && { label: "Copy Command", fn: () => copy(commandText(b)) },
+    b && { label: "Copy Output", key: blockAt() === b ? "⇧⌘C" : undefined, disabled: !outputText(b), fn: () => copy(outputText(b)) },
+    b && { label: "Select Output", disabled: !outputText(b), fn: () => { selectOutput(b); term.focus(); } },
+    b && "sep",
+    hasBlocks() && { label: "Previous Command", key: "⌘↑", fn: () => { jump(-1); term.focus(); } },
+    hasBlocks() && { label: "Next Command", key: "⌘↓", fn: () => { jump(1); term.focus(); } },
+    hasBlocks() && "sep",
+    { label: "Clear", key: "⌘K", fn: () => { term.clear(); term.focus(); } },
+  ], e.clientX, e.clientY);
 }
 
 /** A `cd` typed in the shell: take the active pane there too. */
@@ -121,7 +159,20 @@ function init() {
   });
 }
 
+/** Mark full screen on <html> so the terminal's footer board can grow (see app.css). */
+async function trackFullscreen() {
+  const w = window.__TAURI__?.window?.getCurrentWindow?.(); if (!w) return;
+  const check = async () => {
+    let fs = false; try { fs = await w.isFullscreen(); } catch {}
+    document.documentElement.classList.toggle("fullscreen", fs);
+    if (terminalOpen() && fit) { try { fit.fit(); } catch {} }
+  };
+  await check();
+  w.onResized(() => { clearTimeout(trackFullscreen.t); trackFullscreen.t = setTimeout(check, 150); });
+}
+
 /** On launch: reopen if it was open last time. */
 export function initTerminal() {
+  trackFullscreen();
   if (store.get("fathom-terminal", false)) toggleTerminal(true);
 }
