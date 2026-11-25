@@ -702,3 +702,9 @@ body.dragging, body.dragging * { cursor: default !important; }
 .pstatus .upill .ubtn { display: inline-flex; align-items: center; justify-content: center; padding: 0 9px; }
 .pstatus .ubtn svg { width: 15px; height: 15px; display: block; }
 .pstatus .ubtn:hover { color: var(--text); background: var(--row-hover); }
+
+/* Favourites: drag to reorder */
+.sidebar { position: relative; }
+.fav-line { position: absolute; left: 12px; right: 12px; height: 2px; border-radius: 1px; background: var(--accent); pointer-events: none; z-index: 2; }
+.place.fav-dragging { opacity: 0.45; }
+body.fav-reordering, body.fav-reordering * { cursor: grabbing !important; }

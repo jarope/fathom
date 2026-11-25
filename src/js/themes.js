@@ -9,12 +9,14 @@
 //     Colours: background, window, hover, text, text2, text3, separator,
 //     accent, success, warning, danger, folder. Only background and text are
 //     needed; the rest are worked out from them.
+//     Extras: "font": "vt323" (the bundled pixel-terminal font, set larger so
+//     it reads) and "glow": true (CRT phosphor glow and faint scanlines).
 //   • base16 schemes (YAML or JSON with base00 … base0F) — Solarized,
 //     Tomorrow, Monokai, Ocean… there are hundreds.
 //   • VS Code colour themes (the .json in an extension's themes/ folder).
 //
 // A theme only sets colour tokens from theme.css on <html>; everything else
-// (sizes, fonts, glass) stays Fathom's.
+// (sizes, fonts, glass) stays Fathom's — apart from the two extras above.
 
 import { prefs, saveSettings } from "./settings.js";
 
@@ -52,6 +54,39 @@ export const BUILTIN = [
   { id: "catppuccin", name: "Catppuccin (Latte / Mocha)",
     dark: { background: "#1e1e2e", window: "#181825", hover: "#313244", text: "#cdd6f4", text2: "#bac2de", text3: "#a6adc8", accent: "#cba6f7", success: "#a6e3a1", warning: "#f9e2af", danger: "#f38ba8", folder: "#89b4fa" },
     light: { background: "#eff1f5", window: "#e6e9ef", hover: "#e6e9ef", text: "#4c4f69", text2: "#5c5f77", text3: "#6c6f85", accent: "#8839ef", success: "#40a02b", warning: "#df8e1d", danger: "#d20f39", folder: "#1e66f5" } },
+  // ---- Fathom originals (every text colour checked for contrast, hover rows too) ----
+  { id: "graphite", name: "Graphite",
+    dark: { background: "#1f2124", window: "#17181a", hover: "#2a2d31", text: "#e6e8eb", text2: "#b9bec5", text3: "#9399a2", accent: "#5b9cf5", success: "#6cc48a", warning: "#e3b45a", danger: "#f0716b", folder: "#6fa8f7" },
+    light: { background: "#f4f5f6", window: "#e9ebed", hover: "#e8eaed", text: "#1d1f22", text2: "#41464d", text3: "#5d636b", accent: "#2f6fd6", success: "#2e7d4a", warning: "#8a6410", danger: "#c0362f", folder: "#3d7ddb" } },
+  { id: "midnight-ink", name: "Midnight Ink",
+    dark: { background: "#141a26", window: "#0e131c", hover: "#1e2636", text: "#dde4f0", text2: "#aab5c8", text3: "#8692a8", accent: "#4fc3e8", success: "#5fd3a0", warning: "#f2c35b", danger: "#ff7a85", folder: "#5aa9f0" } },
+  { id: "ember", name: "Ember",
+    dark: { background: "#1f1a17", window: "#171310", hover: "#2b2420", text: "#efe4d8", text2: "#c9b9a8", text3: "#a5937f", accent: "#f0a04b", success: "#a9c46c", warning: "#f2c45a", danger: "#f07560", folder: "#e8a85c" } },
+  { id: "evergreen", name: "Evergreen",
+    dark: { background: "#18201c", window: "#111814", hover: "#222c27", text: "#dfe9e2", text2: "#afc0b5", text3: "#8ba093", accent: "#5fd0a0", success: "#7fd48a", warning: "#e6c565", danger: "#f07a74", folder: "#6cc6a8" } },
+  // An old green-phosphor terminal: near-black glass, everything in greens
+  // (selection becomes inverse video: dark text on bright green).
+  { id: "phosphor", name: "Phosphor (green screen)",
+    dark: { background: "#040b06", window: "#020503", hover: "#0b1a0f", separator: "#1f5a30", text: "#8dffa6", text2: "#4fdc78", text3: "#36b45d", accent: "#39ff6e", success: "#9dff7a", warning: "#d8ff5a", danger: "#ff6b57", folder: "#39ff6e", font: "vt323", glow: true } },
+  { id: "amber", name: "Amber (amber screen)",
+    dark: { background: "#0c0702", window: "#060301", hover: "#1c1206", separator: "#5a3a10", text: "#ffc670", text2: "#f0a53a", text3: "#c9862b", accent: "#ffb000", success: "#e6d36a", warning: "#ffe27a", danger: "#ff6a45", folder: "#ffb000", font: "vt323", glow: true } },
+  { id: "aubergine", name: "Aubergine",
+    dark: { background: "#211a26", window: "#19131d", hover: "#2c2333", text: "#ece3f1", text2: "#c4b6cf", text3: "#a090ad", accent: "#f07ab8", success: "#8fd49a", warning: "#f0c76a", danger: "#ff7b7b", folder: "#c39af2" } },
+  { id: "harbour", name: "Harbour",
+    dark: { background: "#1c2529", window: "#151c1f", hover: "#263136", text: "#e0eaed", text2: "#adbec4", text3: "#8a9da4", accent: "#3fc1c0", success: "#7ccf8e", warning: "#e8c160", danger: "#f27b72", folder: "#58b8d6" } },
+  { id: "obsidian", name: "Obsidian (deep black)",
+    dark: { background: "#0b0b0d", window: "#000000", hover: "#18181c", text: "#e8e8ec", text2: "#b4b4bd", text3: "#8c8c97", accent: "#a68cff", success: "#6fd68f", warning: "#f2c25c", danger: "#ff6b6b", folder: "#9d8cff" } },
+  // ---- mid tones: easier on the eyes than light, less cave-like than dark ----
+  { id: "dusk", name: "Dusk (mid, light text)",
+    dark: { background: "#474d57", window: "#3c414a", hover: "#4f5560", text: "#f8f9fb", text2: "#dce0e6", text3: "#c9ced6", accent: "#8cc4ff", success: "#9fe0a8", warning: "#f5d27a", danger: "#ffaaa5", folder: "#9ccbff" } },
+  { id: "stone", name: "Stone (mid, warm, light text)",
+    dark: { background: "#4f4a45", window: "#43403b", hover: "#57524c", text: "#f8f4ee", text2: "#e2dbd1", text3: "#d2c9bd", accent: "#f2b872", success: "#b5dd8f", warning: "#f6d77f", danger: "#ffab9c", folder: "#f0bf7d" } },
+  { id: "overcast", name: "Overcast (mid, dark text)",
+    light: { background: "#b8bec7", window: "#aab1bb", hover: "#aeb5bf", text: "#15181d", text2: "#2b3038", text3: "#3a4049", accent: "#1d4f9e", success: "#1f5e33", warning: "#5c4307", danger: "#8f1f1a", folder: "#234f94" } },
+  { id: "parchment-dim", name: "Parchment Dim (mid, warm, dark text)",
+    light: { background: "#d3cbbd", window: "#c7bead", hover: "#c9c0b1", text: "#221d16", text2: "#3e372d", text3: "#52493d", accent: "#8a3f12", success: "#3d5a18", warning: "#6b4c06", danger: "#9a2318", folder: "#7a4a1c" } },
+  { id: "sage-mist", name: "Sage Mist (soft light)",
+    light: { background: "#e3e8e2", window: "#d8ded6", hover: "#d9dfd7", text: "#1b211c", text2: "#38423a", text3: "#4c574e", accent: "#2f7a55", success: "#2f7a40", warning: "#7d5b0c", danger: "#ad3127", folder: "#3a7f6a" } },
 ];
 
 export const allThemes = () => [...BUILTIN, ...(Array.isArray(prefs.themes) ? prefs.themes : [])];
@@ -97,6 +132,10 @@ export function applyTheme(root, id, mode) {
   const p = th && th[mode];
   const r = p ? tokens(p, mode) : null;
   root.toggleAttribute("data-color-theme", !!r);
+  const font = r && p.font === "vt323" ? "vt323" : null;
+  if (font) root.dataset.themeFont = font; else delete root.dataset.themeFont;
+  root.toggleAttribute("data-theme-glow", !!(r && p.glow));
+  try { localStorage.setItem("fathom-look-extras", JSON.stringify({ font, glow: !!(r && p.glow) })); } catch {}
   if (!r) return null;
   Object.entries(r.t).forEach(([k, v]) => { root.style.setProperty(k, v); SET.add(k); });
   return r.accent;

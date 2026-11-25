@@ -95,6 +95,10 @@ export function followSystem() {
   let st = null;
   try { st = localStorage.getItem("fathom-look-style"); } catch {}
   if (st) st.split(";").forEach((d) => { const i = d.indexOf(":"); if (i > 0) document.documentElement.style.setProperty(d.slice(0, i).trim(), d.slice(i + 1).trim()); }); // theme colours, custom accent
+  let ex = null;
+  try { ex = JSON.parse(localStorage.getItem("fathom-look-extras") || "null"); } catch {}
+  if (ex && ex.font) document.documentElement.dataset.themeFont = ex.font; // theme font / glow
+  if (ex && ex.glow) document.documentElement.setAttribute("data-theme-glow", "");
 }
 
 /** What the accent currently follows, for Preferences. */

@@ -1,5 +1,8 @@
-// Places sidebar (Dolphin's Places panel / Finder's sidebar): standard
-// folders, your pinned folders, iCloud Drive and mounted volumes.
+// Places sidebar (Dolphin's Places panel / Finder's sidebar): your
+// Favourites, iCloud Drive and mounted volumes.
+// Favourites are one list in your order: it starts with the standard folders
+// (Home, Desktop…) plus any old pins, and every item can be dragged up or
+// down, moved to the top or removed. Standard folders keep their own icons.
 //   click → go there (active pane) · ⌘-click / middle-click → new tab
 //   drop files on a place → move (⌥ copy) · drop folders on blank space → pin
 
@@ -17,42 +20,62 @@ import { renderTree, treeClick, treeKey, invalidateTree } from "./foldertree.js"
 import { trashPaths } from "./ops.js";
 
 let places = null;
-let bookmarks = store.get("fathom-places", []); // [{ name, path }]
+// [{ name, path }] in your order. null until first seeded from the standard folders.
+let bookmarks = store.get("fathom-favs", null);
+const saveFavs = () => store.set("fathom-favs", bookmarks);
+/** The icon for a favourite: a standard folder's own, else a folder. */
+const favKind = (path) => (places && places.standard.find((p) => p.path === path) || { kind: "folder" }).kind;
 let sb;
 
 export async function loadPlaces() {
   try { places = await invoke("places"); } catch { places = null; }
   if (places) app.bin = places.bin;
+  // First run of the single list: the standard folders, then the old pins.
+  if (!bookmarks) {
+    const old = store.get("fathom-places", []);
+    const std = places ? places.standard.map((p) => ({ name: p.name, path: p.path })) : [];
+    bookmarks = [...std, ...old.filter((b) => !std.some((p) => p.path === b.path))];
+    if (places) saveFavs();
+  }
   renderSidebar();
 }
 
 export function addBookmarks(paths) {
-  const have = new Set([...bookmarks.map((b) => b.path), ...(places ? places.standard.map((p) => p.path) : [])]);
-  const add = paths.filter((p) => !have.has(p)).map((p) => ({ name: baseName(p), path: p }));
-  if (!add.length) { if (app.active) app.active.flash("Already in Places"); return; }
+  bookmarks ||= [];
+  const have = new Set(bookmarks.map((b) => b.path));
+  const std = places ? places.standard : [];
+  const add = paths.filter((p) => !have.has(p)).map((p) => ({ name: (std.find((s) => s.path === p) || {}).name || baseName(p), path: p }));
+  if (!add.length) { if (app.active) app.active.flash("Already in Favourites"); return; }
   bookmarks = bookmarks.concat(add);
-  store.set("fathom-places", bookmarks);
+  saveFavs();
   renderSidebar();
-  if (app.active) app.active.flash(`Added ${add.length === 1 ? "“" + add[0].name + "”" : add.length + " folders"} to Places`);
+  if (app.active) app.active.flash(`Added ${add.length === 1 ? "“" + add[0].name + "”" : add.length + " folders"} to Favourites`);
 }
 function removeBookmark(path) {
   bookmarks = bookmarks.filter((b) => b.path !== path);
-  store.set("fathom-places", bookmarks);
+  saveFavs();
   renderSidebar();
 }
-function moveBookmark(path, dir) {
-  const i = bookmarks.findIndex((b) => b.path === path), j = i + dir;
-  if (i < 0 || j < 0 || j >= bookmarks.length) return;
-  [bookmarks[i], bookmarks[j]] = [bookmarks[j], bookmarks[i]];
-  store.set("fathom-places", bookmarks);
+/** Move a favourite to position `to` (an index in the list as it is now). */
+function placeBookmark(path, to) {
+  const i = bookmarks.findIndex((b) => b.path === path);
+  if (i < 0) return;
+  const [b] = bookmarks.splice(i, 1);
+  bookmarks.splice(Math.max(0, Math.min(bookmarks.length, to > i ? to - 1 : to)), 0, b);
+  saveFavs();
+  renderSidebar();
+}
+/** Put back any standard folders (Home, Desktop…) that were removed, at the end. */
+function restoreStandard() {
+  const missing = places ? places.standard.filter((p) => !bookmarks.some((b) => b.path === p.path)) : [];
+  if (!missing.length) { if (app.active) app.active.flash("The standard folders are all there"); return; }
+  bookmarks = bookmarks.concat(missing.map((p) => ({ name: p.name, path: p.path })));
+  saveFavs();
   renderSidebar();
 }
 
-/** Standard places + pinned folders (Copy to / Move to targets). */
-export const placeTargets = () => [
-  ...(places ? places.standard.map((p) => ({ name: p.name, path: p.path })) : []),
-  ...bookmarks.map((b) => ({ name: b.name, path: b.path })),
-];
+/** Favourites (Copy to / Move to targets). */
+export const placeTargets = () => (bookmarks || []).map((b) => ({ name: b.name, path: b.path }));
 
 /** Places ⇄ Folders (F7). */
 export function setSideMode(mode) {
@@ -99,9 +122,8 @@ export function renderSidebar() {
   };
 
   sec("Favourites");
-  places.standard.forEach((p) => item(p.name, p.path, p.kind, { fav: true }));
-  bookmarks.forEach((b) => item(b.name, b.path, "folder", { bookmark: true, fav: true }));
-  if (!bookmarks.length) sb.append(el("div", "side-hint", "Drag folders here to pin them"));
+  (bookmarks || []).forEach((b) => item(b.name, b.path, favKind(b.path), { bookmark: true, fav: true }));
+  if (!bookmarks || !bookmarks.length) sb.append(el("div", "side-hint", "Drag folders here to add them"));
   const rec = el("div", "place recentplace"); rec.dataset.recent = "1"; rec.title = "Folders you were in lately";
   rec.append(icon("recent"), el("span", "pname", "Recent"), el("span", "pchev", "›"));
   asButton(rec, "Recent folders"); sb.append(rec);
@@ -211,16 +233,49 @@ export function initSidebar() {
       "sep",
       { label: "Open Terminal Here", fn: () => openTerminal(P, path) },
       "sep",
-      kind === "bookmark" && i > 0 && { label: "Move Up", fn: () => moveBookmark(path, -1) },
-      kind === "bookmark" && i < bookmarks.length - 1 && { label: "Move Down", fn: () => moveBookmark(path, 1) },
-      kind === "bookmark" && { label: "Remove from Places", fn: () => removeBookmark(path), danger: true },
+      kind === "bookmark" && i > 0 && { label: "Move to Top", fn: () => placeBookmark(path, 0) },
+      kind === "bookmark" && i > 0 && { label: "Move Up", fn: () => placeBookmark(path, i - 1) },
+      kind === "bookmark" && i < bookmarks.length - 1 && { label: "Move Down", fn: () => placeBookmark(path, i + 2) },
+      kind === "bookmark" && { label: "Remove from Favourites", fn: () => removeBookmark(path), danger: true },
+      kind === "bookmark" && places && places.standard.some((p) => !bookmarks.some((b) => b.path === p.path)) && { label: "Restore Standard Folders", fn: restoreStandard },
       kind === "volume" && path !== "/" && { label: `Eject “${name}”`, fn: () => eject(path, name) },
       "sep",
       { label: "Reveal in Finder", fn: () => invoke("reveal_in_finder", { path }) },
     ], ev.clientX, ev.clientY);
   });
 
-  // Drag & drop: onto a place = move/copy into it; onto blank space = pin folders.
+  // Drag a favourite up or down to reorder (a line shows where it will land).
+  let suppressClick = false;
+  sb.addEventListener("mousedown", (ev) => {
+    if (ev.button !== 0 || app.sideMode === "folders") return;
+    const n = ev.target.closest(".place[data-kind='bookmark']"); if (!n || ev.target.closest("button")) return;
+    const y0 = ev.clientY, path = n.dataset.path;
+    let line = null, to = -1;
+    const favEls = () => [...sb.querySelectorAll(".place[data-kind='bookmark']")];
+    const move = (e) => {
+      if (!line && Math.abs(e.clientY - y0) < 5) return;
+      if (!line) { line = el("div", "fav-line"); sb.append(line); n.classList.add("fav-dragging"); document.body.classList.add("fav-reordering"); }
+      const els = favEls(); if (!els.length) return;
+      // The gap nearest the pointer: before item k (or after the last).
+      to = els.length;
+      for (let k = 0; k < els.length; k++) { const r = els[k].getBoundingClientRect(); if (e.clientY < r.top + r.height / 2) { to = k; break; } }
+      const sr = sb.getBoundingClientRect();
+      const ref = to < els.length ? els[to].getBoundingClientRect().top : els[els.length - 1].getBoundingClientRect().bottom;
+      line.style.top = ref - sr.top + sb.scrollTop - 1 + "px";
+    };
+    const up = () => {
+      window.removeEventListener("mousemove", move, true); window.removeEventListener("mouseup", up, true);
+      if (!line) return;
+      line.remove(); n.classList.remove("fav-dragging"); document.body.classList.remove("fav-reordering");
+      suppressClick = true; setTimeout(() => (suppressClick = false), 0);
+      if (to >= 0) placeBookmark(path, to);
+    };
+    window.addEventListener("mousemove", move, true);
+    window.addEventListener("mouseup", up, true);
+  });
+  sb.addEventListener("click", (ev) => { if (suppressClick) { suppressClick = false; ev.stopImmediatePropagation(); } }, true);
+
+  // Drag & drop: onto a place = move/copy into it; onto blank space = add to Favourites.
   registerDropZone({
     root: sb,
     over: (n, data) => {

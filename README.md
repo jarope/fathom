@@ -391,7 +391,7 @@ version and checksum) to the `jarope/homebrew-fathom` tap.
 ```
 src/index.html          Frontend shell (no npm); src/js/ modules, src/css/
 src/css/theme.css       Every colour, font and size from DESIGN.md (tokens only)
-src/fonts/              JetBrains Mono (SIL OFL, bundled)
+src/fonts/              JetBrains Mono and VT323 (SIL OFL, bundled)
 src-tauri/src/lib.rs     Backend: list_dir / home_dir / search / move_to_trash / reveal / open
 src-tauri/src/main.rs    Entry point
 scripts/                 dev.sh, build.sh
@@ -409,5 +409,7 @@ later version** — see [`LICENSE`](LICENSE). It comes with no warranty.
 
 JetBrains Mono is included under the SIL Open Font License
 ([`src/fonts/JetBrainsMono-OFL.txt`](src/fonts/JetBrainsMono-OFL.txt)).
+VT323 (used by the Phosphor and Amber themes) is included under the same
+licence ([`src/fonts/VT323-OFL.txt`](src/fonts/VT323-OFL.txt)).
 xterm.js (the terminal panel) is included under the MIT licence
 ([`src/vendor/xterm/LICENSE`](src/vendor/xterm/LICENSE)).
