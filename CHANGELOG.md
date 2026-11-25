@@ -26,9 +26,6 @@ short and written for people who use Fathom.
   server file to open it in its app: each save uploads back by itself, and
   if someone changed the server's copy meanwhile you choose whether to
   replace theirs, save yours as a copy, or not upload.
-
-## 0.34.0 — 2026-11-25
-
 - **Command blocks in the terminal panel** (zsh): each command and its
   output read as one block, failed commands are marked with their exit code
   (and in the scrollbar), ⌘↑ / ⌘↓ jump between commands, ⇧⌘C copies the last
