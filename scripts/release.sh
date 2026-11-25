@@ -102,9 +102,16 @@ if [[ $PUBLISH == 1 ]]; then
   echo "Publishing v${VERSION} to github.com/${REPO}…"
   git tag -a "v$VERSION" -m "Fathom $VERSION" 2>/dev/null || echo "(tag v$VERSION already exists)"
   git push origin "v$VERSION"
-  gh release create "v$VERSION" --repo "$REPO" --title "Fathom $VERSION" --notes-file "$OUT/notes.md" \
-    "$OUT/Fathom_${VERSION}_${ARCH}.dmg" "$OUT/Fathom_${VERSION}_${ARCH}.app.tar.gz" \
-    "$OUT/Fathom_${VERSION}_${ARCH}.app.tar.gz.sig" "$OUT/latest.json"
+  ASSETS=("$OUT/Fathom_${VERSION}_${ARCH}.dmg" "$OUT/Fathom_${VERSION}_${ARCH}.app.tar.gz"
+          "$OUT/Fathom_${VERSION}_${ARCH}.app.tar.gz.sig" "$OUT/latest.json")
+  if gh release view "v$VERSION" --repo "$REPO" >/dev/null 2>&1; then
+    # Already released (e.g. re-run after fixing the notes): refresh it in place.
+    echo "(release v$VERSION exists: updating its notes and files)"
+    gh release edit "v$VERSION" --repo "$REPO" --notes-file "$OUT/notes.md"
+    gh release upload "v$VERSION" --repo "$REPO" --clobber "${ASSETS[@]}"
+  else
+    gh release create "v$VERSION" --repo "$REPO" --title "Fathom $VERSION" --notes-file "$OUT/notes.md" "${ASSETS[@]}"
+  fi
   echo "Done: https://github.com/$REPO/releases/tag/v$VERSION"
 
   # Homebrew: packaging/homebrew/fathom.rb with this version + checksum, written

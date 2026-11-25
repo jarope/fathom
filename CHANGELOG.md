@@ -7,9 +7,17 @@ short and written for people who use Fathom.
 
 ## 0.33.0 — 2026-11-25
 
-- **Aloft** (new mode): Incorporated another project, called Aloft, which looks at disk size. 
-  This allows for a dual pane view of a folder and see the disk size of items within it.
-
+- **Usage view** (⌥⌘4, or the new View button): see what's taking the space.
+  Every item shows its real size on disk, biggest first, with a bar for its
+  share of the folder or the whole disk. Put it in one half of the twin pane
+  to find big folders and tidy them up in the other.
+- **Favourites your way**: drag sidebar favourites into any order, Home and
+  Desktop included, or remove them. Right-click for Move to Top and Restore
+  Standard Folders.
+- **14 new colour themes**: dark (Graphite, Midnight Ink, Ember, Evergreen,
+  Aubergine, Harbour, Obsidian), mid tones that are easier on the eyes
+  (Dusk, Stone, Overcast, Parchment Dim), Sage Mist, and two retro terminals,
+  Phosphor and Amber, with a pixel font and CRT glow.
 
 ## 0.32.0 — 2026-11-20
 
