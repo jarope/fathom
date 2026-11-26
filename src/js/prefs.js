@@ -11,6 +11,7 @@ import { ACCENTS, applyAppearance, followSystem, systemAccent, accentSource } fr
 import { themesFor, allThemes, BUILTIN, parseTheme, addTheme, removeTheme } from "./themes.js";
 import { checkForUpdates } from "./updates.js";
 import { templatesField } from "./templates.js";
+import { themeMaker } from "./thememaker.js";
 
 const TERMINALS = ["Terminal", "iTerm", "Ghostty", "Warp"];
 const redrawPanes = () => app.tabs.forEach((t) => t.panes.forEach((p) => p.cwd && p.mode === "browse" && p.renderList()));
@@ -101,13 +102,20 @@ function general() {
     const btns = el("div", "pf-inline");
     const imp = el("button", "mbtn small", "Import Theme…"); imp.type = "button";
     imp.addEventListener("click", async () => { if (await importThemeDialog()) { drawThemes(); applyAppearance(); paintSw(); } });
-    btns.append(imp); tbox.append(btns);
+    const make = el("button", "mbtn small", "New Theme…"); make.type = "button";
+    make.title = "Make a theme, starting from the colours on screen now";
+    const after = () => { drawThemes(); paintSw(); };
+    make.addEventListener("click", async () => { await themeMaker(); after(); });
+    btns.append(make, imp); tbox.append(btns);
     const mine = allThemes().filter((t) => !BUILTIN.includes(t));
     if (mine.length) {
       const list = el("div", "pf-tlist");
       mine.forEach((t) => {
         const it = el("div", "pf-titem");
         it.append(el("span", null, t.name), el("span", "pf-tmode", [t.light && "light", t.dark && "dark"].filter(Boolean).join(" + ")));
+        const ed = el("button", "mbtn small pf-tedit", "Edit…"); ed.type = "button"; ed.title = `Change “${t.name}”`;
+        ed.addEventListener("click", async () => { await themeMaker(t.id); after(); });
+        it.append(ed);
         const x = el("button", "pf-tx", "×"); x.type = "button"; x.title = `Remove “${t.name}”`;
         x.addEventListener("click", () => { removeTheme(t.id); drawThemes(); applyAppearance(); paintSw(); });
         it.append(x); list.append(it);
@@ -116,7 +124,7 @@ function general() {
     }
   };
   drawThemes();
-  box.append(field("Colour theme", tbox, note("Solarized, Nord, Dracula, Gruvbox and Catppuccin are built in. Import a base16 scheme (YAML / JSON), a VS Code colour theme (.json from an extension's themes folder), or a Fathom theme file.")));
+  box.append(field("Colour theme", tbox, note("Solarized, Nord, Dracula, Gruvbox and Catppuccin are built in. New Theme… makes your own with a live preview (start from any of these). Import takes a base16 scheme (YAML / JSON), a VS Code colour theme (.json from an extension's themes folder), or a Fathom theme file.")));
   const rng = el("input"); rng.type = "range"; rng.min = 20; rng.max = 100; rng.step = 5; rng.value = prefs.glass;
   const out = el("output", null, prefs.glass + "%");
   rng.addEventListener("input", () => { prefs.glass = +rng.value; out.textContent = rng.value + "%"; applyAppearance(); });

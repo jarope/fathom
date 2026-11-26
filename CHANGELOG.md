@@ -5,6 +5,19 @@ release script uses the section for the version it's building as the release
 notes (and the text shown in the in-app update card), so keep each section
 short and written for people who use Fathom.
 
+## 0.37.0 — 2026-11-26
+
+- **Theme maker**: Preferences → Colour theme → New Theme… makes your own
+  colour theme, and Edit… changes one you've made or imported. Light and
+  dark versions each get a row per colour, with a colour picker, a hex field
+  and Auto (Fathom works it out from the background and text). The whole
+  window previews it as you go, with a small sample file list in the
+  dialog. Text colours show how readable they are (contrast rating), and
+  Start from… copies any built-in or imported theme as a starting point.
+  Export… saves a theme file to share, which Import Theme… reads back.
+- Pressing Esc or Return in a dialog opened from Preferences (such as
+  Import Theme) no longer also closes Preferences.
+
 ## 0.36.0 — 2026-11-26
 
 - **Open Terminal Here uses the terminal panel**: from the right-click

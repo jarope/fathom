@@ -1036,6 +1036,7 @@ pub fn run() {
             actions::config_read,
             actions::config_write,
             actions::read_text_file,
+            actions::write_text_file,
             actions::run_action,
             actions::cancel_action,
             thumbnail,

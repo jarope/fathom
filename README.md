@@ -291,7 +291,11 @@ Updates). They're signed, and Fathom checks the signature before installing.
   **VS Code colour theme** (the `.json` in an extension's `themes/` folder,
   e.g. `~/.vscode/extensions/*/themes/`), or a Fathom theme
   (`{"name": …, "dark": {"background": …, "text": …, "accent": …}}`) — choose
-  the file or paste it. A theme brings its own accent unless you've picked one. Respects **Reduce Transparency** and
+  the file or paste it. A theme brings its own accent unless you've picked one.
+  **New Theme…** (and **Edit…** on your own themes) opens the theme maker:
+  light and dark tabs, a swatch and hex field per colour (Auto lets Fathom
+  work it out), contrast ratings on every text colour, the whole window as a
+  live preview, and **Export…** to a theme file you can share. Respects **Reduce Transparency** and
   **Increase Contrast**. The sidebar is real macOS glass (window vibrancy), so
   Fathom ships outside the Mac App Store. Every file kind has its own icon
   and tint; the toolbar shows the current folder's name.

@@ -8,6 +8,8 @@ import { app, el, fmtSize, fmtDate, baseName, plural } from "./core.js";
  * `onSubmit(value)` may return an error string to keep the dialog open.
  * Resolves with the chosen value, or null on Esc / Cancel.
  */
+const open = []; // modals on screen, newest last: only the top one answers keys
+
 export function modal({ title, body, buttons, wide = false, onSubmit = null, focus = null, enterSubmits = true }) {
   return new Promise((resolve) => {
     const wrap = el("div", "modal-wrap");
@@ -21,11 +23,13 @@ export function modal({ title, body, buttons, wide = false, onSubmit = null, foc
     wrap.append(box);
     document.body.append(wrap);
     app.modalOpen = true;
+    open.push(wrap);
 
     const close = (v) => {
       document.removeEventListener("keydown", onKey, true);
       wrap.remove();
-      app.modalOpen = false;
+      open.splice(open.indexOf(wrap), 1);
+      app.modalOpen = open.length > 0;
       resolve(v);
     };
     const choose = async (b) => {
@@ -44,6 +48,7 @@ export function modal({ title, body, buttons, wide = false, onSubmit = null, foc
       btns.append(n);
     });
     const onKey = (e) => {
+      if (open[open.length - 1] !== wrap) return; // a dialog on top of this one has the keys
       if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(null); }
       else if (e.key === "Enter" && !(e.target && e.target.tagName === "TEXTAREA") && (enterSubmits || !/^(INPUT|SELECT)$/.test(e.target.tagName))) {
         const p = buttons.find((b) => b.primary);

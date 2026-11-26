@@ -209,6 +209,19 @@ mod tests {
     use super::*;
 
     #[test]
+    fn text_file_round_trip() {
+        let dir = std::env::temp_dir().join(format!("fathom-wtf-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let f = dir.join("My Theme.json");
+        let path = f.to_string_lossy().to_string();
+        write_text_file(path.clone(), "{\"a\":1}\n".into()).unwrap();
+        write_text_file(path.clone(), "{\"b\":2}\n".into()).unwrap(); // replaces
+        assert_eq!(read_text_file(path).unwrap(), "{\"b\":2}\n");
+        assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 1); // no leftover part file
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
     fn expands_and_quotes() {
         let p = vec!["/a/it's here.txt".to_string(), "/a/b.png".to_string()];
         assert_eq!(expand("cat %f", "/a", &p), r"cat '/a/it'\''s here.txt'");
@@ -239,4 +252,18 @@ pub fn read_text_file(path: String) -> Result<String, String> {
         return Err("That file is too big to be a theme (over 1 MB).".into());
     }
     std::fs::read_to_string(&path).map_err(|e| format!("Can't read {path}: {e}"))
+}
+
+/// Save a small text file to a path the user chose in a save dialog (e.g. an
+/// exported theme). Written beside it first, then renamed over, so a failed
+/// write never leaves half a file.
+#[tauri::command]
+pub fn write_text_file(path: String, text: String) -> Result<(), String> {
+    let p = std::path::Path::new(&path);
+    let tmp = p.with_file_name(format!(".{}.fathom-part", p.file_name().and_then(|n| n.to_str()).unwrap_or("file")));
+    std::fs::write(&tmp, text.as_bytes()).map_err(|e| format!("Can't save {path}: {e}"))?;
+    std::fs::rename(&tmp, p).map_err(|e| {
+        let _ = std::fs::remove_file(&tmp);
+        format!("Can't save {path}: {e}")
+    })
 }

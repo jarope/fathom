@@ -127,9 +127,14 @@ export function tokens(p, mode) {
 
 /** Put theme `id` (or none) on <html> for this mode; returns the theme's accent or null. */
 export function applyTheme(root, id, mode) {
-  SET.forEach((k) => root.style.removeProperty(k)); SET.clear();
   const th = id ? themeById(id) : null;
-  const p = th && th[mode];
+  return applyPalette(root, th && th[mode], mode);
+}
+
+/** Put palette p (or none) on <html> for this mode; returns its accent or null.
+ *  The theme maker uses this directly for its live preview. */
+export function applyPalette(root, p, mode) {
+  SET.forEach((k) => root.style.removeProperty(k)); SET.clear();
   const r = p ? tokens(p, mode) : null;
   root.toggleAttribute("data-color-theme", !!r);
   const font = r && p.font === "vt323" ? "vt323" : null;
@@ -233,6 +238,56 @@ export function addTheme(th) {
   saveSettings();
   return id;
 }
+/** Replace a theme you made or imported (same id, so Preferences keeps pointing at it). */
+export function updateTheme(id, th) {
+  const list = Array.isArray(prefs.themes) ? prefs.themes : [];
+  const i = list.findIndex((t) => t.id === id);
+  if (i < 0) return addTheme(th);
+  list[i] = { id, name: th.name, ...(th.light ? { light: th.light } : {}), ...(th.dark ? { dark: th.dark } : {}) };
+  saveSettings();
+  return id;
+}
+
+/** A theme as a Fathom theme file (what Import Theme reads back). */
+export const themeFile = (th) => JSON.stringify({ name: th.name, ...(th.light ? { light: th.light } : {}), ...(th.dark ? { dark: th.dark } : {}) }, null, 2) + "\n";
+
+// ---- palette fields (the theme maker's rows) ----
+/** Palette keys, the token each becomes, and whether Fathom works it out when left empty. */
+export const FIELDS = [
+  ["background", "--content", "Background", "File lists, dialogs"],
+  ["window", "--window", "Window", "Sidebar and toolbars, under the glass"],
+  ["hover", "--row-hover", "Hover row", "The row under the pointer"],
+  ["text", "--text", "Text", "Names and most text"],
+  ["text2", "--text2", "Secondary text", "Labels, sizes, sidebar"],
+  ["text3", "--text3", "Tertiary text", "Dates, notes, hints"],
+  ["separator", "--separator", "Separator", "Lines between things"],
+  ["accent", "--accent", "Accent", "Selection, buttons, focus"],
+  ["folder", "--k-folder", "Folders", "Folder icons"],
+  ["success", "--success", "Success", "Done, added, git clean"],
+  ["warning", "--warning", "Warning", "Caution messages"],
+  ["danger", "--danger", "Danger", "Errors, delete"],
+];
+export const REQUIRED = new Set(["background", "text"]);
+
+/** A colour as #rrggbb, whatever CSS form it's in; rgba is laid over `under`. */
+export function cssHex(v, under = [128, 128, 128]) {
+  v = String(v || "").trim();
+  const h = parseHex(v); if (h) return toHex(h);
+  const m = /^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)(?:[\s,/]+([\d.]+%?))?\s*\)$/i.exec(v);
+  if (!m) return null;
+  let a = m[4] == null ? 1 : m[4].endsWith("%") ? parseFloat(m[4]) / 100 : +m[4];
+  return toHex(mix(under, [+m[1], +m[2], +m[3]], a));
+}
+
+/** What every field looks like right now on <html> (theme, derived or Fathom's own). */
+export function currentColours(root) {
+  const cs = getComputedStyle(root);
+  const bg = parseHex(cssHex(cs.getPropertyValue("--content"))) || [128, 128, 128];
+  const out = {};
+  FIELDS.forEach(([k, v]) => { out[k] = cssHex(cs.getPropertyValue(v), bg); });
+  return out;
+}
+
 export function removeTheme(id) {
   prefs.themes = (prefs.themes || []).filter((t) => t.id !== id);
   if (prefs.lightTheme === id) prefs.lightTheme = "";
