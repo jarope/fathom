@@ -57,6 +57,19 @@ TAURI_SIGNING_PRIVATE_KEY_PASSWORD=$(security find-generic-password -s fathom-up
 export APPLE_SIGNING_IDENTITY="${APPLE_SIGNING_IDENTITY:--}"
 [[ "$APPLE_SIGNING_IDENTITY" == "-" ]] && echo "No Developer ID set: ad-hoc signing (Gatekeeper will ask people to confirm the first open)."
 
+# ---- keep this machine's paths out of the binary ----
+# Rust embeds source paths for panic messages; rewrite the local prefixes so
+# the release doesn't carry your home folder (username) to everyone.
+SYSROOT=$(rustc --print sysroot)
+REMAPS=(
+  "--remap-path-prefix=$HOME/.cargo/registry/src=/cargo/registry/src"
+  "--remap-path-prefix=$HOME/.cargo/git/checkouts=/cargo/git/checkouts"
+  "--remap-path-prefix=$SYSROOT/lib/rustlib/src/rust=/rustc/src"
+  "--remap-path-prefix=$ROOT=/fathom"
+)
+export CARGO_ENCODED_RUSTFLAGS
+CARGO_ENCODED_RUSTFLAGS=$(IFS=$'\x1f'; echo "${REMAPS[*]}")
+
 echo "Building Fathom v$VERSION (${TARGET:-native})…"
 cd src-tauri
 ARGS=(build --config '{"bundle":{"createUpdaterArtifacts":true}}')

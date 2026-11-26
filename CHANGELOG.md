@@ -5,6 +5,11 @@ release script uses the section for the version it's building as the release
 notes (and the text shown in the in-app update card), so keep each section
 short and written for people who use Fathom.
 
+## 0.35.2 — 2026-11-26
+
+- Release builds no longer contain file paths from the machine that built
+  them. No change to how Fathom works.
+
 ## 0.35.1 — 2026-11-25
 
 - The terminal panel has a close button (×, top right), and its right-click
