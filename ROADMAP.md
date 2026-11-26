@@ -303,6 +303,12 @@ Phases (each shippable):
 
 ## Polish backlog (after feature-complete, before daily-driver)
 Deferred on purpose — features first, then a polish pass.
+- Nice to have — **Fathom as the default file browser**: handle macOS's
+  "open folder" and "reveal file" requests (Apple Events), plus a Preferences
+  switch that sets `NSFileViewer` and the `public.folder` handler (and resets
+  them to Finder). Covers "Show in Finder" in most apps and opening folders;
+  Open / Save dialogs can't be replaced by any app (use ⌥⌘C then ⇧⌘G, or
+  drag from Fathom onto the dialog).
 - ✅ Terminal panel: Warp-style command blocks via shell integration (OSC 133)
   — done in v0.34 for zsh (`src-tauri/shell`, `termblocks.js`). bash / fish
   integration still to do.
