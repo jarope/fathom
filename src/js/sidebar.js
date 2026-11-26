@@ -10,6 +10,8 @@ import { app, invoke, el, icon, store, baseName } from "./core.js";
 import { showMenu } from "./menu.js";
 import { openTab, other } from "./tabs.js";
 import { openTerminal } from "./ops.js";
+import { terminalHere } from "./terminal.js";
+import { prefs } from "./settings.js";
 import { registerDropZone } from "./dnd.js";
 import { favourites, showTagged, tagPaths } from "./tags.js";
 import { saved, runSaved, removeSaved } from "./search.js";
@@ -259,7 +261,8 @@ export function initSidebar() {
       { label: "Open in New Tab", fn: () => openTab(path), key: "⌘-click" },
       P && app.tab.view === "twin" && { label: "Open in Other Pane", fn: () => other(P).navigate(path) },
       "sep",
-      { label: "Open Terminal Here", fn: () => openTerminal(P, path) },
+      { label: "Open Terminal Here", fn: () => terminalHere(P, path) },
+      { label: `Open in ${prefs.terminal || "Terminal"}`, fn: () => openTerminal(P, path) },
       "sep",
       kind === "bookmark" && i > 0 && { label: "Move to Top", fn: () => placeBookmark(path, 0) },
       kind === "bookmark" && i > 0 && { label: "Move Up", fn: () => placeBookmark(path, i - 1) },

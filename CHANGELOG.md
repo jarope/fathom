@@ -5,6 +5,17 @@ release script uses the section for the version it's building as the release
 notes (and the text shown in the in-app update card), so keep each section
 short and written for people who use Fathom.
 
+## 0.36.0 — 2026-11-26
+
+- **Open Terminal Here uses the terminal panel**: from the right-click
+  menus, the sidebar or ⌥⌘T, the panel opens with its shell in that folder.
+  Open in Warp (or whichever terminal app you've chosen in Preferences) sits
+  just below it, and server folders still open in your terminal app.
+- The toolbar has a terminal panel button beside the Information panel one.
+- Switched-on toolbar buttons (folder shelf, sidebar, information panel,
+  terminal, hidden files) are now filled like the active view, instead of a
+  faint highlight that could look dimmer than off.
+
 ## 0.35.2 — 2026-11-26
 
 - Release builds no longer contain file paths from the machine that built

@@ -131,7 +131,7 @@ function general() {
   box.append(templatesField(field, note, () => saveSettings()));
 
   box.append(field("Terminal app", select(TERMINALS.map((t) => [t, t]), prefs.terminal, (v) => { prefs.terminal = v; saveSettings(); }),
-    note("Used by Open Terminal Here and actions that run in a terminal.")));
+    note("Used by Open in … (beside Open Terminal Here, which uses the panel) and actions that run in a terminal.")));
   box.append(field("Terminal panel",
     check("Command blocks", prefs.termBlocks !== false, (on) => { prefs.termBlocks = on; saveSettings(); }),
     note("Groups each command with its output and marks failed ones; ⌘↑ / ⌘↓ jump between commands, ⇧⌘C copies the last output, right-click for more. zsh only; applies to the next shell you start.")));

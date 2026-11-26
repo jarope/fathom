@@ -1,5 +1,6 @@
 // Terminal panel (F4, Dolphin's Konsole panel): your login shell under the
-// files, drawn by xterm.js (src/vendor/xterm). It follows the active pane:
+// files, drawn by xterm.js (src/vendor/xterm). Open Terminal Here and the
+// toolbar button open it too. It follows the active pane:
 // moving to a folder types `cd` into the shell when it's waiting at its
 // prompt, and a `cd` typed in the shell moves the pane. Height is
 // remembered; drag the top edge to resize.
@@ -7,6 +8,7 @@
 import { app, invoke, listen, store } from "./core.js";
 import { prefs } from "./settings.js";
 import { showMenu } from "./menu.js";
+import { openTerminal } from "./ops.js";
 import { attachBlocks, resetBlocks, hasBlocks, blockAt, lineAt, jump, commandText, outputText, selectOutput } from "./termblocks.js";
 
 let term = null, fit = null, id = 0, panel = null, host = null;
@@ -22,7 +24,7 @@ function theme() {
   return { background: bg, foreground: fg, cursor: css("--accent") || fg, cursorAccent: bg, selectionBackground: css("--sel-quiet") || "rgba(128,128,128,0.35)" };
 }
 
-async function start() {
+async function start(cwd) {
   const { Terminal } = await import("../vendor/xterm/xterm.js");
   const { FitAddon } = await import("../vendor/xterm/addon-fit.js");
   // xterm measures the font once, so make sure Fathom's bundled one has loaded.
@@ -79,12 +81,12 @@ async function start() {
     .observe(document.documentElement, { attributes: true, attributeFilter: ["style", "class", "data-theme"] });
   ro = new ResizeObserver(() => { if (terminalOpen()) { try { fit.fit(); } catch {} } });
   ro.observe(host);
-  await spawn();
+  await spawn(cwd);
 }
 
-async function spawn() {
+async function spawn(at) {
   const P = app.active;
-  const cwd = (P && P.cwd) || app.home;
+  const cwd = at || (P && P.cwd) || app.home;
   try { id = await invoke("term_open", { cwd, cols: term.cols, rows: term.rows, blocks: prefs.termBlocks !== false }); lastShellDir = cwd; }
   catch (e) { term.write(`\r\n\x1b[31m${e}\x1b[0m\r\n`); }
 }
@@ -135,21 +137,39 @@ export async function followPane(P) {
 }
 
 /** F4: show / hide (the shell keeps running while hidden). */
-export async function toggleTerminal(force) {
+export async function toggleTerminal(force, at) {
   if (!panel) init();
   const show = force === undefined ? panel.hidden : force;
   panel.hidden = !show;
   store.set("fathom-terminal", show);
+  syncButton();
   if (!show) { if (app.active) app.active.els.listing.focus(); return; }
-  if (!term) await start();
-  else { try { fit.fit(); } catch {} followPane(app.active); }
+  if (!term) await start(at);
+  else { try { fit.fit(); } catch {} if (!at) followPane(app.active); }
   term.focus();
 }
+
+/** Open Terminal Here: show the panel with its shell in `path`. Server folders
+ *  (and a shell that's busy running something) go to the terminal app instead. */
+export async function terminalHere(P, path) {
+  if (!path) return;
+  if (path.startsWith("sftp://")) return openTerminal(P, path);
+  const fresh = !term;
+  await toggleTerminal(true, path);
+  if (fresh || path === lastShellDir) return;
+  let did = false;
+  try { did = await invoke("term_cd", { id, path }); } catch {}
+  if (did) lastShellDir = path;
+  else P && P.flash(`The terminal is busy — finish or stop the running command, or use Open in ${prefs.terminal || "Terminal"}.`, "warn");
+}
+
+const syncButton = () => document.getElementById("termToggle")?.classList.toggle("on", terminalOpen());
 
 function init() {
   panel = document.getElementById("termPanel");
   host = panel.querySelector(".term-host");
   panel.querySelector(".term-close").addEventListener("click", () => toggleTerminal(false));
+  document.getElementById("termToggle")?.addEventListener("click", () => toggleTerminal());
   const h = +store.get("fathom-terminal-h", 220);
   panel.style.height = Math.max(90, h) + "px";
   // Drag the top edge to resize.
@@ -177,5 +197,6 @@ async function trackFullscreen() {
 /** On launch: reopen if it was open last time. */
 export function initTerminal() {
   trackFullscreen();
+  if (!panel) init();
   if (store.get("fathom-terminal", false)) toggleTerminal(true);
 }

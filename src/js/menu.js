@@ -14,10 +14,11 @@ import { gitMenu } from "./git.js";
 import { keyHint } from "./keys.js";
 import { actionEntries } from "./actions.js";
 import { openPrefs } from "./prefs.js";
+import { prefs } from "./settings.js";
 import { getInfo } from "./info.js";
 import { isBinDir, binItemMenu, emptyBin } from "./bin.js";
 import { templateEntries } from "./templates.js";
-import { toggleTerminal, terminalOpen } from "./terminal.js";
+import { toggleTerminal, terminalOpen, terminalHere } from "./terminal.js";
 
 let ctx, sub, subTimer = null;
 
@@ -177,7 +178,8 @@ export function openContextMenu(P, x, y) {
       { label: "Move Here (from clipboard)", fn: () => paste(P, null, { move: true }), key: keyHint("moveHere") },
       "sep",
       { label: "Open in New Tab", fn: () => openTab(P.cwd), key: keyHint("newTab") },
-      { label: "Open Terminal Here", fn: () => openTerminal(P, P.cwd), key: keyHint("terminal") },
+      { label: "Open Terminal Here", fn: () => terminalHere(P, P.cwd), key: keyHint("terminal") },
+      { label: `Open in ${prefs.terminal || "Terminal"}`, fn: () => openTerminal(P, P.cwd), key: keyHint("terminalApp") },
       { label: terminalOpen() ? "Hide Terminal Panel" : "Show Terminal Panel", fn: () => toggleTerminal(), key: keyHint("terminalPanel") },
       { label: "Add to Favourites", fn: () => addBookmarks([P.cwd]) },
       { label: "Copy folder path", fn: () => copyPaths(P), key: keyHint("copyPath") },
@@ -228,7 +230,8 @@ export function openContextMenu(P, x, y) {
     { label: "Actions", sub: () => actionEntries(P, sel, () => openPrefs("actions")) },
     P.git && P.mode === "browse" && { label: "Git", sub: () => gitMenu(P) },
     { label: "Share…", fn: () => share(P, sel.map((e) => e.path), x, y) },
-    one && one.is_dir && { label: "Open Terminal Here", fn: () => openTerminal(P, one.path) },
+    one && one.is_dir && { label: "Open Terminal Here", fn: () => terminalHere(P, one.path) },
+    one && one.is_dir && { label: `Open in ${prefs.terminal || "Terminal"}`, fn: () => openTerminal(P, one.path) },
     dirs.length && { label: "Add to Favourites", fn: () => addBookmarks(dirs) },
     { label: sel.length > 1 ? "Copy paths" : "Copy path", fn: () => copyPaths(P), key: keyHint("copyPath") },
     "sep",

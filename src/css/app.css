@@ -73,8 +73,8 @@ button { font: inherit; color: inherit; }
 }
 .cap button svg { width: 17px; height: 17px; pointer-events: none; }
 .cap button:hover { color: var(--text); background: var(--row-hover); }
-.cap button.on { color: var(--accent); background: var(--sel-quiet); }   /* toggles */
-.cap.segmented button.on { color: var(--on-accent); background: var(--accent); } /* the active segment */
+/* On: the active segment and switched-on toggles look the same, filled with the accent. */
+.cap button.on, .cap button.on:hover { color: var(--on-accent); background: var(--accent); }
 
 /* ---- Panes ---- */
 .body { flex: 1; min-height: 0; display: flex; }

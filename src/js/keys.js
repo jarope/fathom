@@ -22,7 +22,7 @@ import { getInfo } from "./info.js";
 import { actions, runOnSelection } from "./actions.js";
 import { connectToServer, recentMenu } from "./network.js";
 import { setSideMode } from "./sidebar.js";
-import { toggleTerminal } from "./terminal.js";
+import { toggleTerminal, terminalHere } from "./terminal.js";
 
 function zoomOrIcons(P, dir) {
   if (!P || P.viewMode !== "grid") { zoomStep(dir); return; }
@@ -69,7 +69,8 @@ export const COMMANDS = [
   { id: "editPath", group: "Go", label: "Type a Path", keys: ["Cmd+KeyL"], run: (P) => P.editPath() },
   { id: "find", group: "Go", label: "Search", keys: ["Cmd+KeyF"], run: (P) => { P.els.search.focus(); P.els.search.select(); } },
   { id: "reload", group: "Go", label: "Reload", keys: ["Cmd+KeyR"], run: (P) => P.reload() },
-  { id: "terminal", group: "Go", label: "Open Terminal Here", keys: ["Alt+Cmd+KeyT"], run: (P) => P.cwd && openTerminal(P, P.cwd) },
+  { id: "terminal", group: "Go", label: "Open Terminal Here (panel)", keys: ["Alt+Cmd+KeyT"], run: (P) => P.cwd && terminalHere(P, P.cwd) },
+  { id: "terminalApp", group: "Go", label: "Open in Terminal App", keys: [], run: (P) => P.cwd && openTerminal(P, P.cwd) },
   // Tabs & view
   { id: "newTab", group: "Tabs & View", label: "New Tab", keys: ["Cmd+KeyT"], run: (P) => openTab(P.cwd) },
   { id: "closeTab", group: "Tabs & View", label: "Close Tab", keys: ["Cmd+KeyW"], run: () => (app.tabs.length > 1 ? closeTab() : false) }, // last tab: ⌘W closes the window
